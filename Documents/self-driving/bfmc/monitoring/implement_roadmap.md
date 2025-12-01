@@ -3,18 +3,18 @@
 ### Phase 1: High-Performance MVP (1-2 weeks)
 - [x] Clean up existing project structure (removed NATS, TimescaleDB, Redis, etc.)
 - [x] Re-architected system for UDP/WebSocket direct communication
-- [ ] Implement Go Backend Service:
-  - [ ] Serve static frontend files (HTTP)
-  - [ ] Implement WebSocket server
-  - [ ] Implement UDP listener (telemetry input)
-  - [ ] Forward UDP telemetry to WebSocket clients
-- [ ] Implement Vehicle Agent Simulator:
-  - [ ] Generate basic telemetry data
-  - [ ] Send telemetry via UDP to Go Backend
-- [ ] Implement Frontend (Vite + React):
-  - [ ] Connect to Go Backend via WebSocket
-  - [ ] Display real-time telemetry data (speed, steering, etc.)
-  - [ ] Basic dashboard layout
+- [x] Implement Go Backend Service:
+  - [x] Serve static frontend files (HTTP)
+  - [x] Implement WebSocket server
+  - [x] Implement UDP listener (telemetry input)
+  - [x] Forward UDP telemetry to WebSocket clients
+- [x] Implement Vehicle Agent Simulator:
+  - [x] Generate basic telemetry data
+  - [x] Send telemetry via UDP to Go Backend
+- [x] Implement Frontend (Vite + React):
+  - [x] Connect to Go Backend via WebSocket
+  - [x] Display real-time telemetry data (speed, steering, etc.)
+  - [x] Basic dashboard layout
 
 ### Phase 2: Core Features (TBD)
 - [ ] Control command flow (via WebSocket/UDP)
