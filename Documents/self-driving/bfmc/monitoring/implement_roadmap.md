@@ -1,43 +1,42 @@
+## III. IMPLEMENTATION ROADMAP (Simplified for High-Performance MVP)
 
-## III. IMPLEMENTATION ROADMAP
+### Phase 1: High-Performance MVP (1-2 weeks)
+- [x] Clean up existing project structure (removed NATS, TimescaleDB, Redis, etc.)
+- [x] Re-architected system for UDP/WebSocket direct communication
+- [ ] Implement Go Backend Service:
+  - [ ] Serve static frontend files (HTTP)
+  - [ ] Implement WebSocket server
+  - [ ] Implement UDP listener (telemetry input)
+  - [ ] Forward UDP telemetry to WebSocket clients
+- [ ] Implement Vehicle Agent Simulator:
+  - [ ] Generate basic telemetry data
+  - [ ] Send telemetry via UDP to Go Backend
+- [ ] Implement Frontend (Vite + React):
+  - [ ] Connect to Go Backend via WebSocket
+  - [ ] Display real-time telemetry data (speed, steering, etc.)
+  - [ ] Basic dashboard layout
 
-### Phase 1: MVP (2-3 weeks)
-- [ ] Setup infrastructure (Docker Compose, NATS, TimescaleDB, Redis)
-- [ ] Vehicle agent với basic telemetry publishing
-- [ ] Backend: Telemetry service + WebSocket server
-- [ ] Frontend: Basic dashboard với live charts
-- [ ] Basic video streaming (WebSocket + MJPEG)
-
-### Phase 2: Core Features (2-3 weeks)
-- [ ] Control command flow với safety checks
-- [ ] Planning data visualization
+### Phase 2: Core Features (TBD)
+- [ ] Control command flow (via WebSocket/UDP)
+- [ ] Basic video streaming (e.g., MJPEG over WebSocket)
 - [ ] Parameter tuning UI
-- [ ] Authentication & authorization
-- [ ] Logging & replay (basic)
+- [ ] Simple data logging for short-term replay (e.g., local file or in-memory)
 
-### Phase 3: Polish & Optimization (2 weeks)
-- [ ] Latency optimization
-- [ ] Advanced video streaming (WebRTC)
-- [ ] Alert system
-- [ ] Monitoring & observability stack
-- [ ] Load testing & performance tuning
-
-### Phase 4: Competition Ready (1 week)
-- [ ] On-premise deployment setup
-- [ ] Failover & redundancy
-- [ ] Documentation & runbooks
-- [ ] Dry run & stress testing
+### Phase 3: Further Enhancements (TBD)
+- [ ] Advanced visualization
+- [ ] Alerting and notifications
 
 ---
 
 ## IV. RISK MITIGATION
 
+(Adapted for simplified architecture)
+
 | Risk | Impact | Probability | Mitigation |
 |------|--------|-------------|------------|
-| Network instability at venue | High | Medium | - Multi-connection fallback (WiFi + 4G)<br>- Local buffering<br>- Graceful degradation |
-| High latency breaking control | High | Medium | - Aggressive timeout<br>- Local autonomy mode<br>- Emergency stop always available |
-| Video stream bandwidth saturation | Medium | High | - Adaptive bitrate<br>- Priority QoS for control<br>- Disable video nếu cần |
-| Database overload | Medium | Low | - Connection pooling<br>- Rate limiting writes<br>- Aggregation before storage |
-| Service crashes | High | Low | - Health checks<br>- Auto-restart<br>- Circuit breaker pattern |
+| UDP Packet Loss | Medium | Low | - Acknowledge acceptable for real-time monitoring<br>- Frontend can display "last known good" data<br>- Implement simple retransmission for critical commands if needed in future phases |
+| Single Point of Failure (Go Backend) | High | Low | - Auto-restart mechanisms for Go service<br>- Detailed logging for quick diagnostics |
+| Performance bottlenecks (Go/Frontend) | Low | Low | - Profile Go backend and frontend code<br>- Optimize data serialization/deserialization |
+| Environment setup issues | High | Medium | - Focus on minimal external dependencies<br>- Provide clear, concise run instructions |
 
 ---
