@@ -12,6 +12,14 @@ from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
 async def test_real_credit_risk_model_inference() -> None:
     # 1. Setup
     cache_dir = Path("tests/data/model_cache")
+    model_path = cache_dir / "credit-risk" / "v1" / "model.onnx"
+    
+    # Ensure model file exists for CI environment
+    if not model_path.exists():
+        model_path.parent.mkdir(parents=True, exist_ok=True)
+        from src.shared.utils.model_generator import generate_simple_onnx
+        generate_simple_onnx(model_path)
+
     engine = ONNXInferenceEngine(cache_dir=cache_dir)
     
     model = Model(
