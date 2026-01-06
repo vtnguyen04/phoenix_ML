@@ -83,6 +83,15 @@ chmod +x demo.sh
 ./demo.sh
 ```
 
+## Documentation
+
+Hệ thống được tài liệu hóa chi tiết cho các cấp độ khác nhau:
+*   **[System Design](docs/architecture/system-design.md)**: Chi tiết luồng dữ liệu và thiết kế các lớp.
+*   **Architecture Decision Records (ADRs)**:
+    *   [ADR 001: DDD Architecture](docs/adr/001-use-ddd-architecture.md)
+    *   [ADR 002: ONNX Runtime](docs/adr/002-use-onnx-runtime.md)
+*   **API Specs**: Tự động sinh bởi FastAPI tại `/docs` khi ứng dụng khởi chạy.
+
 ## Project Structure
 
 ```text
