@@ -6,6 +6,7 @@ import pytest
 from src.domain.inference.entities.model import Model
 from src.domain.inference.value_objects.feature_vector import FeatureVector
 from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
+from src.shared.utils.model_generator import generate_simple_onnx
 
 
 @pytest.mark.asyncio
@@ -17,7 +18,6 @@ async def test_real_credit_risk_model_inference() -> None:
     # Ensure model file exists for CI environment
     if not model_path.exists():
         model_path.parent.mkdir(parents=True, exist_ok=True)
-        from src.shared.utils.model_generator import generate_simple_onnx
         generate_simple_onnx(model_path)
 
     engine = ONNXInferenceEngine(cache_dir=cache_dir)
