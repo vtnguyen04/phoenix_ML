@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
+
 from src.domain.inference.entities.model import Model
-from src.domain.inference.value_objects.feature_vector import FeatureVector
 from src.domain.inference.entities.prediction import Prediction
+from src.domain.inference.value_objects.feature_vector import FeatureVector
+
 
 class InferenceEngine(ABC):
     """

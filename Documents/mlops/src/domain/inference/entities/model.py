@@ -1,6 +1,8 @@
-from datetime import datetime, timezone
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Dict, Any
+from datetime import UTC, datetime
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class Model(BaseModel):
     """
@@ -12,8 +14,8 @@ class Model(BaseModel):
     version: str
     uri: str
     framework: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     is_active: bool = True
 
     @property

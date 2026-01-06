@@ -1,9 +1,12 @@
-from fastapi import FastAPI, Depends, HTTPException
-from src.application.handlers.predict_handler import PredictHandler
+from typing import Any
+
+from fastapi import Depends, FastAPI, HTTPException
+
 from src.application.dto.prediction_request import PredictCommand
-from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
-from src.infrastructure.ml_engines.mock_engine import MockInferenceEngine
+from src.application.handlers.predict_handler import PredictHandler
 from src.domain.inference.entities.model import Model
+from src.infrastructure.ml_engines.mock_engine import MockInferenceEngine
+from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
 app = FastAPI(title="Phoenix ML Platform", version="0.1.0")
 
@@ -13,29 +16,33 @@ app = FastAPI(title="Phoenix ML Platform", version="0.1.0")
 model_repo = InMemoryModelRepository()
 inference_engine = MockInferenceEngine()
 
+
 def get_predict_handler() -> PredictHandler:
     return PredictHandler(model_repo, inference_engine)
 
+
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     # Register a default model for demo purposes
     demo_model = Model(
         id="demo-model",
         version="v1",
         uri="local://models/demo.onnx",
-        framework="onnx"
+        framework="onnx",
     )
     await model_repo.save(demo_model)
 
+
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     return {"status": "healthy", "version": "0.1.0"}
+
 
 @app.post("/predict")
 async def predict(
     command: PredictCommand,
-    handler: PredictHandler = Depends(get_predict_handler)
-):
+    handler: PredictHandler = Depends(get_predict_handler),  # noqa: B008
+) -> dict[str, Any]:
     try:
         prediction = await handler.execute(command)
         return {
@@ -43,13 +50,15 @@ async def predict(
             "version": prediction.model_version,
             "result": prediction.result,
             "confidence": prediction.confidence.value,
-            "latency_ms": round(prediction.latency_ms, 2)
+            "latency_ms": round(prediction.latency_ms, 2),
         }
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}") from e
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

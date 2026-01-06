@@ -1,18 +1,21 @@
 import time
+
 import numpy as np
-from src.domain.inference.services.inference_engine import InferenceEngine
+
 from src.domain.inference.entities.model import Model
-from src.domain.inference.value_objects.feature_vector import FeatureVector
 from src.domain.inference.entities.prediction import Prediction
+from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
+from src.domain.inference.value_objects.feature_vector import FeatureVector
+
 
 class MockInferenceEngine(InferenceEngine):
     """
     A mock implementation of InferenceEngine for testing and local development.
     """
     
-    def __init__(self):
-        self.loaded_models = {}
+    def __init__(self) -> None:
+        self.loaded_models: dict[str, Model] = {}
 
     async def load(self, model: Model) -> None:
         # Simulate loading latency

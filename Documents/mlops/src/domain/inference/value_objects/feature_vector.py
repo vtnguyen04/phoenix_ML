@@ -1,15 +1,24 @@
-from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Any
+
 import numpy as np
-from typing import Any, List
+from pydantic import BaseModel, ConfigDict, field_validator
+
 
 class FeatureVector(BaseModel):
     """
     Value Object representing the input feature vector for the model.
     Immutable and validated upon creation using Pydantic.
     """
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        frozen=True, 
+        arbitrary_types_allowed=True, 
+        unsafe_hash=True  # type: ignore
+    )
     
     values: np.ndarray
+
+    def __hash__(self) -> int:
+        return hash(self.values.tobytes())
 
     @field_validator("values", mode="before")
     @classmethod
@@ -28,8 +37,8 @@ class FeatureVector(BaseModel):
             
         return v
 
-    def to_list(self) -> List[float]:
-        return self.values.tolist()
+    def to_list(self) -> list[float]:
+        return list(self.values.tolist())  # Explicit cast to list
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, FeatureVector):

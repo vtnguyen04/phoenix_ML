@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+
 from src.domain.inference.entities.model import Model
+
 
 class ModelRepository(ABC):
     """
@@ -12,9 +13,9 @@ class ModelRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, model_id: str, version: str) -> Optional[Model]:
+    async def get_by_id(self, model_id: str, version: str) -> Model | None:
         pass
 
     @abstractmethod
-    async def list_active_models(self) -> List[Model]:
+    async def list_active_models(self) -> list[Model]:
         pass

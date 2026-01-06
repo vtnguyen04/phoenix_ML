@@ -1,9 +1,11 @@
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
-from pydantic import BaseModel, Field, ConfigDict
+from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
+
 
 class Prediction(BaseModel):
     """
@@ -17,7 +19,7 @@ class Prediction(BaseModel):
     result: Any
     confidence: ConfidenceScore
     latency_ms: float
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     def is_confident(self, threshold: float) -> bool:
         return self.confidence.value >= threshold

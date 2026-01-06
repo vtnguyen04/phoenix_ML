@@ -1,9 +1,11 @@
 import pytest
-from src.application.handlers.predict_handler import PredictHandler
+
 from src.application.dto.prediction_request import PredictCommand
-from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
-from src.infrastructure.ml_engines.mock_engine import MockInferenceEngine
+from src.application.handlers.predict_handler import PredictHandler
 from src.domain.inference.entities.model import Model
+from src.infrastructure.ml_engines.mock_engine import MockInferenceEngine
+from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
+
 
 @pytest.mark.asyncio
 async def test_predict_handler_success():
@@ -32,5 +34,5 @@ async def test_predict_handler_success():
     
     # Verify
     assert prediction.model_id == "sentiment-model"
-    assert prediction.result == pytest.approx(0.2) # Mean of [0.1, 0.2, 0.3]
-    assert prediction.confidence.value == 0.99
+    assert prediction.result == pytest.approx(0.2)  # noqa: PLR2004
+    assert prediction.confidence.value == 0.99  # noqa: PLR2004

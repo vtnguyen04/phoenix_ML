@@ -1,5 +1,6 @@
+
 from pydantic import BaseModel
-from typing import List, Any
+
 
 class PredictCommand(BaseModel):
     """
@@ -7,4 +8,4 @@ class PredictCommand(BaseModel):
     """
     model_id: str
     model_version: str
-    features: List[float]
+    features: list[float]

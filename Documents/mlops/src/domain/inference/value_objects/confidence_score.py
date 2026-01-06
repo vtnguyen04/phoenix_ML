@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
-from typing_extensions import Annotated
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class ConfidenceScore(BaseModel):
     """

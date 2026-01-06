@@ -1,8 +1,9 @@
-from src.domain.inference.repositories.model_repository import ModelRepository
-from src.domain.inference.services.inference_engine import InferenceEngine
 from src.application.dto.prediction_request import PredictCommand
 from src.domain.inference.entities.prediction import Prediction
+from src.domain.inference.repositories.model_repository import ModelRepository
+from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.inference.value_objects.feature_vector import FeatureVector
+
 
 class PredictHandler:
     """
@@ -26,10 +27,12 @@ class PredictHandler:
         )
         
         if not model:
-            raise ValueError(f"Model {command.model_id}:{command.model_version} not found")
+            raise ValueError(
+                f"Model {command.model_id}:{command.model_version} not found"
+            )
 
         # 2. Prepare features (Value Object validation happens here)
-        features = FeatureVector(values=command.features)
+        features = FeatureVector(values=command.features)  # type: ignore
 
         # 3. Ensure model is loaded (Implementation specific)
         await self._inference_engine.load(model)
