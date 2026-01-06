@@ -1,0 +1,107 @@
+# Phoenix ML Platform
+
+High-Throughput, Low-Latency Real-time ML Inference System built with Domain-Driven Design (DDD), SOLID principles, and Production-Grade MLOps practices.
+
+## System Architecture
+
+Phoenix Platform is designed to separate Business Logic (Domain) from Infrastructure, ensuring scalability and maintainability.
+
+```mermaid
+graph TD
+    Client[Client] -->|REST /predict| API[FastAPI Gateway]
+    
+    subgraph "Application Layer"
+        API --> Handler[PredictHandler]
+        API --> Monitor[MonitoringService]
+    end
+    
+    subgraph "Domain Layer (Pure Python)"
+        Handler -->|Entities| Model[Model Entity]
+        Monitor -->|Service| Drift[DriftCalculator]
+    end
+    
+    subgraph "Infrastructure Layer"
+        Handler -->|Fetch| FS[(Feature Store)]
+        Handler -->|Load| MR[(Model Registry)]
+        Handler -->|Run| Engine[Inference Engine]
+        Monitor -->|Read| Logs[(Prediction Logs)]
+    end
+    
+    FS -.->|Redis| Redis[(Redis)]
+    MR -.->|S3/Local| Storage[Artifact Storage]
+```
+
+## Key Features
+
+*   **Clean Architecture (DDD)**: Strict separation of concerns. `Domain` layer has ZERO dependencies on frameworks.
+*   **Real-time Feature Store**: Integrated with Redis for low-latency feature retrieval (<5ms).
+*   **Self-Healing & Monitoring**:
+    *   **Drift Detection**: Automated Kolmogorov-Smirnov (KS) tests on production data.
+    *   **Async Logging**: Non-blocking logging using background tasks.
+*   **Production Engineering**:
+    *   **Multi-stage Docker Builds**: Optimized image size (<200MB).
+    *   **Config Management**: Environment-based configuration (12-factor app).
+    *   **Strict Quality Gates**: `ruff` (linting), `mypy` (strict typing), `pytest` (90%+ coverage).
+
+## Quick Start
+
+### Prerequisites
+* Docker & Docker Compose
+* Or Python 3.11+ (with `uv` or `pip`)
+
+### Option 1: Run with Docker (Recommended)
+
+```bash
+# 1. Start the stack (API + Redis)
+docker compose up -d --build
+
+# 2. Check health
+curl http://localhost:8000/health
+```
+
+### Option 2: Run Locally
+
+```bash
+# 1. Install dependencies
+uv sync
+
+# 2. Run server (uses In-Memory Redis fallback)
+uv run python -m src.infrastructure.http.fastapi_server
+```
+
+## Demo Scenario
+
+We have included a `demo.sh` script to simulate a real-world usage scenario:
+
+1.  **Health Check**: Ensure system is up.
+2.  **Prediction**: Send a request using Feature Store (no features in payload).
+3.  **Traffic Simulation**: Send 50+ requests to generate data.
+4.  **Drift Detection**: Analyze the traffic against a reference distribution.
+
+```bash
+chmod +x demo.sh
+./demo.sh
+```
+
+## Project Structure
+
+```text
+src/
+├── domain/                  # CORE LOGIC (No ext. dependencies)
+│   ├── inference/           # Model, Prediction Entities
+│   ├── feature_store/       # FeatureStore Interface
+│   └── monitoring/          # Drift Calculation Logic
+├── application/             # ORCHESTRATION
+│   ├── handlers/            # Use Cases (Predict, Retrain)
+│   └── services/            # Monitoring Service
+├── infrastructure/          # ADAPTERS
+│   ├── http/                # FastAPI Server
+│   ├── feature_store/       # Redis Implementation
+│   └── persistence/         # In-Memory Repositories
+└── config.py                # Configuration
+```
+
+---
+
+**Author:** VÕ Thành nguyễn
+**Email:** nguyenvothanh04@gmail.com
