@@ -2,6 +2,8 @@
 
 > High-Throughput, Low-Latency Real-time ML Inference System with Autonomous Self-Healing
 
+**[🌐 View Live Documentation](https://vtnguyen04.github.io/phoenix_ML/)**
+
 Phoenix ML is an enterprise-grade machine learning inference platform designed for high-availability, scalability, and deep observability. It implements Domain-Driven Design (DDD) to isolate complex ML orchestration from infrastructure concerns, ensuring a robust and maintainable system.
 
 ---
