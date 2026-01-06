@@ -1,7 +1,7 @@
 site_name: Phoenix ML Platform
 site_description: High-Throughput Real-time ML Inference System
-site_author: VÕ Thành nguyễn
-repo_url: https://github.com/username/phoenix-ml-platform
+site_author: Võ Thành Nguyễn
+repo_url: https://github.com/vtnguyen04/phoenix_ML
 edit_uri: edit/main/docs/
 
 theme:
@@ -15,18 +15,15 @@ theme:
     - search.suggest
     - search.highlight
   palette:
-    # Palette toggle for light mode
     - scheme: default
-      primary: indigo
-      accent: deep purple
+      primary: orange
+      accent: blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-
-    # Palette toggle for dark mode
     - scheme: slate
-      primary: indigo
-      accent: deep purple
+      primary: orange
+      accent: blue
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -53,7 +50,13 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Architecture:
-    - Overview: architecture/system-design.md
+    - Core Design: architecture/system-design.md
+    - Frontend Design: frontend/architecture.md
+  - API Reference: api/reference.md
   - Decisions (ADR):
     - 001 - DDD Architecture: adr/001-use-ddd-architecture.md
     - 002 - ONNX Runtime: adr/002-use-onnx-runtime.md
+    - 003 - Kafka Streaming: adr/003-use-kafka-for-event-streaming.md
+    - 004 - Observability Stack: adr/004-observability-with-prometheus-grafana.md
+  - Deployment:
+    - Docker Stack: deployment/docker-stack.md
