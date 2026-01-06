@@ -18,3 +18,16 @@ class ModelORM(Base):
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default={})
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class PredictionLogORM(Base):
+    __tablename__ = "prediction_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    model_id: Mapped[str] = mapped_column(String, nullable=False)
+    model_version: Mapped[str] = mapped_column(String, nullable=False)
+    features: Mapped[list[float]] = mapped_column(JSON, nullable=False)
+    result: Mapped[int] = mapped_column(JSON, nullable=False)
+    confidence: Mapped[float] = mapped_column(JSON, nullable=False)
+    latency_ms: Mapped[float] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

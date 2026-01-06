@@ -1,7 +1,9 @@
 import asyncio
 import shutil
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,11 +28,15 @@ from src.infrastructure.feature_store.in_memory_feature_store import (
     InMemoryFeatureStore,
 )
 from src.infrastructure.feature_store.redis_feature_store import RedisFeatureStore
+from src.infrastructure.messaging.kafka_producer import KafkaProducer
 from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
 from src.infrastructure.monitoring.in_memory_log_repo import (
     InMemoryPredictionLogRepository,
 )
 from src.infrastructure.persistence.database import Base, engine, get_db
+from src.infrastructure.persistence.postgres_log_repo import (
+    PostgresPredictionLogRepository,
+)
 from src.infrastructure.persistence.postgres_model_registry import PostgresModelRegistry
 
 settings = get_settings()
@@ -38,9 +44,12 @@ settings = get_settings()
 # --- Global Components ---
 artifact_storage = LocalArtifactStorage(base_dir=Path("/tmp/phoenix/remote_storage"))
 inference_engine = ONNXInferenceEngine(cache_dir=Path("/tmp/phoenix/model_cache"))
-log_repo = InMemoryPredictionLogRepository()
+kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
 drift_calculator = DriftCalculator()
-monitoring_service = MonitoringService(log_repo, drift_calculator)
+
+# log_repo will be initialized per-request for DB session or globally for Memory
+global_log_repo: Any = InMemoryPredictionLogRepository() 
+monitoring_service = MonitoringService(global_log_repo, drift_calculator)
 
 # Conditional Feature Store Initialization
 feature_store: FeatureStore
@@ -142,11 +151,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         break  # Only need one session
 
     # 3. Start Background Monitoring
+    await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
     yield
     
     # Cleanup
+    await kafka_producer.stop()
     monitor_task.cancel()
     await engine.dispose()
 
@@ -167,10 +178,26 @@ async def get_predict_handler(
 
 
 async def log_prediction_background(
-    command: PredictCommand, prediction: Prediction
+    command: PredictCommand, prediction: Prediction, db: AsyncSession
 ) -> None:
-    """Background task to log prediction without blocking response"""
-    await log_repo.log(command, prediction)
+    """
+    Background task to log prediction to DB and Kafka.
+    """
+    # 1. Persistent Storage (Postgres)
+    repo = PostgresPredictionLogRepository(db)
+    await repo.log(command, prediction)
+    
+    # 2. Real-time Streaming (Kafka)
+    event = {
+        "event_id": str(uuid.uuid4()),
+        "model_id": prediction.model_id,
+        "version": prediction.model_version,
+        "features": command.features,
+        "result": prediction.result,
+        "confidence": prediction.confidence.value,
+        "timestamp": datetime.now(UTC).isoformat()
+    }
+    await kafka_producer.publish("inference-events", event)
 
 
 @app.get("/health")
@@ -183,12 +210,13 @@ async def predict(
     command: PredictCommand,
     background_tasks: BackgroundTasks,
     handler: PredictHandler = Depends(get_predict_handler),  # noqa: B008
+    db: AsyncSession = Depends(get_db), # noqa: B008
 ) -> dict[str, Any]:
     try:
         prediction = await handler.execute(command)
 
-        # Async Logging
-        background_tasks.add_task(log_prediction_background, command, prediction)
+        # Async Logging (DB + Kafka)
+        background_tasks.add_task(log_prediction_background, command, prediction, db)
 
         return {
             "model_id": prediction.model_id,

@@ -1,16 +1,18 @@
-import pytest
 from unittest.mock import AsyncMock, Mock
 
-from src.application.handlers.predict_handler import PredictHandler
+import pytest
+
 from src.application.commands.predict_command import PredictCommand
-from src.domain.inference.entities.model import Model
-from src.domain.inference.services.routing_strategy import RoutingStrategy
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.services.inference_engine import InferenceEngine
+from src.application.handlers.predict_handler import PredictHandler
 from src.domain.feature_store.repositories.feature_store import FeatureStore
-from src.domain.model_registry.repositories.artifact_storage import ArtifactStorage
+from src.domain.inference.entities.model import Model
+from src.domain.inference.entities.prediction import Prediction
 from src.domain.inference.repositories.model_repository import ModelRepository
+from src.domain.inference.services.inference_engine import InferenceEngine
+from src.domain.inference.services.routing_strategy import RoutingStrategy
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
+from src.domain.model_registry.repositories.artifact_storage import ArtifactStorage
+
 
 @pytest.fixture
 def mock_components():
@@ -38,7 +40,11 @@ async def test_predict_handler_routing_logic(mock_components) -> None:
     
     # Mock Engine Prediction
     engine.predict.return_value = Prediction(
-        model_id="m1", model_version="v2", result=1, confidence=ConfidenceScore(value=0.9), latency_ms=1.0
+        model_id="m1", 
+        model_version="v2", 
+        result=1, 
+        confidence=ConfidenceScore(value=0.9), 
+        latency_ms=1.0
     )
 
     # Command WITHOUT version

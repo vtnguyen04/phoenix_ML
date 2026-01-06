@@ -6,18 +6,44 @@ services:
       - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379
+      - KAFKA_URL=kafka:9092
+      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/phoenix
       - USE_REDIS=true
     depends_on:
       - redis
+      - db
+      - kafka
     volumes:
-      - ./models:/models  # Mount models for loading
-      - ./src:/app/src # Hot reload for dev
+      - ./models:/models
+      - ./src:/app/src
 
-  # Feature Store
+  # Databases
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=phoenix
+    ports:
+      - "5432:5432"
+
+  # Real-time Messaging
+  kafka:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    ports:
+      - "9092:9092"
 
   # Monitoring
   prometheus:
@@ -26,11 +52,11 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   grafana:
     image: grafana/grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
     depends_on:

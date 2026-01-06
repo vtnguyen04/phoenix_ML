@@ -1,12 +1,16 @@
-import pytest
 from unittest.mock import AsyncMock, Mock
 
-from src.application.services.monitoring_service import MonitoringService
+import pytest
+
 from src.application.commands.predict_command import PredictCommand
+from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.monitoring.entities.drift_report import DriftReport
-from src.domain.monitoring.repositories.prediction_log_repository import PredictionLogRepository
+from src.domain.monitoring.repositories.prediction_log_repository import (
+    PredictionLogRepository,
+)
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
+
 
 @pytest.fixture
 def mock_log_repo() -> PredictionLogRepository:
@@ -31,11 +35,26 @@ async def test_check_drift_success(
 ) -> None:
     # Setup Mock Data
     logs = [
-        (PredictCommand(model_id="m1", model_version="v1", features=[1.0]), Mock(spec=Prediction)),
-        (PredictCommand(model_id="m1", model_version="v1", features=[2.0]), Mock(spec=Prediction)),
-        (PredictCommand(model_id="m1", model_version="v1", features=[3.0]), Mock(spec=Prediction)),
-        (PredictCommand(model_id="m1", model_version="v1", features=[4.0]), Mock(spec=Prediction)),
-        (PredictCommand(model_id="m1", model_version="v1", features=[5.0]), Mock(spec=Prediction)),
+        (
+            PredictCommand(model_id="m1", model_version="v1", features=[1.0]), 
+            Mock(spec=Prediction)
+        ),
+        (
+            PredictCommand(model_id="m1", model_version="v1", features=[2.0]), 
+            Mock(spec=Prediction)
+        ),
+        (
+            PredictCommand(model_id="m1", model_version="v1", features=[3.0]), 
+            Mock(spec=Prediction)
+        ),
+        (
+            PredictCommand(model_id="m1", model_version="v1", features=[4.0]), 
+            Mock(spec=Prediction)
+        ),
+        (
+            PredictCommand(model_id="m1", model_version="v1", features=[5.0]), 
+            Mock(spec=Prediction)
+        ),
     ]
     mock_log_repo.get_recent_logs.return_value = logs
     
@@ -49,7 +68,11 @@ async def test_check_drift_success(
     )
 
     # Execute
-    report = await monitoring_service.check_drift("m1", reference_data=[0.0]*5, feature_index=0)
+    report = await monitoring_service.check_drift(
+        "m1", 
+        reference_data=[0.0]*5, 
+        feature_index=0
+    )
 
     # Verify
     assert report.drift_detected is True
@@ -63,8 +86,14 @@ async def test_check_drift_not_enough_data(
 ) -> None:
     # Only 2 logs
     logs = [
-        (PredictCommand(model_id="m1", model_version="v1", features=[1.0]), Mock(spec=Prediction)),
-        (PredictCommand(model_id="m1", model_version="v1", features=[2.0]), Mock(spec=Prediction)),
+        (
+            PredictCommand(model_id="m1", model_version="v1", features=[1.0]), 
+            Mock(spec=Prediction)
+        ),
+        (
+            PredictCommand(model_id="m1", model_version="v1", features=[2.0]), 
+            Mock(spec=Prediction)
+        ),
     ]
     mock_log_repo.get_recent_logs.return_value = logs
 
