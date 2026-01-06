@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Model, PredictionResult, DriftReport } from '../types';
+import { PredictionResult, DriftReport } from '../types';
 
 const API_BASE_URL = 'http://localhost:8000';
 

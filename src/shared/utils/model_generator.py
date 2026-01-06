@@ -19,13 +19,14 @@ def generate_simple_onnx(output_path: Path) -> None:
     B = helper.make_tensor('B', TensorProto.FLOAT, [2], [0.1, 0.2])
 
     # Create nodes
-    # Y = X * W + B
+    # Y = Sigmoid(X * W + B)
     matmul_node = helper.make_node('MatMul', ['input', 'W'], ['matmul_out'])
-    add_node = helper.make_node('Add', ['matmul_out', 'B'], ['output'])
+    add_node = helper.make_node('Add', ['matmul_out', 'B'], ['add_out'])
+    sigmoid_node = helper.make_node('Sigmoid', ['add_out'], ['output'])
 
     # Create graph
     graph = helper.make_graph(
-        [matmul_node, add_node],
+        [matmul_node, add_node, sigmoid_node],
         'simple-model',
         [X],
         [Y],

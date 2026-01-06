@@ -59,4 +59,5 @@ cover/
 data/
 models/
 logs/
+site/
 .DS_Store

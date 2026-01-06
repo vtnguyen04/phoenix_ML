@@ -1,18 +1,20 @@
-# ADR 002: Sử dụng ONNX Runtime làm Inference Engine
+# ADR 002: Standardization on ONNX Runtime
 
-## Trạng thái
-Đã chấp thuận (Accepted)
+## Status
+Accepted
 
-## Bối cảnh
-Việc sử dụng trực tiếp các framework như PyTorch hay TensorFlow trong production gây ra image size cực lớn (>2GB) và hiệu năng inference không được tối ưu cho CPU/GPU.
+## Context
+Deploying ML models directly via heavy training frameworks (PyTorch, TensorFlow) leads to bloated Docker images (>3GB), slow startup times, and suboptimal inference latency. We need a unified runtime that is lightweight, fast, and framework-agnostic.
 
-## Quyết định
-Sử dụng định dạng **ONNX (Open Neural Network Exchange)** và thư viện **ONNX Runtime** để thực thi model.
+## Decision
+We chose **ONNX (Open Neural Network Exchange)** as the standard model format and **ONNX Runtime** as the execution engine.
 
-## Hệ quả
-- **Ưu điểm**:
-    - Hiệu năng inference cao hơn 2-5 lần so với PyTorch thô.
-    - Giảm thiểu image size Docker (loại bỏ dependencies nặng của torch).
-    - Hỗ trợ tốt cho cả CPU và GPU mà không cần thay đổi code ứng dụng.
-- **Nhược điểm**:
-    - Yêu cầu thêm một bước export model từ training pipeline sang định dạng `.onnx`.
+## Consequences
+### Positive
+*   **Performance**: ONNX Runtime offers graph optimizations (operator fusion, constant folding) yielding 2x-10x speedups over native frameworks.
+*   **Interoperability**: Supports models trained in PyTorch, TensorFlow, Scikit-Learn, and XGBoost.
+*   **Efficiency**: Significantly reduced container size and memory footprint.
+
+### Negative
+*   **Pipeline Complexity**: Adds an extra "export/conversion" step in the MLOps pipeline.
+*   **Operator Support**: Some cutting-edge or custom layers in PyTorch might not yet be supported by the ONNX standard.
