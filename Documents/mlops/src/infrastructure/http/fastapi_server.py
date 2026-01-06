@@ -1,4 +1,5 @@
 import shutil
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -46,6 +47,33 @@ if settings.USE_REDIS:
     feature_store = RedisFeatureStore(redis_url=settings.REDIS_URL)
 else:
     feature_store = InMemoryFeatureStore()
+
+async def run_monitoring_loop() -> None:
+    """
+    Background task to check drift periodically (every 10s).
+    Simulates a continuous monitoring system.
+    """
+    print("🚀 Starting Drift Monitoring Loop...")
+    # Mock Reference Data (Standard Normal Distribution) from training
+    # Simulating Feature 0 (Income) from training set
+    import numpy as np
+    reference_data = np.random.normal(0, 1, 100).tolist()
+    
+    while True:
+        try:
+            await asyncio.sleep(5) # Check every 5 seconds for demo
+            
+            # Check drift for 'credit-risk' model, feature 0 (income)
+            await monitoring_service.check_drift(
+                model_id="credit-risk",
+                reference_data=reference_data,
+                feature_index=0
+            )
+        except ValueError:
+             # Not enough data yet, silent fail
+             pass
+        except Exception as e:
+            print(f"⚠️ Monitoring Loop Error: {e}")
 
 
 @asynccontextmanager
@@ -95,20 +123,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await model_repo.save(credit_model_v2)
 
         # --- SEED REAL FEATURE DATA ---
-        # Feature order: [Income, Debt, Age, CreditHistory]
-        # Data is scaled/normalized as per training script assumption
-        
-        # Profile 1: Good Customer (High Income, Low Debt) 
-        # -> Expect Low Risk (Class 0)
-        # Features: [2.0, -1.5, 1.0, 1.5]
         await feature_store.add_features(
             "customer-good", 
             {"f1": 2.0, "f2": -1.5, "f3": 1.0, "f4": 1.5}
         )
-
-        # Profile 2: Risky Customer (Low Income, High Debt) 
-        # -> Expect High Risk (Class 1)
-        # Features: [-1.5, 2.0, -0.5, -1.0]
         await feature_store.add_features(
             "customer-bad", 
             {"f1": -1.5, "f2": 2.0, "f3": -0.5, "f4": -1.0}
@@ -117,8 +135,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print("✅ Seeded customer data into Feature Store")
         break  # Only need one session
 
+    # 3. Start Background Monitoring
+    monitor_task = asyncio.create_task(run_monitoring_loop())
+
     yield
-    # Cleanup logic if any
+    
+    # Cleanup
+    monitor_task.cancel()
     await engine.dispose()
 
 
