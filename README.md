@@ -1,116 +1,138 @@
 # Phoenix ML Platform
 
-> High-Throughput, Low-Latency Real-time ML Inference System with Self-Healing Capabilities
+> High-Throughput, Low-Latency Real-time ML Inference System with Autonomous Self-Healing
 
-Phoenix ML is a production-grade machine learning inference platform designed for high-availability and real-time observability. It leverages Domain-Driven Design (DDD) to decouple complex business logic from infrastructure, ensuring the system is maintainable, scalable, and testable.
+Phoenix ML is an enterprise-grade machine learning inference platform designed for high-availability, scalability, and deep observability. It implements Domain-Driven Design (DDD) to isolate complex ML orchestration from infrastructure concerns, ensuring a robust and maintainable system.
 
-## Architecture Overview
+---
 
-The system follows a strict 4-layer architecture to ensure SOLID and KISS principles:
+## Architectural Philosophy
 
--   **Domain Layer**: Pure business logic, entities (Model, Prediction), and value objects. ZERO external dependencies.
--   **Application Layer**: Orchestrates use cases (Predict, Load Model, Monitor) using the Command Pattern.
--   **Infrastructure Layer**: Technology-specific implementations (FastAPI, Redis, Kafka, ONNX Runtime, PostgreSQL).
--   **Shared Kernel**: Common utilities, exceptions, and interfaces.
+The system is built upon four fundamental technical pillars:
 
-### System Design
+### 1. Domain-Driven Design (DDD)
+The codebase is strictly partitioned into four layers:
+-   **Domain Layer**: Contains pure business logic, entities (Model, Prediction), and value objects. It is framework-agnostic and maintains zero external dependencies.
+-   **Application Layer**: Orchestrates use cases (Predict, Load Model, Monitor) using the Command Pattern. This layer handles the execution flow without being concerned with data persistence or API details.
+-   **Infrastructure Layer**: Provides concrete implementations for the interfaces defined in the Domain. This includes FastAPI for the REST gateway, ONNX Runtime for model execution, and Redis for the online feature store.
+-   **Shared Kernel**: Houses common utilities, base exceptions, and shared interfaces used across all layers.
 
-The system consists of a Client communicating via REST/gRPC to a FastAPI Gateway. The gateway dispatches commands to Handlers.
-Core Inference involves a Model Router (for A/B Testing/Canary releases) that routes to specific models (Champion/Challenger).
-Real-time Monitoring is achieved by publishing events to a Kafka Event Bus, which are consumed by a Drift Detector to alert and trigger retraining.
-Redis is used as a Feature Store, and ONNX Runtime is used for execution.
+### 2. Event-Driven Observability
+Every inference request is treated as an event. These events are published asynchronously to **Apache Kafka**, decoupling the critical inference path from auxiliary tasks like auditing and drift analysis. This ensures that logging and monitoring overhead never impacts client-facing latency.
 
-## Key Features
+### 3. Autonomous Self-Healing
+The platform features an integrated background monitoring service. It performs real-time statistical analysis (Kolmogorov-Smirnov Test) on production data streams to detect Data Drift. Upon detection of significant distribution shifts, the system automatically updates Prometheus metrics and triggers simulated retraining workflows.
 
-### 1. High-Performance Inference
--   **ONNX Runtime Integration**: Support for high-performance cross-framework model execution.
--   **A/B Testing & Canary**: Flexible RoutingStrategy for seamless model rollouts.
--   **Dynamic Feature Enrichment**: Real-time feature retrieval from Redis Online Store with <5ms latency.
+### 4. High-Performance Execution
+Standardized on **ONNX Runtime**, the platform provides unified high-performance execution for models trained in any framework (PyTorch, Scikit-Learn, etc.). Combined with a dynamic model routing engine, it supports seamless A/B testing and Canary deployments.
 
-### 2. Self-Healing & Observability
--   **Real-time Drift Detection**: Automated statistical monitoring (KS Test) to detect distribution shifts in production data.
--   **Event-Driven Logging**: All inference events are streamed via Kafka to PostgreSQL for persistence.
--   **Dashboard-as-Code**: Pre-configured Prometheus & Grafana dashboards for real-time RPS, Latency, and Drift visualization.
+---
 
-### 3. Professional Frontend
--   **React + TypeScript + Tailwind CSS**: A modern, reactive dashboard for model management and health monitoring.
--   **Real-time Interaction**: Simulate customer profiles and visualize model responses instantly.
+## Project Structure
+
+The project follows a modular structure reflecting the Inversion of Control principle:
+
+```text
+.
+├── src/
+│   ├── domain/              # Pure Logic Layer (Zero dependencies)
+│   │   ├── inference/       # Core ML logic (Entities, Value Objects, Routing)
+│   │   ├── feature_store/   # Feature retrieval interfaces
+│   │   ├── model_registry/  # Artifact storage interfaces
+│   │   └── monitoring/      # Statistical drift algorithms
+│   ├── application/         # Orchestration Layer (Commands & Handlers)
+│   │   ├── commands/        # Command objects (Predict, LoadModel)
+│   │   ├── handlers/        # Logic orchestrators
+│   │   └── services/        # Cross-context application services
+│   ├── infrastructure/      # Implementation Layer (Adapters)
+│   │   ├── http/            # FastAPI configuration and routes
+│   │   ├── ml_engines/      # ONNX and TensorRT implementations
+│   │   ├── messaging/       # Kafka producers and consumers
+│   │   ├── persistence/     # PostgreSQL and Redis repositories
+│   │   └── artifact_storage/# Local and S3 model loading
+│   └── shared/              # Utilities and Base interfaces
+├── frontend/                # React + TypeScript Control Plane
+│   ├── src/api/             # Standardized API client
+│   ├── src/components/      # Reusable UI components
+│   └── src/types/           # Shared TypeScript interfaces
+├── tests/                   # Comprehensive Test Suite
+│   ├── unit/                # Per-layer isolation tests
+│   └── integration/         # End-to-end flow verification
+├── scripts/                 # MLOps Pipelines (Training, Simulation)
+├── grafana/                 # Monitoring Dashboards (Provisioning)
+├── .github/workflows/       # Full-stack CI/CD (Ruff, Mypy, Vitest, Docker)
+├── Dockerfile               # Backend production build
+├── Dockerfile.frontend      # Frontend production build
+└── compose.yaml             # Multi-container stack orchestration
+```
+
+---
 
 ## Technology Stack
 
-*   **Backend**: FastAPI, Pydantic v2, SQLAlchemy, Asyncio
-*   **ML Engine**: ONNX Runtime, Scikit-learn (for demo models)
-*   **Streaming**: Apache Kafka (aiokafka)
-*   **Data**: PostgreSQL, Redis Cluster
-*   **Observability**: Prometheus, Grafana
-*   **Frontend**: React, TypeScript, Tailwind CSS, TanStack Query
-*   **DevOps**: Docker, Docker Compose, GitHub Actions, Ruff, Mypy
+| Category | Component |
+| :--- | :--- |
+| **Backend Framework** | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy (Async) |
+| **ML Runtime** | ONNX Runtime, Scikit-Learn |
+| **Infrastructure** | Apache Kafka (aiokafka), Redis 7, PostgreSQL 15 |
+| **Observability** | Prometheus, Grafana |
+| **Frontend** | React 18, TypeScript, Tailwind CSS, TanStack Query |
+| **Tooling** | Ruff (Linting), Mypy (Type Checking), Pytest (Testing), Docker |
 
-## Getting Started
+---
 
-### Prerequisites
--   Docker & Docker Compose
--   Python 3.11+ (recommended)
--   Node.js 20+
+## Deployment and Getting Started
 
-### One-Command Deployment (Production Stack)
+### Production-ready Deployment (Docker)
+Deploy the entire stack—including the API, Dashboard, Kafka, and Monitoring—with a single command:
 
 ```bash
 docker compose up -d --build
 ```
 
-This command starts:
--   **ML API**: http://localhost:8000
--   **Frontend Dashboard**: http://localhost:5173
--   **Grafana**: http://localhost:3000 (Admin/admin)
--   **Prometheus**: http://localhost:9090
+-   **API Gateway**: http://localhost:8000
+-   **Control Plane Dashboard**: http://localhost:5173
+-   **Grafana (Observability)**: http://localhost:3000 (Credentials: Admin/admin)
+-   **Prometheus (Metrics)**: http://localhost:9090
 
-### Local Development (Backend)
+### Local Development Environment
 
-1.  Install dependencies:
+1.  **Environment Setup**:
     ```bash
     uv sync
     ```
 
-2.  Train demo models:
+2.  **Generate Model Artifacts**:
     ```bash
     uv run scripts/train_model.py
     uv run scripts/train_challenger.py
     ```
 
-3.  Start API:
+3.  **Start Inference Service**:
     ```bash
     uv run python -m src.infrastructure.http.fastapi_server
     ```
 
+---
+
 ## Quality Assurance
 
-We enforce a 100% pass rate for all quality gates:
+We maintain 100% compliance with strict quality gates enforced via CI/CD:
 
 ```bash
-# Linting & Formatting
+# Python Quality Gate
 uv run ruff check .
-
-# Static Type Checking
 uv run mypy . --explicit-package-bases
-
-# Unit & Integration Tests
 uv run pytest
+
+# Frontend Quality Gate
+cd frontend
+npm ci
+npx tsc --noEmit
+npx eslint . --ext ts,tsx
 ```
 
-## Repository Structure
-
-*   `src/`: Python Source Code
-    *   `domain/`: Core Logic (Entities, Value Objects)
-    *   `application/`: Orchestration (Handlers, Commands)
-    *   `infrastructure/`: Adapters (API, Persistence, Kafka)
-    *   `shared/`: Utilities
-*   `frontend/`: React Dashboard
-*   `tests/`: Unit & Integration Test Suite
-*   `scripts/`: Simulation & Training Scripts
-*   `grafana/`: Monitoring Dashboards & Provisioning
-*   `Dockerfile`: Backend Docker configuration
-*   `compose.yaml`: Full-stack Orchestration
+---
 
 ## Author
 **Võ Thành Nguyễn**

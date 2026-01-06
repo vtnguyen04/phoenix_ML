@@ -63,4 +63,4 @@ jobs:
       run: npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
 
     - name: Verify Frontend Docker Build
-      run: docker build -f ../Dockerfile.frontend ./frontend -t phoenix-dashboard:test
+      run: docker build -f ../Dockerfile.frontend . -t phoenix-dashboard:test
