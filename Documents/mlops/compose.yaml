@@ -6,8 +6,10 @@ services:
     environment:
       - USE_REDIS=true
       - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://phoenix:phoenix_pass@postgres:5432/phoenix_db
     depends_on:
       - redis
+      - postgres
     networks:
       - phoenix-net
     healthcheck:
@@ -30,9 +32,28 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=phoenix
+      - POSTGRES_PASSWORD=phoenix_pass
+      - POSTGRES_DB=phoenix_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - phoenix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phoenix -d phoenix_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   phoenix-net:
     driver: bridge
 
 volumes:
   redis_data:
+  postgres_data:

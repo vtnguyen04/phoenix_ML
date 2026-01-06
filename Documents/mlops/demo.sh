@@ -32,7 +32,7 @@ echo -e "\n${GREEN}[3/4] Simulating Traffic (50 requests) to generate logs...${N
 for i in {1..50}; do
     # Generate random feature values using python inline
     F1=$(python3 -c "import random; print(random.gauss(0, 1))") # Normal distribution
-    PAYLOAD_TRAFFIC="{\"model_id\": \"demo-model\", \"model_version\": \"v1\", \"features\": [$F1, 0.5, 0.5]}"
+    PAYLOAD_TRAFFIC="{\"model_id\": \"demo-model\", \"model_version\": \"v1\", \"features\": [$F1, 0.5, 0.5, 0.5]}"
     
     curl -s -X POST "$BASE_URL/predict" \
          -H "Content-Type: application/json" \

@@ -1,7 +1,7 @@
 from typing import Any
 
 import numpy as np
-from scipy import stats  # type: ignore
+from scipy import stats
 
 from src.domain.monitoring.entities.drift_report import DriftReport
 

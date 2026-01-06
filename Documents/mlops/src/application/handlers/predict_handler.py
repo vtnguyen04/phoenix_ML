@@ -52,7 +52,7 @@ class PredictHandler:
             if command.entity_id:
                 # TODO: In real app, feature names should come from Model Metadata 
                 # or Configuration specific to the model version.
-                required_features = ["f1", "f2", "f3"] 
+                required_features = ["f1", "f2", "f3", "f4"] 
                 feature_values = await self._feature_store.get_online_features(
                     command.entity_id, required_features
                 )

@@ -29,6 +29,6 @@ class InMemoryFeatureStore(FeatureStore):
             
         return features
 
-    def add_features(self, entity_id: str, data: dict[str, float]) -> None:
+    async def add_features(self, entity_id: str, data: dict[str, float]) -> None:
         """Helper method to seed data for testing"""
         self._store[entity_id] = data

@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # Feature Store Config
     USE_REDIS: bool = False
     REDIS_URL: str = "redis://localhost:6379/0"
+    
+    # Database Config
+    # Default to sqlite for local dev without docker
+    DATABASE_URL: str = "sqlite+aiosqlite:///./phoenix.db"
 
     # Model Config
     DEFAULT_MODEL_PATH: str = "local://models/demo.onnx"

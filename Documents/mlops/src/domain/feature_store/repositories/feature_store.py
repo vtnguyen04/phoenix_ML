@@ -18,3 +18,11 @@ class FeatureStore(ABC):
         Returns None if entity not found.
         """
         pass
+
+    @abstractmethod
+    async def add_features(self, entity_id: str, data: dict[str, float]) -> None:
+        """
+        Add or update features for an entity.
+        Useful for seeding data or real-time ingestion.
+        """
+        pass

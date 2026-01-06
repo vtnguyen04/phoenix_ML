@@ -46,3 +46,8 @@ class RedisFeatureStore(FeatureStore):
             # Fallback or log error
             # In production, you might want to return None or raise specific DomainError
             return None
+
+    async def add_features(self, entity_id: str, data: dict[str, float]) -> None:
+        key = f"features:{entity_id}"
+        # Convert all values to string/float as needed by Redis mapping
+        await self.redis.hset(key, mapping=data)
