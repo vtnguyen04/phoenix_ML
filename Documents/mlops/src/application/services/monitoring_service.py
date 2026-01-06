@@ -1,12 +1,13 @@
 import logging
+
 from src.domain.monitoring.entities.drift_report import DriftReport
 from src.domain.monitoring.repositories.prediction_log_repository import (
     PredictionLogRepository,
 )
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
 from src.infrastructure.monitoring.prometheus_metrics import (
+    DRIFT_DETECTED_COUNT,
     DRIFT_SCORE,
-    DRIFT_DETECTED_COUNT
 )
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,9 @@ class MonitoringService:
                     continue
         
         if len(current_data) < self.MIN_DATA_POINTS:
-             raise ValueError(f"Not enough data points ({len(current_data)}) to calculate drift")
+             raise ValueError(
+                 f"Not enough data points ({len(current_data)}) to calculate drift"
+             )
 
         # 3. Calculate Drift
         feature_name = f"feature_{feature_index}"

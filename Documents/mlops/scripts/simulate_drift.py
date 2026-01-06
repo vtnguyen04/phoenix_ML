@@ -1,7 +1,8 @@
 import time
-import requests
-import random
+
 import numpy as np
+import requests
+
 
 def send_drifted_traffic(n=50):
     url = "http://localhost:8001/predict"

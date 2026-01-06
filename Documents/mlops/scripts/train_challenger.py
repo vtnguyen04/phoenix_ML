@@ -1,12 +1,14 @@
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.datasets import make_classification
-from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType
-import onnx
 from pathlib import Path
 
-def train_challenger_model(output_path: str = "models/credit_risk/v2/model.onnx") -> None:
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+
+
+def train_challenger_model(
+    output_path: str = "models/credit_risk/v2/model.onnx"
+) -> None:
     # Challenger Model: Train trên dữ liệu hơi khác một chút (giả lập data mới)
     # Tăng độ nhiễu (n_redundant) để model hoạt động khác đi
     X, y = make_classification(

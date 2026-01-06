@@ -1,6 +1,5 @@
 import time
 from pathlib import Path
-from typing import Any
 
 from src.application.commands.predict_command import PredictCommand
 from src.domain.feature_store.repositories.feature_store import FeatureStore
@@ -58,9 +57,13 @@ class PredictHandler:
                 )
             else:
                 # Dynamic Routing
-                candidates = await self._model_repo.get_active_versions(command.model_id)
+                candidates = await self._model_repo.get_active_versions(
+                    command.model_id
+                )
                 if not candidates:
-                     raise ValueError(f"No active versions found for model {command.model_id}")
+                     raise ValueError(
+                         f"No active versions found for model {command.model_id}"
+                     )
                 
                 context = {"user_id": command.entity_id} if command.entity_id else {}
                 model = self._routing_strategy.select_model(candidates, context)
@@ -87,7 +90,9 @@ class PredictHandler:
                     )
                     
                 if feature_values is None:
-                    raise ValueError("No features provided and could not fetch from store")
+                    raise ValueError(
+                        "No features provided and could not fetch from store"
+                    )
 
             # 4. Prepare features
             # TODO: Fix type hint for numpy array conversion if needed

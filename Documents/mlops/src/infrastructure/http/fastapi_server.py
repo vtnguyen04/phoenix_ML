@@ -1,10 +1,11 @@
-import shutil
 import asyncio
+import shutil
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from prometheus_client import make_asgi_app
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,7 +57,6 @@ async def run_monitoring_loop() -> None:
     print("🚀 Starting Drift Monitoring Loop...")
     # Mock Reference Data (Standard Normal Distribution) from training
     # Simulating Feature 0 (Income) from training set
-    import numpy as np
     reference_data = np.random.normal(0, 1, 100).tolist()
     
     while True:
@@ -100,7 +100,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             version="v1",
             uri=f"local://{storage_path_v1}",
             framework="onnx",
-            metadata={"features": ["income", "debt", "age", "credit_history"], "role": "champion"}
+            metadata={
+                "features": ["income", "debt", "age", "credit_history"], 
+                "role": "champion"
+            }
         )
         await model_repo.save(credit_model_v1)
 
@@ -118,7 +121,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             version="v2",
             uri=f"local://{storage_path_v2}",
             framework="onnx",
-            metadata={"features": ["income", "debt", "age", "credit_history"], "role": "challenger"}
+            metadata={
+                "features": ["income", "debt", "age", "credit_history"], 
+                "role": "challenger"
+            }
         )
         await model_repo.save(credit_model_v2)
 

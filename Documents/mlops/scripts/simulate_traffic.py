@@ -1,7 +1,8 @@
-import time
-import requests
 import random
-import threading
+import time
+
+import requests
+
 
 def send_requests(n=50):
     url = "http://localhost:8001/predict"
@@ -23,7 +24,11 @@ def send_requests(n=50):
             resp = requests.post(url, json=payload, timeout=1)
             if resp.status_code == 200:
                 data = resp.json()
-                print(f"[{i+1}/{n}] Ver: {data['version']} | Result: {data['result']} | Conf: {data['confidence']:.2f}")
+                print(
+                    f"[{i+1}/{n}] Ver: {data['version']} | "
+                    f"Result: {data['result']} | "
+                    f"Conf: {data['confidence']:.2f}"
+                )
             else:
                 print(f"Error: {resp.status_code} - {resp.text}")
         except Exception as e:
