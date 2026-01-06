@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+from prometheus_client import make_asgi_app
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.commands.predict_command import PredictCommand
@@ -57,27 +58,41 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
 
-        # --- SETUP REAL MODEL ---
-        # Copy the real trained model to the artifact storage location
-        real_model_path = Path("models/credit_risk/v1/model.onnx")
-        storage_path = Path("/tmp/phoenix/remote_storage/credit-risk/v1/model.onnx")
+        # --- SETUP REAL MODEL (V1 - CHAMPION) ---
+        real_model_path_v1 = Path("models/credit_risk/v1/model.onnx")
+        storage_path_v1 = Path("/tmp/phoenix/remote_storage/credit-risk/v1/model.onnx")
         
-        if real_model_path.exists():
-            storage_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(real_model_path, storage_path)
-            print(f"✅ Loaded real model from {real_model_path}")
-        else:
-            print("⚠️ Real model not found, skipping model registration")
+        if real_model_path_v1.exists():
+            storage_path_v1.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(real_model_path_v1, storage_path_v1)
+            print(f"✅ Loaded Champion model (v1) from {real_model_path_v1}")
 
-        # Register the Credit Risk Model
-        credit_model = Model(
+        credit_model_v1 = Model(
             id="credit-risk",
             version="v1",
-            uri=f"local://{storage_path}",
+            uri=f"local://{storage_path_v1}",
             framework="onnx",
-            metadata={"features": ["income", "debt", "age", "credit_history"]}
+            metadata={"features": ["income", "debt", "age", "credit_history"], "role": "champion"}
         )
-        await model_repo.save(credit_model)
+        await model_repo.save(credit_model_v1)
+
+        # --- SETUP REAL MODEL (V2 - CHALLENGER) ---
+        real_model_path_v2 = Path("models/credit_risk/v2/model.onnx")
+        storage_path_v2 = Path("/tmp/phoenix/remote_storage/credit-risk/v2/model.onnx")
+        
+        if real_model_path_v2.exists():
+            storage_path_v2.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(real_model_path_v2, storage_path_v2)
+            print(f"✅ Loaded Challenger model (v2) from {real_model_path_v2}")
+
+        credit_model_v2 = Model(
+            id="credit-risk",
+            version="v2",
+            uri=f"local://{storage_path_v2}",
+            framework="onnx",
+            metadata={"features": ["income", "debt", "age", "credit_history"], "role": "challenger"}
+        )
+        await model_repo.save(credit_model_v2)
 
         # --- SEED REAL FEATURE DATA ---
         # Feature order: [Income, Debt, Age, CreditHistory]
@@ -108,6 +123,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
+
+# Mount Prometheus Metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 
 # --- Dependencies ---

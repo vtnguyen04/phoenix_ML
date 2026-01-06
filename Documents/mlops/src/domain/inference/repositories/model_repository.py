@@ -19,3 +19,8 @@ class ModelRepository(ABC):
     @abstractmethod
     async def list_active_models(self) -> list[Model]:
         pass
+
+    @abstractmethod
+    async def get_active_versions(self, model_id: str) -> list[Model]:
+        """Get all active versions for a specific model group"""
+        pass

@@ -1,59 +1,39 @@
 services:
-  phoenix-api:
+  # ML API Service
+  api:
     build: .
     ports:
       - "8000:8000"
     environment:
+      - REDIS_URL=redis://redis:6379
       - USE_REDIS=true
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=postgresql+asyncpg://phoenix:phoenix_pass@postgres:5432/phoenix_db
     depends_on:
       - redis
-      - postgres
-    networks:
-      - phoenix-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    volumes:
+      - ./models:/models  # Mount models for loading
+      - ./src:/app/src # Hot reload for dev
 
+  # Feature Store
   redis:
-    image: redis:7.2-alpine
+    image: redis:alpine
     ports:
-      - "6380:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - phoenix-net
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "6379:6379"
 
-  postgres:
-    image: postgres:15-alpine
+  # Monitoring
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "5433:5432"
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
     environment:
-      - POSTGRES_USER=phoenix
-      - POSTGRES_PASSWORD=phoenix_pass
-      - POSTGRES_DB=phoenix_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - phoenix-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U phoenix -d phoenix_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-networks:
-  phoenix-net:
-    driver: bridge
-
-volumes:
-  redis_data:
-  postgres_data:
+      - GF_SECURITY_ADMIN_PASSWORD=admin

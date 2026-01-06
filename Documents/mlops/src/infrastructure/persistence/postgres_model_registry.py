@@ -47,6 +47,14 @@ class PostgresModelRegistry(ModelRepository):
         result = await self._session.execute(query)
         return [self._to_domain(m) for m in result.scalars().all()]
 
+    async def get_active_versions(self, model_id: str) -> list[Model]:
+        query = select(ModelORM).where(
+            ModelORM.id == model_id,
+            ModelORM.is_active == True # noqa: E712
+        )
+        result = await self._session.execute(query)
+        return [self._to_domain(m) for m in result.scalars().all()]
+
     def _to_domain(self, orm: ModelORM) -> Model:
         return Model(
             id=orm.id,
