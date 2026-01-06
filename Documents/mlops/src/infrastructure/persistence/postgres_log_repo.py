@@ -1,12 +1,12 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.commands.predict_command import PredictCommand
 from src.domain.inference.entities.prediction import Prediction
+from src.domain.inference.value_objects.confidence_score import ConfidenceScore
 from src.domain.monitoring.repositories.prediction_log_repository import (
     PredictionLogRepository,
 )
@@ -27,7 +27,7 @@ class PostgresPredictionLogRepository(PredictionLogRepository):
             model_id=prediction.model_id,
             model_version=prediction.model_version,
             features=command.features or [],
-            result=prediction.result, # type: ignore
+            result=prediction.result, 
             confidence=prediction.confidence.value,
             latency_ms=prediction.latency_ms,
             created_at=datetime.now(UTC)
@@ -60,7 +60,7 @@ class PostgresPredictionLogRepository(PredictionLogRepository):
                     model_id=row.model_id,
                     model_version=row.model_version,
                     result=row.result,
-                    confidence=Any, # Not used in drift calc
+                    confidence=ConfidenceScore(value=row.confidence), 
                     latency_ms=row.latency_ms
                 )
             )

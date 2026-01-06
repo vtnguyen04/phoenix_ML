@@ -15,7 +15,7 @@ from src.domain.model_registry.repositories.artifact_storage import ArtifactStor
 
 
 @pytest.fixture
-def mock_components():
+def mock_components() -> tuple[AsyncMock, AsyncMock, AsyncMock, AsyncMock, Mock]:
     repo = AsyncMock(spec=ModelRepository)
     engine = AsyncMock(spec=InferenceEngine)
     fs = AsyncMock(spec=FeatureStore)
@@ -24,7 +24,9 @@ def mock_components():
     return repo, engine, fs, storage, routing
 
 @pytest.mark.asyncio
-async def test_predict_handler_routing_logic(mock_components) -> None:
+async def test_predict_handler_routing_logic(
+    mock_components: tuple[AsyncMock, AsyncMock, AsyncMock, AsyncMock, Mock]
+) -> None:
     repo, engine, fs, storage, routing = mock_components
     handler = PredictHandler(repo, engine, fs, storage, routing)
 
@@ -60,7 +62,9 @@ async def test_predict_handler_routing_logic(mock_components) -> None:
     engine.load.assert_awaited_with(model_v2)
 
 @pytest.mark.asyncio
-async def test_predict_handler_routing_no_candidates(mock_components) -> None:
+async def test_predict_handler_routing_no_candidates(
+    mock_components: tuple[AsyncMock, AsyncMock, AsyncMock, AsyncMock, Mock]
+) -> None:
     repo, engine, fs, storage, routing = mock_components
     handler = PredictHandler(repo, engine, fs, storage, routing)
 

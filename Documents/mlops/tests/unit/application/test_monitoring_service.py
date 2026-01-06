@@ -59,7 +59,6 @@ async def test_check_drift_success(
     mock_log_repo.get_recent_logs.return_value = logs
     
     mock_drift_calculator.calculate_drift.return_value = DriftReport(
-        drift_type="ks",
         feature_name="feature_0",
         drift_detected=True,
         p_value=0.01,

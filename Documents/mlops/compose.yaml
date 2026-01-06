@@ -17,6 +17,16 @@ services:
       - ./models:/models
       - ./src:/app/src
 
+  # Frontend Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
   # Databases
   redis:
     image: redis:alpine

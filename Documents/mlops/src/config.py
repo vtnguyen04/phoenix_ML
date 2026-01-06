@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     USE_REDIS: bool = False
     REDIS_URL: str = "redis://localhost:6379/0"
     
+    # Messaging Config
+    KAFKA_URL: str = "localhost:9092"
+    
     # Database Config
     # Default to sqlite for local dev without docker
     DATABASE_URL: str = "sqlite+aiosqlite:///./phoenix.db"

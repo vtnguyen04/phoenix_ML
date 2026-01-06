@@ -4,7 +4,7 @@ import numpy as np
 import requests
 
 
-def send_drifted_traffic(n=50):
+def send_drifted_traffic(n: int = 50) -> None:
     url = "http://localhost:8001/predict"
     
     print(f"🌊 Sending {n} DRIFTED requests...")
@@ -33,10 +33,11 @@ def send_drifted_traffic(n=50):
             print(f"Sent {i}...")
         time.sleep(0.05)
 
-def check_drift_metrics():
+def check_drift_metrics() -> None:
+    HTTP_OK = 200
     try:
-        resp = requests.get("http://localhost:8001/metrics")
-        if resp.status_code == 200:
+        resp = requests.get("http://localhost:8001/metrics", timeout=1)
+        if resp.status_code == HTTP_OK:
             print("\n--- DRIFT METRICS STATUS ---")
             found = False
             for line in resp.text.split("\n"):

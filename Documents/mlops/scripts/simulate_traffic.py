@@ -4,15 +4,16 @@ import time
 import requests
 
 
-def send_requests(n=50):
+def send_requests(n: int = 50) -> None:
     url = "http://localhost:8001/predict"
     
     # Customer Profiles
     good_customer = "customer-good"
     bad_customer = "customer-bad"
     
+    RANDOM_THRESHOLD = 0.5
     for i in range(n):
-        entity = good_customer if random.random() > 0.5 else bad_customer
+        entity = good_customer if random.random() > RANDOM_THRESHOLD else bad_customer
         
         payload = {
             "model_id": "credit-risk",
@@ -20,9 +21,10 @@ def send_requests(n=50):
             "entity_id": entity
         }
         
+        HTTP_OK = 200
         try:
             resp = requests.post(url, json=payload, timeout=1)
-            if resp.status_code == 200:
+            if resp.status_code == HTTP_OK:
                 data = resp.json()
                 print(
                     f"[{i+1}/{n}] Ver: {data['version']} | "
@@ -36,10 +38,11 @@ def send_requests(n=50):
         
         time.sleep(0.1)
 
-def check_metrics():
+def check_metrics() -> None:
+    HTTP_OK = 200
     try:
-        resp = requests.get("http://localhost:8001/metrics")
-        if resp.status_code == 200:
+        resp = requests.get("http://localhost:8001/metrics", timeout=1)
+        if resp.status_code == HTTP_OK:
             print("\n--- METRICS PREVIEW ---")
             for line in resp.text.split("\n"):
                 if "prediction_count_total" in line and "#" not in line:
