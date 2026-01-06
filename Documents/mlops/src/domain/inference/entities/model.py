@@ -1,21 +1,33 @@
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class ModelStage(str, Enum):
+    DEVELOPMENT = "development"
+    STAGING = "staging"
+    PRODUCTION = "production"
+    ARCHIVED = "archived"
 
 
 class Model(BaseModel):
     """
     Aggregate Root representing a Machine Learning Model.
     """
+
     model_config = ConfigDict(validate_assignment=True)
 
     id: str
     version: str
     uri: str
     framework: str
+    stage: ModelStage = ModelStage.DEVELOPMENT
     metadata: dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC)
+    )
     is_active: bool = True
 
     @property

@@ -4,9 +4,6 @@ import redis.asyncio as redis
 from src.domain.feature_store.repositories.feature_store import FeatureStore
 
 
-
-
-
 class RedisFeatureStore(FeatureStore):
 
     """
