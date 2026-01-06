@@ -1,6 +1,6 @@
 from collections import deque
 
-from src.application.dto.prediction_request import PredictCommand
+from src.application.commands.predict_command import PredictCommand
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.monitoring.repositories.prediction_log_repository import (
     PredictionLogRepository,

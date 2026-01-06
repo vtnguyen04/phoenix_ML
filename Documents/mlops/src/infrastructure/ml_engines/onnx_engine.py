@@ -69,20 +69,48 @@ class ONNXInferenceEngine(InferenceEngine):
         
         latency_ms = (time.time() - start_time) * 1000
         
-        # Process output (Assuming single output for simplicity)
-        raw_result = outputs[0]
+        # Process output
+        # Sklearn-ONNX typically returns: [label_tensor, probability_map_list]
+        # Deep Learning ONNX typically returns: [probability_tensor]
         
-        # Simple processing of result (e.g., argmax for classification)
-        # In a real app, this logic would be more robust or moved to a PostProcessor
+        result_tensor = outputs[0]
         result: Any
         confidence_val: float = 1.0
-        
-        if raw_result.ndim > 1:
-            # Likely probabilities [1, C]
-            result = int(np.argmax(raw_result[0]))
-            confidence_val = float(np.max(raw_result[0]))
+
+        if len(outputs) > 1 and isinstance(outputs[1], list):
+            # Case: Sklearn ONNX (Label + Probs)
+            # outputs[1] is a list of dicts (one per sample in batch)
+            probs_map = outputs[1][0] # Batch size is 1
+            
+            # Get label
+            if isinstance(result_tensor, np.ndarray):
+                result = result_tensor[0]
+            else:
+                result = result_tensor
+
+            # Convert numpy scalar to python native type
+            if hasattr(result, "item"):
+                result = result.item()
+
+            # Get confidence
+            if isinstance(probs_map, dict):
+            # result might be numpy scalar, convert to native python type 
+            # for key lookup if needed
+            # but usually dict keys match the label type
+            # Handle numpy int64 key lookup issues
+                lookup_key = result
+                if isinstance(result, np.int64):
+                    lookup_key = int(result)
+                    
+                confidence_val = float(probs_map.get(lookup_key, 1.0))
+                
+        elif isinstance(result_tensor, np.ndarray) and result_tensor.ndim > 1:
+            # Case: Deep Learning (Logits/Probs) -> [1, C]
+            result = int(np.argmax(result_tensor[0]))
+            confidence_val = float(np.max(result_tensor[0]))
         else:
-            result = raw_result.tolist()
+            # Fallback
+            result = result_tensor.tolist()
 
         return Prediction(
             model_id=model.id,

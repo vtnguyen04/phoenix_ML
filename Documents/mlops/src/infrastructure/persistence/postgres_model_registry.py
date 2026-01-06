@@ -7,7 +7,7 @@ from src.domain.inference.repositories.model_repository import ModelRepository
 from src.infrastructure.persistence.models import ModelORM
 
 
-class PostgresModelRepository(ModelRepository):
+class PostgresModelRegistry(ModelRepository):
     """
     PostgreSQL implementation of ModelRepository using SQLAlchemy Async.
     """

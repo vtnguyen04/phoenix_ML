@@ -1,3 +1,4 @@
+import shutil
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -6,7 +7,7 @@ from typing import Any
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.application.dto.prediction_request import PredictCommand
+from src.application.commands.predict_command import PredictCommand
 from src.application.handlers.predict_handler import PredictHandler
 from src.application.services.monitoring_service import MonitoringService
 from src.config import get_settings
@@ -27,7 +28,7 @@ from src.infrastructure.monitoring.in_memory_log_repo import (
     InMemoryPredictionLogRepository,
 )
 from src.infrastructure.persistence.database import Base, engine, get_db
-from src.infrastructure.persistence.postgres_model_repo import PostgresModelRepository
+from src.infrastructure.persistence.postgres_model_registry import PostgresModelRegistry
 
 settings = get_settings()
 
@@ -54,30 +55,51 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 2. Seed Initial Data
     async for db in get_db():
-        model_repo = PostgresModelRepository(db)
+        model_repo = PostgresModelRegistry(db)
 
-        # Prepare dummy remote storage for demo
-        dummy_remote_path = Path("/tmp/phoenix/remote_storage/demo/v1/model.onnx")
-        if not dummy_remote_path.exists():
-            from src.shared.utils.model_generator import (  # noqa: PLC0415
-                generate_simple_onnx,
-            )
+        # --- SETUP REAL MODEL ---
+        # Copy the real trained model to the artifact storage location
+        real_model_path = Path("models/credit_risk/v1/model.onnx")
+        storage_path = Path("/tmp/phoenix/remote_storage/credit-risk/v1/model.onnx")
+        
+        if real_model_path.exists():
+            storage_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(real_model_path, storage_path)
+            print(f"✅ Loaded real model from {real_model_path}")
+        else:
+            print("⚠️ Real model not found, skipping model registration")
 
-            generate_simple_onnx(dummy_remote_path)
-
-        # Register a default model
-        demo_model = Model(
-            id="demo-model",
+        # Register the Credit Risk Model
+        credit_model = Model(
+            id="credit-risk",
             version="v1",
-            uri=f"local://{dummy_remote_path}",
+            uri=f"local://{storage_path}",
             framework="onnx",
+            metadata={"features": ["income", "debt", "age", "credit_history"]}
         )
-        await model_repo.save(demo_model)
+        await model_repo.save(credit_model)
 
-        # Seed data for demo purposes (Redis or InMemory)
+        # --- SEED REAL FEATURE DATA ---
+        # Feature order: [Income, Debt, Age, CreditHistory]
+        # Data is scaled/normalized as per training script assumption
+        
+        # Profile 1: Good Customer (High Income, Low Debt) 
+        # -> Expect Low Risk (Class 0)
+        # Features: [2.0, -1.5, 1.0, 1.5]
         await feature_store.add_features(
-            "user-123", {"f1": 0.5, "f2": 1.5, "f3": 2.5, "f4": 3.5}
+            "customer-good", 
+            {"f1": 2.0, "f2": -1.5, "f3": 1.0, "f4": 1.5}
         )
+
+        # Profile 2: Risky Customer (Low Income, High Debt) 
+        # -> Expect High Risk (Class 1)
+        # Features: [-1.5, 2.0, -0.5, -1.0]
+        await feature_store.add_features(
+            "customer-bad", 
+            {"f1": -1.5, "f2": 2.0, "f3": -0.5, "f4": -1.0}
+        )
+        
+        print("✅ Seeded customer data into Feature Store")
         break  # Only need one session
 
     yield
@@ -92,7 +114,7 @@ app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=li
 async def get_predict_handler(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> PredictHandler:
-    model_repo = PostgresModelRepository(db)
+    model_repo = PostgresModelRegistry(db)
     return PredictHandler(model_repo, inference_engine, feature_store, artifact_storage)
 
 

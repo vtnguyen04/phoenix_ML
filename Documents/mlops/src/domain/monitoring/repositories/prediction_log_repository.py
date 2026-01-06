@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.application.dto.prediction_request import PredictCommand
+from src.application.commands.predict_command import PredictCommand
 from src.domain.inference.entities.prediction import Prediction
 
 

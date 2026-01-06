@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.application.dto.prediction_request import PredictCommand
+from src.application.commands.predict_command import PredictCommand
 from src.application.handlers.predict_handler import PredictHandler
 from src.domain.inference.entities.model import Model
 from src.infrastructure.artifact_storage.local_artifact_storage import (
@@ -21,8 +21,14 @@ class MockArtifactStorage(LocalArtifactStorage):
         local_path.write_text("mock content")
         return local_path
 
+PredictHandlerFixture = tuple[
+    PredictHandler, 
+    InMemoryModelRepository, 
+    InMemoryFeatureStore
+]
+
 @pytest.fixture
-def predict_handler():
+def predict_handler() -> PredictHandlerFixture:
     repo = InMemoryModelRepository()
     engine = MockInferenceEngine()
     fs = InMemoryFeatureStore()
@@ -30,7 +36,9 @@ def predict_handler():
     return PredictHandler(repo, engine, fs, storage), repo, fs
 
 @pytest.mark.asyncio
-async def test_predict_handler_with_direct_features(predict_handler):
+async def test_predict_handler_with_direct_features(
+    predict_handler: PredictHandlerFixture
+) -> None:
     handler, repo, _ = predict_handler
     
     # Register model
@@ -45,13 +53,15 @@ async def test_predict_handler_with_direct_features(predict_handler):
     assert prediction.result == pytest.approx(1.5)  # noqa: PLR2004
 
 @pytest.mark.asyncio
-async def test_predict_handler_with_feature_store(predict_handler):
+async def test_predict_handler_with_feature_store(
+    predict_handler: PredictHandlerFixture
+) -> None:
     handler, repo, fs = predict_handler
     
     # Register model & Seed features
     model = Model(id="m2", version="v1", uri="local://tmp/m2", framework="onnx")
     await repo.save(model)
-    fs.add_features("user-1", {"f1": 10.0, "f2": 20.0, "f3": 30.0})
+    await fs.add_features("user-1", {"f1": 10.0, "f2": 20.0, "f3": 30.0, "f4": 40.0})
     
     # Execute with entity_id
     command = PredictCommand(
@@ -59,10 +69,12 @@ async def test_predict_handler_with_feature_store(predict_handler):
     )
     prediction = await handler.execute(command)
     
-    assert prediction.result == pytest.approx(20.0)  # noqa: PLR2004
+    assert prediction.result == pytest.approx(25.0)  # noqa: PLR2004
 
 @pytest.mark.asyncio
-async def test_predict_handler_missing_features_raises_error(predict_handler):
+async def test_predict_handler_missing_features_raises_error(
+    predict_handler: PredictHandlerFixture
+) -> None:
     handler, repo, _ = predict_handler
     
     model = Model(id="m3", version="v1", uri="local://tmp/m3", framework="onnx")
