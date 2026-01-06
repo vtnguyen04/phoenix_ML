@@ -4,7 +4,7 @@ export interface Model {
   framework: string;
   stage: string;
   is_active: boolean;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface PredictionResult {
