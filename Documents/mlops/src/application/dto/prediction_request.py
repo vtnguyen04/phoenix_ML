@@ -8,4 +8,5 @@ class PredictCommand(BaseModel):
     """
     model_id: str
     model_version: str
-    features: list[float]
+    features: list[float] | None = None
+    entity_id: str | None = None

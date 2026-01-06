@@ -5,6 +5,9 @@ from fastapi import Depends, FastAPI, HTTPException
 from src.application.dto.prediction_request import PredictCommand
 from src.application.handlers.predict_handler import PredictHandler
 from src.domain.inference.entities.model import Model
+from src.infrastructure.feature_store.in_memory_feature_store import (
+    InMemoryFeatureStore,
+)
 from src.infrastructure.ml_engines.mock_engine import MockInferenceEngine
 from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
@@ -15,10 +18,11 @@ app = FastAPI(title="Phoenix ML Platform", version="0.1.0")
 # For now, we'll use singleton instances for simplicity
 model_repo = InMemoryModelRepository()
 inference_engine = MockInferenceEngine()
+feature_store = InMemoryFeatureStore()
 
 
 def get_predict_handler() -> PredictHandler:
-    return PredictHandler(model_repo, inference_engine)
+    return PredictHandler(model_repo, inference_engine, feature_store)
 
 
 @app.on_event("startup")
@@ -31,6 +35,9 @@ async def startup_event() -> None:
         framework="onnx",
     )
     await model_repo.save(demo_model)
+    
+    # Seed feature store for demo
+    feature_store.add_features("user-123", {"f1": 0.5, "f2": 1.5, "f3": 2.5})
 
 
 @app.get("/health")
