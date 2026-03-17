@@ -31,3 +31,19 @@ class PredictionLogORM(Base):
     confidence: Mapped[float] = mapped_column(JSON, nullable=False)
     latency_ms: Mapped[float] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class DriftReportORM(Base):
+    __tablename__ = "drift_reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    model_id: Mapped[str] = mapped_column(String, nullable=False)
+    feature_name: Mapped[str] = mapped_column(String, nullable=False)
+    drift_detected: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    p_value: Mapped[float] = mapped_column(JSON, nullable=False)
+    statistic: Mapped[float] = mapped_column(JSON, nullable=False)
+    threshold: Mapped[float] = mapped_column(JSON, nullable=False)
+    method: Mapped[str] = mapped_column(String, nullable=False)
+    recommendation: Mapped[str] = mapped_column(String, nullable=False)
+    sample_size: Mapped[int] = mapped_column(JSON, nullable=False)
+    analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

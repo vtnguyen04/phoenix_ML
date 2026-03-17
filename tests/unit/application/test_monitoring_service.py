@@ -3,9 +3,13 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.application.commands.predict_command import PredictCommand
+from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.monitoring.entities.drift_report import DriftReport
+from src.domain.monitoring.repositories.drift_report_repository import (
+    DriftReportRepository,
+)
 from src.domain.monitoring.repositories.prediction_log_repository import (
     PredictionLogRepository,
 )
@@ -16,48 +20,69 @@ from src.domain.monitoring.services.drift_calculator import DriftCalculator
 def mock_log_repo() -> PredictionLogRepository:
     return AsyncMock(spec=PredictionLogRepository)
 
+
 @pytest.fixture
 def mock_drift_calculator() -> DriftCalculator:
     return Mock(spec=DriftCalculator)
 
+
+@pytest.fixture
+def mock_drift_report_repo() -> DriftReportRepository:
+    return AsyncMock(spec=DriftReportRepository)
+
+
+@pytest.fixture
+def mock_retrain_handler() -> RetrainHandler:
+    return AsyncMock(spec=RetrainHandler)
+
+
 @pytest.fixture
 def monitoring_service(
-    mock_log_repo: PredictionLogRepository, 
-    mock_drift_calculator: DriftCalculator
+    mock_log_repo: PredictionLogRepository,
+    mock_drift_calculator: DriftCalculator,
+    mock_drift_report_repo: DriftReportRepository,
+    mock_retrain_handler: RetrainHandler,
 ) -> MonitoringService:
-    return MonitoringService(mock_log_repo, mock_drift_calculator)
+    return MonitoringService(
+        mock_log_repo,
+        mock_drift_calculator,
+        mock_drift_report_repo,
+        mock_retrain_handler,
+    )
+
 
 @pytest.mark.asyncio
 async def test_check_drift_success(
     monitoring_service: MonitoringService,
     mock_log_repo: AsyncMock,
-    mock_drift_calculator: Mock
+    mock_drift_calculator: Mock,
+    mock_drift_report_repo: AsyncMock,
 ) -> None:
     # Setup Mock Data
     logs = [
         (
-            PredictCommand(model_id="m1", model_version="v1", features=[1.0]), 
-            Mock(spec=Prediction)
+            PredictCommand(model_id="m1", model_version="v1", features=[1.0]),
+            Mock(spec=Prediction),
         ),
         (
-            PredictCommand(model_id="m1", model_version="v1", features=[2.0]), 
-            Mock(spec=Prediction)
+            PredictCommand(model_id="m1", model_version="v1", features=[2.0]),
+            Mock(spec=Prediction),
         ),
         (
-            PredictCommand(model_id="m1", model_version="v1", features=[3.0]), 
-            Mock(spec=Prediction)
+            PredictCommand(model_id="m1", model_version="v1", features=[3.0]),
+            Mock(spec=Prediction),
         ),
         (
-            PredictCommand(model_id="m1", model_version="v1", features=[4.0]), 
-            Mock(spec=Prediction)
+            PredictCommand(model_id="m1", model_version="v1", features=[4.0]),
+            Mock(spec=Prediction),
         ),
         (
-            PredictCommand(model_id="m1", model_version="v1", features=[5.0]), 
-            Mock(spec=Prediction)
+            PredictCommand(model_id="m1", model_version="v1", features=[5.0]),
+            Mock(spec=Prediction),
         ),
     ]
     mock_log_repo.get_recent_logs.return_value = logs
-    
+
     mock_drift_calculator.calculate_drift.return_value = DriftReport(
         feature_name="feature_0",
         drift_detected=True,
@@ -66,14 +91,12 @@ async def test_check_drift_success(
         threshold=0.05,
         method="ks_test",
         recommendation="WARNING: Drift detected.",
-        sample_size=5
+        sample_size=5,
     )
 
     # Execute
     report = await monitoring_service.check_drift(
-        "m1", 
-        reference_data=[0.0]*5, 
-        feature_index=0
+        "m1", reference_data=[0.0] * 5, feature_index=0
     )
 
     # Verify
@@ -81,6 +104,8 @@ async def test_check_drift_success(
     assert report.method == "ks_test"
     mock_drift_calculator.calculate_drift.assert_called_once()
     mock_log_repo.get_recent_logs.assert_awaited_once_with("m1", limit=1000)
+    mock_drift_report_repo.save.assert_awaited_once_with("m1", report)
+
 
 @pytest.mark.asyncio
 async def test_check_drift_psi(
@@ -90,39 +115,38 @@ async def test_check_drift_psi(
     # Use real calculator for this test
     real_calculator = DriftCalculator()
     monitoring_service._drift_calculator = real_calculator
-    
+
     logs = [
-        (PredictCommand(model_id="m1", features=[float(i)]), Mock())
-        for i in range(10)
+        (PredictCommand(model_id="m1", features=[float(i)]), Mock()) for i in range(10)
     ]
     mock_log_repo.get_recent_logs.return_value = logs
 
     # Execute with PSI
     report = await monitoring_service.check_drift(
-        "m1", 
-        reference_data=[float(i) + 10.0 for i in range(10)], # Significant shift
+        "m1",
+        reference_data=[float(i) + 10.0 for i in range(10)],  # Significant shift
         feature_index=0,
-        test_type="psi"
+        test_type="psi",
     )
 
     assert report.method == "psi"
     assert report.drift_detected is True
     assert "drift" in report.recommendation.lower()
 
+
 @pytest.mark.asyncio
 async def test_check_drift_not_enough_data(
-    monitoring_service: MonitoringService,
-    mock_log_repo: AsyncMock
+    monitoring_service: MonitoringService, mock_log_repo: AsyncMock
 ) -> None:
     # Only 2 logs
     logs = [
         (
-            PredictCommand(model_id="m1", model_version="v1", features=[1.0]), 
-            Mock(spec=Prediction)
+            PredictCommand(model_id="m1", model_version="v1", features=[1.0]),
+            Mock(spec=Prediction),
         ),
         (
-            PredictCommand(model_id="m1", model_version="v1", features=[2.0]), 
-            Mock(spec=Prediction)
+            PredictCommand(model_id="m1", model_version="v1", features=[2.0]),
+            Mock(spec=Prediction),
         ),
     ]
     mock_log_repo.get_recent_logs.return_value = logs
