@@ -16,7 +16,6 @@ class LoadModelHandler:
         self._inference_engine = inference_engine
 
     async def execute(self, command: LoadModelCommand) -> bool:
-        # 1. Fetch Model from Registry
         model = await self._model_repo.get_by_id(
             command.model_id, command.model_version
         )
@@ -26,7 +25,6 @@ class LoadModelHandler:
                 f"Model {command.model_id}:{command.model_version} not found"
             )
 
-        # 2. Trigger Engine Load
         await self._inference_engine.load(model)
 
         return True
