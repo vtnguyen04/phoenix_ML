@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.commands.predict_command import PredictCommand
 from src.application.handlers.predict_handler import PredictHandler
+from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.services.monitoring_service import MonitoringService
 from src.config import get_settings
 from src.domain.feature_store.repositories.feature_store import FeatureStore
@@ -38,11 +39,11 @@ from src.infrastructure.feature_store.in_memory_feature_store import (
 from src.infrastructure.feature_store.redis_feature_store import RedisFeatureStore
 from src.infrastructure.messaging.kafka_producer import KafkaProducer
 from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
-from src.infrastructure.monitoring.in_memory_log_repo import (
-    InMemoryPredictionLogRepository,
-)
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
+from src.infrastructure.persistence.postgres_drift_repo import (
+    PostgresDriftReportRepository,
+)
 from src.infrastructure.persistence.postgres_log_repo import (
     PostgresPredictionLogRepository,
 )
@@ -59,10 +60,9 @@ batch_config = BatchConfig(max_batch_size=16, max_wait_time_ms=10)
 batch_manager = BatchManager(inference_engine, config=batch_config)
 kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
 drift_calculator = DriftCalculator()
+retrain_handler = RetrainHandler()
 
-global_log_repo: Any = InMemoryPredictionLogRepository()
-monitoring_service = MonitoringService(global_log_repo, drift_calculator)
-
+# Conditional Feature Store Initialization
 feature_store: FeatureStore
 if settings.USE_REDIS:
     feature_store = RedisFeatureStore(redis_url=settings.REDIS_URL)
@@ -73,22 +73,23 @@ _shutdown_event = asyncio.Event()
 
 
 def find_project_root() -> Path:
-    """Find project root by looking for pyproject.toml upwards from this file."""
+    """Find the project root by looking for pyproject.toml upwards from this file."""
     current = Path(__file__).resolve().parent
     for parent in [current, *current.parents]:
         if (parent / "pyproject.toml").exists():
             return parent
-    return Path.cwd()
+    return Path.cwd()  # Fallback to current working directory
 
 
 def ensure_model_exists() -> Path:
-    """Ensures model exists, generating a VALID ONNX one if in test context."""
+    """Ensures model exists, creating a dummy one if in test context and missing."""
     root = find_project_root()
     model_path = root / "models" / "credit_risk" / "v1" / "model.onnx"
 
     if model_path.exists():
         return model_path.absolute()
 
+    # In CI/Test, we can create a dummy if the real one is missing
     is_ci = os.getenv("GITHUB_ACTIONS")
     is_test = "test" in str(Path.cwd())
 
@@ -104,25 +105,36 @@ def ensure_model_exists() -> Path:
 
 
 async def run_monitoring_loop() -> None:
+    """Background task to check drift periodically."""
     logger.info("🚀 Starting Drift Monitoring Loop...")
     reference_data = np.random.normal(0, 1, 100).tolist()
 
-    try:
-        while not _shutdown_event.is_set():
-            for _ in range(50):
+    while not _shutdown_event.is_set():
+        try:
+            # Check for shutdown more frequently than the sleep interval
+            for _ in range(50):  # 5 seconds = 50 * 0.1s
                 if _shutdown_event.is_set():
                     return
                 await asyncio.sleep(0.1)
 
-            await monitoring_service.check_drift(
-                model_id="credit-risk",
-                reference_data=reference_data,
-                feature_index=0,
-            )
-    except asyncio.CancelledError:
-        raise
-    except Exception as e:
-        logger.error("⚠️ Monitoring Loop Error: %s", e)
+            # Monitoring Service requires a DB session for DriftReportRepo
+            async for db in get_db():
+                log_repo = PostgresPredictionLogRepository(db)
+                drift_repo = PostgresDriftReportRepository(db)
+                ms = MonitoringService(
+                    log_repo, drift_calculator, drift_repo, retrain_handler
+                )
+
+                await ms.check_drift(
+                    model_id="credit-risk",
+                    reference_data=reference_data,
+                    feature_index=0,
+                )
+                break  # Just one session
+        except asyncio.CancelledError:
+            return
+        except Exception as e:
+            logger.error("⚠️ Monitoring Loop Error: %s", e)
 
 
 @asynccontextmanager
@@ -163,6 +175,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await feature_store.add_features(
             "customer-good", {"f1": 2.0, "f2": -1.5, "f3": 1.0, "f4": 1.5}
         )
+        logger.info("✅ Seeded customer data into Feature Store")
         break
 
     # 3. Start Background Components
@@ -173,6 +186,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # Cleanup
+    logger.info("🧹 Lifespan shutdown started...")
     _shutdown_event.set()
     monitor_task.cancel()
     await batch_manager.stop()
@@ -182,6 +196,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except (TimeoutError, asyncio.CancelledError):
         pass
     await engine.dispose()
+    logger.info("✅ Cleanup complete.")
 
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
@@ -267,10 +282,17 @@ async def predict(
 
 
 @app.get("/monitoring/drift/{model_id}")
-async def check_drift(model_id: str) -> DriftReport:
+async def check_drift(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> DriftReport:
     try:
+        log_repo = PostgresPredictionLogRepository(db)
+        drift_repo = PostgresDriftReportRepository(db)
+        ms = MonitoringService(log_repo, drift_calculator, drift_repo, retrain_handler)
+
         mock_reference_data = [float(x) for x in range(100)]
-        return await monitoring_service.check_drift(
+        return await ms.check_drift(
             model_id=model_id, reference_data=mock_reference_data, feature_index=0
         )
     except ValueError as e:
