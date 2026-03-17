@@ -41,5 +41,16 @@ class MockInferenceEngine(InferenceEngine):
             latency_ms=latency
         )
 
+    async def batch_predict(
+        self, model: Model, features_list: list[FeatureVector]
+    ) -> list[Prediction]:
+        if model.unique_key not in self.loaded_models:
+            raise RuntimeError(f"Model {model.unique_key} not loaded")
+            
+        results = []
+        for features in features_list:
+             results.append(await self.predict(model, features))
+        return results
+
     async def optimize(self, model: Model) -> None:
         pass
