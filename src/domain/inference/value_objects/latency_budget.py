@@ -6,8 +6,9 @@ class LatencyBudget:
     """
     Value Object representing the time budget for inference.
     """
+
     max_latency_ms: float
-    
+
     def __post_init__(self) -> None:
         if self.max_latency_ms <= 0:
             raise ValueError("Latency budget must be positive")

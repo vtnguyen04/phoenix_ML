@@ -13,7 +13,7 @@ class MockInferenceEngine(InferenceEngine):
     """
     A mock implementation of InferenceEngine for testing and local development.
     """
-    
+
     def __init__(self) -> None:
         self.loaded_models: dict[str, Model] = {}
 
@@ -24,22 +24,33 @@ class MockInferenceEngine(InferenceEngine):
     async def predict(self, model: Model, features: FeatureVector) -> Prediction:
         if model.unique_key not in self.loaded_models:
             raise RuntimeError(f"Model {model.unique_key} not loaded")
-        
+
         start_time = time.time()
-        
+
         # Mock logic: result is just the mean of the features
         result = float(np.mean(features.values))
         confidence = ConfidenceScore(value=0.99)
-        
+
         latency = (time.time() - start_time) * 1000
-        
+
         return Prediction(
             model_id=model.id,
             model_version=model.version,
             result=result,
             confidence=confidence,
-            latency_ms=latency
+            latency_ms=latency,
         )
+
+    async def batch_predict(
+        self, model: Model, features_list: list[FeatureVector]
+    ) -> list[Prediction]:
+        if model.unique_key not in self.loaded_models:
+            raise RuntimeError(f"Model {model.unique_key} not loaded")
+
+        results = []
+        for features in features_list:
+            results.append(await self.predict(model, features))
+        return results
 
     async def optimize(self, model: Model) -> None:
         pass

@@ -23,6 +23,7 @@ class TestFeatureVector:
         v2 = FeatureVector(values=np.array([1.0, 2.0]))
         assert v1 == v2
 
+
 class TestConfidenceScore:
     def test_valid_score(self) -> None:
         score = ConfidenceScore(value=0.95)
@@ -36,6 +37,7 @@ class TestConfidenceScore:
         with pytest.raises(ValidationError):
             ConfidenceScore(value=-0.1)
 
+
 class TestPrediction:
     def test_is_confident(self) -> None:
         pred = Prediction(
@@ -43,7 +45,7 @@ class TestPrediction:
             model_version="v1",
             result="cat",
             confidence=ConfidenceScore(value=0.8),
-            latency_ms=10.0
+            latency_ms=10.0,
         )
         assert pred.is_confident(0.5) is True
         assert pred.is_confident(0.9) is False

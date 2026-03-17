@@ -15,6 +15,7 @@ class DriftReport(BaseModel):
     p_value: float
     statistic: float
     threshold: float
-    analyzed_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
-    )
+    method: str = "ks_test"
+    recommendation: str = "No action needed."
+    sample_size: int = 0
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

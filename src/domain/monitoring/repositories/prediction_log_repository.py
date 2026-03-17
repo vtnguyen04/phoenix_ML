@@ -8,7 +8,7 @@ class PredictionLogRepository(ABC):
     """
     Interface for storing prediction logs for monitoring.
     """
-    
+
     @abstractmethod
     async def log(self, command: PredictCommand, prediction: Prediction) -> None:
         """Log a single prediction event"""
