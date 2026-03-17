@@ -20,7 +20,7 @@ class InMemoryPredictionLogRepository(PredictionLogRepository):
         model_id = prediction.model_id
         if model_id not in self._logs:
             self._logs[model_id] = deque(maxlen=self._max_size)
-        
+
         self._logs[model_id].append((command, prediction))
 
     async def get_recent_logs(
@@ -28,7 +28,7 @@ class InMemoryPredictionLogRepository(PredictionLogRepository):
     ) -> list[tuple[PredictCommand, Prediction]]:
         if model_id not in self._logs:
             return []
-        
+
         # Convert deque to list and slice
         logs = list(self._logs[model_id])
         return logs[-limit:]

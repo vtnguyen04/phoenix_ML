@@ -18,6 +18,4 @@ class DriftReport(BaseModel):
     method: str = "ks_test"
     recommendation: str = "No action needed."
     sample_size: int = 0
-    analyzed_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
-    )
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

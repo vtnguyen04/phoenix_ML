@@ -27,10 +27,10 @@ class PostgresPredictionLogRepository(PredictionLogRepository):
             model_id=prediction.model_id,
             model_version=prediction.model_version,
             features=command.features or [],
-            result=prediction.result, 
+            result=prediction.result,
             confidence=prediction.confidence.value,
             latency_ms=prediction.latency_ms,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
         self._session.add(orm_log)
         await self._session.commit()
@@ -46,23 +46,23 @@ class PostgresPredictionLogRepository(PredictionLogRepository):
         )
         result = await self._session.execute(query)
         rows = result.scalars().all()
-        
+
         # Convert ORM back to Domain/Command
         # (Simplified conversion for monitoring service)
         return [
             (
                 PredictCommand(
-                    model_id=row.model_id, 
-                    model_version=row.model_version, 
-                    features=row.features
+                    model_id=row.model_id,
+                    model_version=row.model_version,
+                    features=row.features,
                 ),
                 Prediction(
                     model_id=row.model_id,
                     model_version=row.model_version,
                     result=row.result,
-                    confidence=ConfidenceScore(value=row.confidence), 
-                    latency_ms=row.latency_ms
-                )
+                    confidence=ConfidenceScore(value=row.confidence),
+                    latency_ms=row.latency_ms,
+                ),
             )
             for row in rows
         ]

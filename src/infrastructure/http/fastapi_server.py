@@ -28,8 +28,10 @@ from src.domain.inference.services.inference_service import (
     InferenceService,
 )
 from src.domain.inference.services.routing_strategy import ABTestStrategy
+from src.domain.model_registry.repositories.model_repository import ModelRepository
 from src.domain.monitoring.entities.drift_report import DriftReport
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
+from src.domain.monitoring.services.model_evaluator import ModelEvaluator
 from src.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
@@ -47,7 +49,9 @@ from src.infrastructure.persistence.postgres_drift_repo import (
 from src.infrastructure.persistence.postgres_log_repo import (
     PostgresPredictionLogRepository,
 )
-from src.infrastructure.persistence.postgres_model_registry import PostgresModelRegistry
+from src.infrastructure.persistence.postgres_model_registry import (
+    PostgresModelRegistry,
+)
 from src.shared.utils.model_generator import generate_simple_onnx
 
 settings = get_settings()
@@ -60,7 +64,7 @@ batch_config = BatchConfig(max_batch_size=16, max_wait_time_ms=10)
 batch_manager = BatchManager(inference_engine, config=batch_config)
 kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
 drift_calculator = DriftCalculator()
-retrain_handler = RetrainHandler()
+model_evaluator = ModelEvaluator()
 
 # Conditional Feature Store Initialization
 feature_store: FeatureStore
@@ -73,23 +77,22 @@ _shutdown_event = asyncio.Event()
 
 
 def find_project_root() -> Path:
-    """Find the project root by looking for pyproject.toml upwards from this file."""
+    """Find root by searching for pyproject.toml upwards from this file."""
     current = Path(__file__).resolve().parent
     for parent in [current, *current.parents]:
         if (parent / "pyproject.toml").exists():
             return parent
-    return Path.cwd()  # Fallback to current working directory
+    return Path.cwd()
 
 
 def ensure_model_exists() -> Path:
-    """Ensures model exists, creating a dummy one if in test context and missing."""
+    """Ensures model exists, generating a VALID ONNX one if in test context."""
     root = find_project_root()
     model_path = root / "models" / "credit_risk" / "v1" / "model.onnx"
 
     if model_path.exists():
         return model_path.absolute()
 
-    # In CI/Test, we can create a dummy if the real one is missing
     is_ci = os.getenv("GITHUB_ACTIONS")
     is_test = "test" in str(Path.cwd())
 
@@ -111,26 +114,26 @@ async def run_monitoring_loop() -> None:
 
     while not _shutdown_event.is_set():
         try:
-            # Check for shutdown more frequently than the sleep interval
-            for _ in range(50):  # 5 seconds = 50 * 0.1s
+            for _ in range(50):
                 if _shutdown_event.is_set():
                     return
                 await asyncio.sleep(0.1)
 
-            # Monitoring Service requires a DB session for DriftReportRepo
             async for db in get_db():
                 log_repo = PostgresPredictionLogRepository(db)
                 drift_repo = PostgresDriftReportRepository(db)
-                ms = MonitoringService(
-                    log_repo, drift_calculator, drift_repo, retrain_handler
-                )
+                model_repo = PostgresModelRegistry(db)
+
+                # Loop needs its own handler connected to current session
+                rh = RetrainHandler(find_project_root(), model_repo, model_evaluator)
+                ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
 
                 await ms.check_drift(
                     model_id="credit-risk",
                     reference_data=reference_data,
                     feature_index=0,
                 )
-                break  # Just one session
+                break
         except asyncio.CancelledError:
             return
         except Exception as e:
@@ -139,11 +142,9 @@ async def run_monitoring_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # 1. Initialize Database Tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # 2. Seed Initial Data
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
 
@@ -164,9 +165,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     metadata={
                         "features": ["income", "debt", "age", "credit_history"],
                         "role": "champion",
+                        "metrics": {"accuracy": 0.85, "f1_score": 0.84},
                     },
                 )
                 await model_repo.save(credit_model_v1)
+                await model_repo.update_stage("credit-risk", "v1", "champion")
                 await db.commit()
                 logger.info("✅ Successfully registered Credit Risk model v1")
             except Exception as e:
@@ -175,18 +178,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await feature_store.add_features(
             "customer-good", {"f1": 2.0, "f2": -1.5, "f3": 1.0, "f4": 1.5}
         )
-        logger.info("✅ Seeded customer data into Feature Store")
         break
 
-    # 3. Start Background Components
     _shutdown_event.clear()
     await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
     yield
 
-    # Cleanup
-    logger.info("🧹 Lifespan shutdown started...")
     _shutdown_event.set()
     monitor_task.cancel()
     await batch_manager.stop()
@@ -196,7 +195,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except (TimeoutError, asyncio.CancelledError):
         pass
     await engine.dispose()
-    logger.info("✅ Cleanup complete.")
 
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
@@ -216,7 +214,7 @@ app.mount("/metrics", metrics_app)
 async def get_predict_handler(
     db: AsyncSession,
 ) -> PredictHandler:
-    model_repo = PostgresModelRegistry(db)
+    model_repo: ModelRepository = PostgresModelRegistry(db)
     inference_service = InferenceService(
         model_repo=model_repo,
         inference_engine=inference_engine,
@@ -289,7 +287,9 @@ async def check_drift(
     try:
         log_repo = PostgresPredictionLogRepository(db)
         drift_repo = PostgresDriftReportRepository(db)
-        ms = MonitoringService(log_repo, drift_calculator, drift_repo, retrain_handler)
+        model_repo = PostgresModelRegistry(db)
+        rh = RetrainHandler(find_project_root(), model_repo, model_evaluator)
+        ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
 
         mock_reference_data = [float(x) for x in range(100)]
         return await ms.check_drift(

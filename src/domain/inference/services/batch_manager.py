@@ -63,9 +63,7 @@ class BatchManager:
 
         try:
             while True:
-                batch_items: list[
-                    tuple[FeatureVector, asyncio.Future[Prediction]]
-                ] = []
+                batch_items: list[tuple[FeatureVector, asyncio.Future[Prediction]]] = []
 
                 # 1. Wait for the first item
                 try:

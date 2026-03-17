@@ -68,9 +68,7 @@ class ONNXInferenceEngine(InferenceEngine):
         start_time = time.time()
 
         # Run inference in thread
-        outputs = await asyncio.to_thread(
-            session.run, None, {input_name: batch_data}
-        )
+        outputs = await asyncio.to_thread(session.run, None, {input_name: batch_data})
 
         latency_ms_total = (time.time() - start_time) * 1000
         avg_latency_ms = latency_ms_total / len(features_list)

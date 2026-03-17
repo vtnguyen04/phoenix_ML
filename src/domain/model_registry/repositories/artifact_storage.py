@@ -7,7 +7,7 @@ class ArtifactStorage(ABC):
     Interface for handling model files (artifacts).
     Decouples storage logic (S3, Disk) from inference logic.
     """
-    
+
     @abstractmethod
     async def download(self, remote_uri: str, local_path: Path) -> Path:
         """Download artifact to local path for loading"""

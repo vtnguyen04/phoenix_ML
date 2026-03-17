@@ -7,15 +7,14 @@ class KafkaConsumer:
     """
     Infrastructure service for consuming events from Kafka.
     """
+
     def __init__(self, bootstrap_servers: str, group_id: str):
         self.bootstrap_servers = bootstrap_servers
         self.group_id = group_id
         self._running = False
 
     async def start(
-        self, 
-        topic: str, 
-        handler: Callable[[dict[str, Any]], Awaitable[None]]
+        self, topic: str, handler: Callable[[dict[str, Any]], Awaitable[None]]
     ) -> None:
         """
         Starts consuming messages from the topic and processes them with the handler.

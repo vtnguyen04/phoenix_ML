@@ -10,6 +10,7 @@ class ModelVersion:
     Value Object representing a semantic version of a model.
     Format: MAJOR.MINOR.PATCH (e.g., 1.0.0)
     """
+
     major: int
     minor: int
     patch: int
@@ -23,14 +24,13 @@ class ModelVersion:
         match = re.match(pattern, version_str)
         if not match:
             raise ValueError(
-                f"Invalid version format: {version_str}. "
-                "Expected 'MAJOR.MINOR.PATCH'"
+                f"Invalid version format: {version_str}. Expected 'MAJOR.MINOR.PATCH'"
             )
-        
+
         return cls(
             major=int(match.group(1)),
             minor=int(match.group(2)),
-            patch=int(match.group(3))
+            patch=int(match.group(3)),
         )
 
     def __lt__(self, other: object) -> bool:

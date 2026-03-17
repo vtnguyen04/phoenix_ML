@@ -6,28 +6,28 @@ import requests
 
 def send_requests(n: int = 50) -> None:
     url = "http://localhost:8001/predict"
-    
+
     # Customer Profiles
     good_customer = "customer-good"
     bad_customer = "customer-bad"
-    
+
     RANDOM_THRESHOLD = 0.5
     for i in range(n):
         entity = good_customer if random.random() > RANDOM_THRESHOLD else bad_customer
-        
+
         payload = {
             "model_id": "credit-risk",
             # No model_version -> Dynamic Routing
-            "entity_id": entity
+            "entity_id": entity,
         }
-        
+
         HTTP_OK = 200
         try:
             resp = requests.post(url, json=payload, timeout=1)
             if resp.status_code == HTTP_OK:
                 data = resp.json()
                 print(
-                    f"[{i+1}/{n}] Ver: {data['version']} | "
+                    f"[{i + 1}/{n}] Ver: {data['version']} | "
                     f"Result: {data['result']} | "
                     f"Conf: {data['confidence']:.2f}"
                 )
@@ -35,8 +35,9 @@ def send_requests(n: int = 50) -> None:
                 print(f"Error: {resp.status_code} - {resp.text}")
         except Exception as e:
             print(f"Request failed: {e}")
-        
+
         time.sleep(0.1)
+
 
 def check_metrics() -> None:
     HTTP_OK = 200
@@ -52,6 +53,7 @@ def check_metrics() -> None:
             print("-----------------------\n")
     except Exception as e:
         print(f"Metrics failed: {e}")
+
 
 if __name__ == "__main__":
     print("Starting Traffic Simulation...")
