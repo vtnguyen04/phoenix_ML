@@ -12,7 +12,7 @@ from src.infrastructure.persistence.postgres_drift_repo import (
 
 # Test Constants
 SUCCESS_STATUS = 200
-DRIFT_REQUEST_COUNT = 5
+DRIFT_REQUEST_COUNT = 15 # Increased to ensure > MIN_DATA_POINTS (5)
 WAIT_FOR_SUBPROCESS = 5
 
 
@@ -36,10 +36,16 @@ async def test_full_self_healing_flow() -> None:
             for _ in range(DRIFT_REQUEST_COUNT):
                 resp = await client.post("/predict", json=payload)
                 assert resp.status_code == SUCCESS_STATUS
+            
+            # Wait for background tasks to finish logging to DB
+            await asyncio.sleep(2)
 
             # --- PHASE 2: Trigger Drift Detection ---
             # Triggers check_drift -> _trigger_retrain -> RetrainHandler
             drift_resp = await client.get("/monitoring/drift/credit-risk")
+            if drift_resp.status_code != SUCCESS_STATUS:
+                print(f"❌ Drift Error: {drift_resp.json()}")
+            
             assert drift_resp.status_code == SUCCESS_STATUS
             report = drift_resp.json()
 

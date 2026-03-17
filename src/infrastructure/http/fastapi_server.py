@@ -12,6 +12,7 @@ import numpy as np
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -142,9 +143,11 @@ async def run_monitoring_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # 1. Initialize Database Tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # 2. Seed Initial Data
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
 
@@ -180,12 +183,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         break
 
+    # 3. Start Background Components
     _shutdown_event.clear()
     await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
     yield
 
+    # Cleanup
+    logger.info("🧹 Lifespan shutdown started...")
     _shutdown_event.set()
     monitor_task.cancel()
     await batch_manager.stop()
@@ -195,6 +201,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except (TimeoutError, asyncio.CancelledError):
         pass
     await engine.dispose()
+    logger.info("✅ Cleanup complete.")
 
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
@@ -212,7 +219,7 @@ app.mount("/metrics", metrics_app)
 
 
 async def get_predict_handler(
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> PredictHandler:
     model_repo: ModelRepository = PostgresModelRegistry(db)
     inference_service = InferenceService(
@@ -227,7 +234,10 @@ async def get_predict_handler(
 
 
 async def log_prediction_background(
-    command: PredictCommand, prediction: Prediction, db: AsyncSession
+    command: PredictCommand,
+    prediction: Prediction,
+    prediction_id: str,
+    db: AsyncSession,
 ) -> None:
     try:
         repo = PostgresPredictionLogRepository(db)
@@ -237,7 +247,7 @@ async def log_prediction_background(
 
     try:
         event = {
-            "event_id": str(uuid.uuid4()),
+            "event_id": prediction_id,
             "model_id": prediction.model_id,
             "version": prediction.model_version,
             "features": command.features,
@@ -250,6 +260,11 @@ async def log_prediction_background(
         logger.error("⚠️ Kafka Log failed: %s", e)
 
 
+class FeedbackRequest(BaseModel):
+    prediction_id: str
+    ground_truth: int
+
+
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "healthy", "version": settings.APP_VERSION}
@@ -259,23 +274,40 @@ async def health_check() -> dict[str, str]:
 async def predict(
     command: PredictCommand,
     background_tasks: BackgroundTasks,
+    handler: PredictHandler = Depends(get_predict_handler),  # noqa: B008
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> dict[str, Any]:
     try:
-        handler = await get_predict_handler(db)
         prediction = await handler.execute(command)
-        background_tasks.add_task(log_prediction_background, command, prediction, db)
+        prediction_id = str(uuid.uuid4())
+        background_tasks.add_task(
+            log_prediction_background, command, prediction, prediction_id, db
+        )
         return {
+            "prediction_id": prediction_id,
             "model_id": prediction.model_id,
             "version": prediction.model_version,
             "result": prediction.result,
-            "confidence": prediction.confidence.value,
+            "confidence": {"value": prediction.confidence.value},
             "latency_ms": round(prediction.latency_ms, 2),
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.exception("Inference failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.post("/feedback")
+async def feedback(
+    request: FeedbackRequest,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, str]:
+    try:
+        repo = PostgresPredictionLogRepository(db)
+        await repo.update_ground_truth(request.prediction_id, request.ground_truth)
+        return {"status": "feedback_received"}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -288,7 +320,10 @@ async def check_drift(
         log_repo = PostgresPredictionLogRepository(db)
         drift_repo = PostgresDriftReportRepository(db)
         model_repo = PostgresModelRegistry(db)
-        rh = RetrainHandler(find_project_root(), model_repo, model_evaluator)
+
+        # Handler needs to be created with current DB session context
+        root = find_project_root()
+        rh = RetrainHandler(root, model_repo, model_evaluator)
         ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
 
         mock_reference_data = [float(x) for x in range(100)]
