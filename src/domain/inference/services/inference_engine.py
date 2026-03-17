@@ -22,6 +22,13 @@ class InferenceEngine(ABC):
         pass
 
     @abstractmethod
+    async def batch_predict(
+        self, model: Model, features_list: list[FeatureVector]
+    ) -> list[Prediction]:
+        """Run batch inference for multiple inputs"""
+        pass
+
+    @abstractmethod
     async def optimize(self, model: Model) -> None:
         """Apply engine-specific optimizations (e.g., quantization)"""
         pass

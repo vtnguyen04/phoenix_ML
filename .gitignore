@@ -61,3 +61,11 @@ models/
 logs/
 site/
 .DS_Store
+.gitnexus
+
+# AI Agent files
+.claude/
+AGENTS.md
+CLAUDE.md
+project.md.save
+phoenix.db

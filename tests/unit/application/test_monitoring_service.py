@@ -63,7 +63,10 @@ async def test_check_drift_success(
         drift_detected=True,
         p_value=0.01,
         statistic=0.5,
-        threshold=0.05
+        threshold=0.05,
+        method="ks_test",
+        recommendation="WARNING: Drift detected.",
+        sample_size=5
     )
 
     # Execute
@@ -75,8 +78,36 @@ async def test_check_drift_success(
 
     # Verify
     assert report.drift_detected is True
+    assert report.method == "ks_test"
     mock_drift_calculator.calculate_drift.assert_called_once()
     mock_log_repo.get_recent_logs.assert_awaited_once_with("m1", limit=1000)
+
+@pytest.mark.asyncio
+async def test_check_drift_psi(
+    monitoring_service: MonitoringService,
+    mock_log_repo: AsyncMock,
+) -> None:
+    # Use real calculator for this test
+    real_calculator = DriftCalculator()
+    monitoring_service._drift_calculator = real_calculator
+    
+    logs = [
+        (PredictCommand(model_id="m1", features=[float(i)]), Mock())
+        for i in range(10)
+    ]
+    mock_log_repo.get_recent_logs.return_value = logs
+
+    # Execute with PSI
+    report = await monitoring_service.check_drift(
+        "m1", 
+        reference_data=[float(i) + 10.0 for i in range(10)], # Significant shift
+        feature_index=0,
+        test_type="psi"
+    )
+
+    assert report.method == "psi"
+    assert report.drift_detected is True
+    assert "drift" in report.recommendation.lower()
 
 @pytest.mark.asyncio
 async def test_check_drift_not_enough_data(

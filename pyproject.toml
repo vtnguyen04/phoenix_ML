@@ -34,6 +34,7 @@ dev = [
     "black>=24.0.0",
     "isort>=5.13.0",
     "httpx>=0.26.0",
+    "asgi-lifespan>=2.1.0",
 ]
 
 [build-system]
@@ -65,6 +66,7 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --cov=src"
+asyncio_mode = "auto"
 testpaths = [
     "tests",
 ]

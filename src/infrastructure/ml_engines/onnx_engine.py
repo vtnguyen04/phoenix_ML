@@ -15,110 +15,108 @@ from src.domain.inference.value_objects.feature_vector import FeatureVector
 
 class ONNXInferenceEngine(InferenceEngine):
     """
-    Real implementation of InferenceEngine using ONNX Runtime.
-    Includes thread-safe execution and session caching.
+    Production implementation of InferenceEngine using ONNX Runtime.
+    Supports high-performance execution on CPU and GPU (if configured).
     """
 
-    def __init__(self, cache_dir: Path) -> None:
-        self._cache_dir = cache_dir
+    def __init__(self, cache_dir: Path | None = None) -> None:
+        self._cache_dir = cache_dir or Path("/tmp/phoenix/model_cache")
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._sessions: dict[str, ort.InferenceSession] = {}
-        self._lock = asyncio.Lock()
 
     async def load(self, model: Model) -> None:
         """
-        Loads the ONNX model into an InferenceSession if not already loaded.
+        Loads an ONNX model into memory.
         """
-        async with self._lock:
-            if model.unique_key in self._sessions:
-                return
+        if model.unique_key in self._sessions:
+            return
 
-            local_path = self._cache_dir / model.id / model.version / "model.onnx"
-            if not local_path.exists():
-                raise FileNotFoundError(f"Model file not found at {local_path}")
+        model_path = self._cache_dir / model.id / model.version / "model.onnx"
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model artifact not found at {model_path}")
 
-            # Load session in a thread to not block event loop
-            session = await asyncio.to_thread(
-                ort.InferenceSession, 
-                str(local_path),
-                providers=['CPUExecutionProvider'] # Default to CPU
-            )
-            self._sessions[model.unique_key] = session
+        # Load session in background thread
+        session = await asyncio.to_thread(
+            ort.InferenceSession, str(model_path), providers=["CPUExecutionProvider"]
+        )
+        self._sessions[model.unique_key] = session
 
     async def predict(self, model: Model, features: FeatureVector) -> Prediction:
         """
         Executes inference using ONNX Runtime in a background thread.
         """
+        results = await self.batch_predict(model, [features])
+        return results[0]
+
+    async def batch_predict(
+        self, model: Model, features_list: list[FeatureVector]
+    ) -> list[Prediction]:
+        """
+        Executes batch inference using ONNX Runtime.
+        """
         if model.unique_key not in self._sessions:
             await self.load(model)
 
         session = self._sessions[model.unique_key]
-        
-        # Prepare input
+
+        # Prepare input batch
         input_name = session.get_inputs()[0].name
-        # Add batch dimension if necessary (e.g., [N] -> [1, N])
-        input_data = features.values.reshape(1, -1)
+
+        # Stack all feature vectors into a single batch [N, D]
+        batch_data = np.stack([f.values for f in features_list])
 
         start_time = time.time()
-        
+
         # Run inference in thread
         outputs = await asyncio.to_thread(
-            session.run, 
-            None, 
-            {input_name: input_data}
+            session.run, None, {input_name: batch_data}
         )
-        
-        latency_ms = (time.time() - start_time) * 1000
-        
-        # Process output
-        # Sklearn-ONNX typically returns: [label_tensor, probability_map_list]
-        # Deep Learning ONNX typically returns: [probability_tensor]
-        
-        result_tensor = outputs[0]
-        result: Any
-        confidence_val: float = 1.0
 
-        if len(outputs) > 1 and isinstance(outputs[1], list):
-            # Case: Sklearn ONNX (Label + Probs)
-            # outputs[1] is a list of dicts (one per sample in batch)
-            probs_map = outputs[1][0] # Batch size is 1
-            
-            # Get label
-            if isinstance(result_tensor, np.ndarray):
-                result = result_tensor[0]
-            else:
-                result = result_tensor
+        latency_ms_total = (time.time() - start_time) * 1000
+        avg_latency_ms = latency_ms_total / len(features_list)
 
-            # Convert numpy scalar to python native type
-            if hasattr(result, "item"):
-                result = result.item()
+        # Process outputs
+        result_tensors = outputs[0]
+        predictions = []
 
-            # Get confidence
-            if isinstance(probs_map, dict):
-            # result might be numpy scalar, convert to native python type 
-            # for key lookup if needed
-            # but usually dict keys match the label type
-            # Handle numpy int64 key lookup issues
+        for i in range(len(features_list)):
+            result: Any
+            confidence_val: float = 1.0
+
+            if len(outputs) > 1 and isinstance(outputs[1], list):
+                # Case: Sklearn ONNX
+                probs_map = outputs[1][i]
+                result = result_tensors[i]
+
+                if hasattr(result, "item"):
+                    result = result.item()
+
                 lookup_key = result
-                if isinstance(result, np.int64):
+                if isinstance(result, (np.int64, np.integer)):
                     lookup_key = int(result)
-                    
-                confidence_val = float(probs_map.get(lookup_key, 1.0))
-                
-        elif isinstance(result_tensor, np.ndarray) and result_tensor.ndim > 1:
-            # Case: Deep Learning (Logits/Probs) -> [1, C]
-            result = int(np.argmax(result_tensor[0]))
-            confidence_val = float(np.max(result_tensor[0]))
-        else:
-            # Fallback
-            result = result_tensor.tolist()
 
-        return Prediction(
-            model_id=model.id,
-            model_version=model.version,
-            result=result,
-            confidence=ConfidenceScore(value=confidence_val),
-            latency_ms=latency_ms
-        )
+                confidence_val = float(probs_map.get(lookup_key, 1.0))
+
+            elif isinstance(result_tensors, np.ndarray) and result_tensors.ndim > 1:
+                # Case: Deep Learning [N, C]
+                result = int(np.argmax(result_tensors[i]))
+                confidence_val = float(np.max(result_tensors[i]))
+            else:
+                # Fallback
+                val = result_tensors[i]
+                result = val.tolist() if hasattr(val, "tolist") else val
+
+            predictions.append(
+                Prediction(
+                    model_id=model.id,
+                    model_version=model.version,
+                    result=result,
+                    confidence=ConfidenceScore(value=confidence_val),
+                    latency_ms=avg_latency_ms,
+                )
+            )
+
+        return predictions
 
     async def optimize(self, model: Model) -> None:
         """
