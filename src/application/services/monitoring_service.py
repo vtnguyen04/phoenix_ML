@@ -1,6 +1,11 @@
 import logging
 
+from src.application.commands.trigger_retrain_command import TriggerRetrainCommand
+from src.application.handlers.retrain_handler import RetrainHandler
 from src.domain.monitoring.entities.drift_report import DriftReport
+from src.domain.monitoring.repositories.drift_report_repository import (
+    DriftReportRepository,
+)
 from src.domain.monitoring.repositories.prediction_log_repository import (
     PredictionLogRepository,
 )
@@ -22,10 +27,16 @@ class MonitoringService:
     MIN_DATA_POINTS = 5  # Lower threshold for demo purposes
 
     def __init__(
-        self, log_repo: PredictionLogRepository, drift_calculator: DriftCalculator
+        self,
+        log_repo: PredictionLogRepository,
+        drift_calculator: DriftCalculator,
+        drift_report_repo: DriftReportRepository,
+        retrain_handler: RetrainHandler,
     ) -> None:
         self._log_repo = log_repo
         self._drift_calculator = drift_calculator
+        self._drift_report_repo = drift_report_repo
+        self._retrain_handler = retrain_handler
 
     async def check_drift(
         self,
@@ -66,7 +77,10 @@ class MonitoringService:
             test_type=test_type,
         )
 
-        # 4. Update Prometheus Metrics
+        # 4. Save report to DB
+        await self._drift_report_repo.save(model_id, report)
+
+        # 5. Update Prometheus Metrics
         DRIFT_SCORE.labels(
             model_id=model_id, feature_name=feature_name, method=report.method
         ).set(report.statistic)
@@ -83,13 +97,8 @@ class MonitoringService:
 
     async def _trigger_retrain(self, model_id: str, report: DriftReport) -> None:
         """
-        Trigger the auto-retraining pipeline.
-        In a real system, this would send a message to Kafka or call Airflow API.
+        Trigger the auto-retraining pipeline via RetrainHandler.
         """
         logger.info("🔄 Triggering Retrain Handler for model %s...", model_id)
-        # Mock triggering a handler
-        # In a real implementation:
-        # command = TriggerRetrainCommand(model_id=model_id,
-        #                                reason=report.recommendation)
-        # await self._retrain_handler.execute(command)
-        pass
+        command = TriggerRetrainCommand(model_id=model_id, reason=report.recommendation)
+        await self._retrain_handler.execute(command)
