@@ -6,12 +6,12 @@ import numpy as np
 from src.domain.feature_store.repositories.feature_store import FeatureStore
 from src.domain.inference.entities.model import Model
 from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.repositories.model_repository import ModelRepository
 from src.domain.inference.services.batch_manager import BatchManager
 from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.inference.services.routing_strategy import RoutingStrategy
 from src.domain.inference.value_objects.feature_vector import FeatureVector
 from src.domain.model_registry.repositories.artifact_storage import ArtifactStorage
+from src.domain.model_registry.repositories.model_repository import ModelRepository
 
 
 @dataclass(frozen=True)
