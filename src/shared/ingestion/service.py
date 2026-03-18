@@ -15,9 +15,7 @@ class IngestionService:
     def __init__(self, ingestor: IDataIngestor):
         self._ingestor = ingestor
 
-    async def process_raw_data(
-        self, entity_id: str, raw_features: dict[str, Any]
-    ) -> bool:
+    async def process_raw_data(self, entity_id: str, raw_features: dict[str, Any]) -> bool:
         """
         Processes and cleans raw data before ingestion.
         """

@@ -64,9 +64,7 @@ async def test_inference_service_full_flow(
 
     # Execute with Path.exists mocked to False to force download
     with patch("pathlib.Path.exists", return_value=False):
-        req = PredictionRequest(
-            model_id="m1", model_version="v1", features=[1.0, 2.0, 3.0, 4.0]
-        )
+        req = PredictionRequest(model_id="m1", model_version="v1", features=[1.0, 2.0, 3.0, 4.0])
         prediction = await inference_service.predict(req)
 
     # Verify

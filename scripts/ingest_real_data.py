@@ -35,7 +35,7 @@ async def main() -> None:
         ingest_data.append(
             {
                 "entity_id": f"real-cust-{i}",
-                "data": {f"f{j+1}": float(row[f"f{j+1}"]) for j in range(4)},
+                "data": {f"f{j + 1}": float(row[f"f{j + 1}"]) for j in range(4)},
             }
         )
 

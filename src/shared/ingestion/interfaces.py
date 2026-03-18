@@ -7,7 +7,7 @@ class IDataIngestor(ABC):
     Interface for data ingestion following Clean Architecture.
     Allows swappable implementations (API, Kafka, Direct DB).
     """
-    
+
     @abstractmethod
     async def ingest(self, entity_id: str, data: dict[str, float]) -> bool:
         """Ingests a single data record for an entity."""

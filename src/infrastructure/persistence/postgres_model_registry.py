@@ -27,9 +27,7 @@ class PostgresModelRegistry(ModelRepository):
         await self._session.commit()
 
     async def get_by_id(self, model_id: str, version: str) -> Model | None:
-        stmt = select(ModelORM).where(
-            ModelORM.id == model_id, ModelORM.version == version
-        )
+        stmt = select(ModelORM).where(ModelORM.id == model_id, ModelORM.version == version)
         result = await self._session.execute(stmt)
         orm = result.scalar_one_or_none()
         if not orm:
@@ -42,9 +40,7 @@ class PostgresModelRegistry(ModelRepository):
         return [self._to_entity(o) for o in result.scalars().all()]
 
     async def get_champion(self, model_id: str) -> Model | None:
-        stmt = select(ModelORM).where(
-            ModelORM.id == model_id, ModelORM.stage == "champion"
-        )
+        stmt = select(ModelORM).where(ModelORM.id == model_id, ModelORM.stage == "champion")
         result = await self._session.execute(stmt)
         orm = result.scalar_one_or_none()
         return self._to_entity(orm) if orm else None

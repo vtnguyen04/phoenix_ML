@@ -51,9 +51,7 @@ class InferenceService:
         Coordinates the full prediction flow.
         """
         # 1. Select Model Version
-        model = await self._select_model(
-            request.model_id, request.model_version, request.entity_id
-        )
+        model = await self._select_model(request.model_id, request.model_version, request.entity_id)
 
         # 2. Ensure artifact is local
         local_model_path = self._cache_dir / model.id / model.version / "model.onnx"
@@ -81,9 +79,7 @@ class InferenceService:
             if feature_values is None:
                 raise ValueError(f"Features not found for entity {request.entity_id}")
 
-        feature_vector = FeatureVector(
-            values=np.array(feature_values, dtype=np.float32)
-        )
+        feature_vector = FeatureVector(values=np.array(feature_values, dtype=np.float32))
 
         # 5. Perform Prediction via BatchManager
         return await self._batch_manager.predict(model, feature_vector)

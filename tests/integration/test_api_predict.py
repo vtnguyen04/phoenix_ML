@@ -21,21 +21,16 @@ async def test_api_predict_dynamic_batching() -> None:
     async with asyncio.timeout(TEST_TIMEOUT):
         async with LifespanManager(app) as manager:
             transport = ASGITransport(app=manager.app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 # 1. Send multiple concurrent prediction requests
                 payload = {
                     "model_id": "credit-risk",
                     "model_version": "v1",
-                    "entity_id": "customer-good",
+                    "entity_id": "customer-0000",
                 }
 
                 # Simulating concurrent requests to trigger BatchManager
-                tasks = [
-                    client.post("/predict", json=payload)
-                    for _ in range(CONCURRENT_REQUESTS)
-                ]
+                tasks = [client.post("/predict", json=payload) for _ in range(CONCURRENT_REQUESTS)]
                 responses = await asyncio.gather(*tasks)
 
                 # 2. Verify all responses are successful
@@ -58,9 +53,7 @@ async def test_api_health() -> None:
     async with asyncio.timeout(TEST_TIMEOUT):
         async with LifespanManager(app) as manager:
             transport = ASGITransport(app=manager.app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 response = await client.get("/health")
                 assert response.status_code == SUCCESS_STATUS
                 assert response.json()["status"] == "healthy"

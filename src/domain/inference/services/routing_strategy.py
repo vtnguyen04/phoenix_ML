@@ -12,18 +12,14 @@ class RoutingStrategy(ABC):
     """Strategy Pattern for determining which model to use for a request."""
 
     @abstractmethod
-    def select_model(
-        self, models: list[Model], context: dict[str, Any] | None = None
-    ) -> Model:
+    def select_model(self, models: list[Model], context: dict[str, Any] | None = None) -> Model:
         pass
 
 
 class SingleModelStrategy(RoutingStrategy):
     """Default strategy: Returns the first available active model."""
 
-    def select_model(
-        self, models: list[Model], context: dict[str, Any] | None = None
-    ) -> Model:
+    def select_model(self, models: list[Model], context: dict[str, Any] | None = None) -> Model:
         active_models = [m for m in models if m.is_active]
         if not active_models:
             raise ValueError("No active models available")
@@ -38,9 +34,7 @@ class ABTestStrategy(RoutingStrategy):
             raise ValueError("Traffic percentage must be between 0 and 1")
         self.challenger_percentage = challenger_traffic_percentage
 
-    def select_model(
-        self, models: list[Model], context: dict[str, Any] | None = None
-    ) -> Model:
+    def select_model(self, models: list[Model], context: dict[str, Any] | None = None) -> Model:
         MIN_MODELS_FOR_AB = 2
         if len(models) < MIN_MODELS_FOR_AB:
             return models[0]
@@ -63,15 +57,15 @@ class CanaryStrategy(RoutingStrategy):
             raise ValueError("Canary percentage must be between 0 and 100")
         self.canary_percentage = canary_percentage
 
-    def select_model(
-        self, models: list[Model], context: dict[str, Any] | None = None
-    ) -> Model:
+    def select_model(self, models: list[Model], context: dict[str, Any] | None = None) -> Model:
         champion = self._find_by_role(models, "champion")
         challenger = self._find_by_role(models, "challenger")
 
         if challenger and random.random() < self.canary_percentage / 100:
             logger.info("Canary routing: selected challenger %s", challenger.unique_key)
             return challenger
+        if champion is None:
+            raise ValueError("No champion model found")
         return champion
 
     def _find_by_role(self, models: list[Model], role: str) -> Model | None:
@@ -96,18 +90,18 @@ class ShadowStrategy(RoutingStrategy):
     def shadow_model(self) -> Model | None:
         return self._shadow_model
 
-    def select_model(
-        self, models: list[Model], context: dict[str, Any] | None = None
-    ) -> Model:
+    def select_model(self, models: list[Model], context: dict[str, Any] | None = None) -> Model:
         champion = self._find_by_role(models, "champion")
         self._shadow_model = self._find_by_role(models, "challenger")
 
-        if self._shadow_model:
+        if champion and self._shadow_model:
             logger.info(
                 "Shadow routing: champion=%s, shadow=%s",
                 champion.unique_key,
                 self._shadow_model.unique_key,
             )
+        if champion is None:
+            raise ValueError("No champion model found")
         return champion
 
     def _find_by_role(self, models: list[Model], role: str) -> Model | None:
