@@ -24,7 +24,7 @@ class RedisDataIngestor(IDataIngestor):
         async with self.redis.pipeline(transaction=True) as pipe:
             for item in data_list:
                 key = f"features:{item['entity_id']}"
-                pipe.hset(key, mapping=item['data'])
+                pipe.hset(key, mapping=item["data"])
             results = await pipe.execute()
             success_count = len(results)
         return success_count

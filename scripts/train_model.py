@@ -23,9 +23,7 @@ def train_and_export_model(output_path: str, metrics_path: str | None = None) ->
         random_state=42,
     )
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # 2. Train Logistic Regression model
     clf = LogisticRegression()
@@ -70,8 +68,6 @@ if __name__ == "__main__":
         default="models/credit_risk/v1/model.onnx",
         help="Path to save the ONNX model",
     )
-    parser.add_argument(
-        "--metrics", type=str, default=None, help="Path to save the metrics JSON"
-    )
+    parser.add_argument("--metrics", type=str, default=None, help="Path to save the metrics JSON")
     args = parser.parse_args()
     train_and_export_model(args.output, args.metrics)

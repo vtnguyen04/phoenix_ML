@@ -21,11 +21,17 @@ def models() -> list[Model]:
 def role_models() -> list[Model]:
     return [
         Model(
-            id="m1", version="v1", uri="loc://m1", framework="onnx",
+            id="m1",
+            version="v1",
+            uri="loc://m1",
+            framework="onnx",
             metadata={"role": "champion"},
         ),
         Model(
-            id="m2", version="v2", uri="loc://m2", framework="onnx",
+            id="m2",
+            version="v2",
+            uri="loc://m2",
+            framework="onnx",
             metadata={"role": "challenger"},
         ),
     ]

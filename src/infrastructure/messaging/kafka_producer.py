@@ -23,16 +23,12 @@ class KafkaProducer:
             try:
                 self._producer = AIOKafkaProducer(
                     bootstrap_servers=self.bootstrap_servers,
-                    value_serializer=lambda v: json.dumps(v, default=str).encode(
-                        "utf-8"
-                    ),
+                    value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8"),
                 )
                 await self._producer.start()
                 logger.info("✅ Kafka Producer started at %s", self.bootstrap_servers)
             except Exception as e:
-                logger.warning(
-                    "⚠️ Kafka connection failed: %s. Falling back to no-op mode.", e
-                )
+                logger.warning("⚠️ Kafka connection failed: %s. Falling back to no-op mode.", e)
                 self._is_noop = True
                 self._producer = None
 

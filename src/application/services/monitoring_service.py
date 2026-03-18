@@ -64,9 +64,7 @@ class MonitoringService:
                     continue
 
         if len(current_data) < self.MIN_DATA_POINTS:
-            raise ValueError(
-                f"Not enough data points ({len(current_data)}) to calculate drift"
-            )
+            raise ValueError(f"Not enough data points ({len(current_data)}) to calculate drift")
 
         # 3. Calculate Drift
         feature_name = f"feature_{feature_index}"
@@ -81,14 +79,12 @@ class MonitoringService:
         await self._drift_report_repo.save(model_id, report)
 
         # 5. Update Prometheus Metrics
-        DRIFT_SCORE.labels(
-            model_id=model_id, feature_name=feature_name, method=report.method
-        ).set(report.statistic)
+        DRIFT_SCORE.labels(model_id=model_id, feature_name=feature_name, method=report.method).set(
+            report.statistic
+        )
 
         if report.drift_detected:
-            DRIFT_DETECTED_COUNT.labels(
-                model_id=model_id, feature_name=feature_name
-            ).inc()
+            DRIFT_DETECTED_COUNT.labels(model_id=model_id, feature_name=feature_name).inc()
 
             logger.warning("🚨 DRIFT DETECTED: %s", report.recommendation)
             await self._trigger_retrain(model_id, report)

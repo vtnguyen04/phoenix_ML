@@ -57,9 +57,7 @@ async def test_open_returns_fallback() -> None:
 @pytest.mark.asyncio
 async def test_half_open_recovery() -> None:
     cb = CircuitBreaker(
-        CircuitBreakerConfig(
-            failure_threshold=1, recovery_timeout=0, half_open_requests=2
-        )
+        CircuitBreakerConfig(failure_threshold=1, recovery_timeout=0, half_open_requests=2)
     )
 
     await cb.execute(_failure, _fallback)

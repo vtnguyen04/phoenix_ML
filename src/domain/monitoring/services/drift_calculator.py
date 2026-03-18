@@ -56,9 +56,7 @@ class DriftCalculator:
         p_value: float = float(result.pvalue)
         drift_detected = bool(p_value < threshold)
 
-        recommendation = self._generate_recommendation(
-            drift_detected, statistic, feature_name
-        )
+        recommendation = self._generate_recommendation(drift_detected, statistic, feature_name)
 
         return DriftReport(
             feature_name=feature_name,
@@ -102,9 +100,7 @@ class DriftCalculator:
         drift_detected = bool(psi > PSI_MODERATE_DRIFT)
         p_value = 0.01 if drift_detected else (0.1 if psi > PSI_NO_DRIFT else 0.5)
 
-        recommendation = self._generate_recommendation(
-            drift_detected, psi, feature_name
-        )
+        recommendation = self._generate_recommendation(drift_detected, psi, feature_name)
 
         return DriftReport(
             feature_name=feature_name,
@@ -128,9 +124,7 @@ class DriftCalculator:
         threshold = float(np.std(reference) * WASSERSTEIN_THRESHOLD_FACTOR)
         drift_detected = bool(distance > threshold)
 
-        recommendation = self._generate_recommendation(
-            drift_detected, distance, feature_name
-        )
+        recommendation = self._generate_recommendation(drift_detected, distance, feature_name)
 
         return DriftReport(
             feature_name=feature_name,
@@ -154,7 +148,4 @@ class DriftCalculator:
                 f"CRITICAL: Severe drift in {feature_name}. "
                 "Immediate retraining and pipeline check required."
             )
-        return (
-            f"WARNING: Drift detected in {feature_name}. "
-            "Scheduling auto-retraining pipeline."
-        )
+        return f"WARNING: Drift detected in {feature_name}. Scheduling auto-retraining pipeline."

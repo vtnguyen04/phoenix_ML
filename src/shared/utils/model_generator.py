@@ -12,9 +12,7 @@ def generate_simple_onnx(output_path: Path) -> None:
     X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [None, 4])
     Y = helper.make_tensor_value_info("output", TensorProto.FLOAT, [None, 2])
 
-    W = helper.make_tensor(
-        "W", TensorProto.FLOAT, [4, 2], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
-    )
+    W = helper.make_tensor("W", TensorProto.FLOAT, [4, 2], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
     B = helper.make_tensor("B", TensorProto.FLOAT, [2], [0.1, 0.2])
 
     matmul_node = helper.make_node("MatMul", ["input", "W"], ["matmul_out"])

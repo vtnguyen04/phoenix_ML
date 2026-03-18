@@ -18,9 +18,7 @@ class TensorRTExecutor(InferenceEngine):
 
     async def load(self, model: Model) -> None:
         if model.framework != "tensorrt":
-            raise ValueError(
-                f"Model framework {model.framework} not supported by TensorRTExecutor"
-            )
+            raise ValueError(f"Model framework {model.framework} not supported by TensorRTExecutor")
 
         # Mock loading
         self._engines[model.unique_key] = "MockTRTEngine"

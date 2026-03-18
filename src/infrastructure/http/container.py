@@ -60,9 +60,7 @@ def ensure_model_exists() -> Path:
     is_test = "test" in str(Path.cwd())
 
     if is_ci or is_test:
-        logger.warning(
-            "🧪 CI/Test context. Generating valid ONNX model at %s", model_path
-        )
+        logger.warning("🧪 CI/Test context. Generating valid ONNX model at %s", model_path)
         generate_simple_onnx(model_path)
         return model_path.absolute()
 

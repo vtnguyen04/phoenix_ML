@@ -7,8 +7,7 @@ from typing import Protocol
 import mlflow
 import mlflow.onnx
 
-from src.domain.inference.entities.model import Model
-from src.domain.inference.entities.model import ModelStage
+from src.domain.inference.entities.model import Model, ModelStage
 from src.domain.model_registry.repositories.model_repository import ModelRepository
 
 
@@ -36,9 +35,7 @@ class _MlflowClient(Protocol):
 
     def search_model_versions(self, filter_string: str) -> list[_ModelVersion]: ...
 
-    def transition_model_version_stage(
-        self, *, name: str, version: str, stage: str
-    ) -> None: ...
+    def transition_model_version_stage(self, *, name: str, version: str, stage: str) -> None: ...
 
 
 class MlflowModelRegistry(ModelRepository):
@@ -129,17 +126,13 @@ class MlflowModelRegistry(ModelRepository):
                 raise ValueError(f"MLflow model version not found for {model_id}:{version}")
             mv_version = mv.version
 
-        client.transition_model_version_stage(
-            name=model_id, version=mv_version, stage=mapped
-        )
+        client.transition_model_version_stage(name=model_id, version=mv_version, stage=mapped)
 
     @staticmethod
     def _require_local_path(uri: str) -> Path:
         if uri.startswith("local://"):
             return Path(uri.removeprefix("local://"))
-        raise ValueError(
-            "MlflowModelRegistry.save expects uri to be local://<path-to-onnx>"
-        )
+        raise ValueError("MlflowModelRegistry.save expects uri to be local://<path-to-onnx>")
 
     @staticmethod
     def _map_role_to_mlflow_stage(role: object) -> str | None:
@@ -199,7 +192,7 @@ class MlflowModelRegistry(ModelRepository):
 
     @staticmethod
     def _load_onnx(path: Path):  # returns onnx.ModelProto
-        import onnx  # type: ignore
+        import onnx  # type: ignore # noqa: PLC0415
 
         return onnx.load(str(path))
 
@@ -258,9 +251,7 @@ class MlflowModelRegistry(ModelRepository):
             return datetime.now(UTC)
 
     @staticmethod
-    def _latest_mlflow_version(
-        client: _MlflowClient, model_id: str
-    ) -> _ModelVersion | None:
+    def _latest_mlflow_version(client: _MlflowClient, model_id: str) -> _ModelVersion | None:
         versions = client.search_model_versions(f"name='{model_id}'")
         numeric = [mv for mv in versions if mv.version.isdigit()]
         if not numeric:

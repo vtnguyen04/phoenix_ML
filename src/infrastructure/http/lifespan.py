@@ -75,9 +75,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         model_repo = PostgresModelRegistry(db)
 
         result = await db.execute(
-            select(ModelORM).where(
-                ModelORM.id == "credit-risk", ModelORM.version == "v1"
-            )
+            select(ModelORM).where(ModelORM.id == "credit-risk", ModelORM.version == "v1")
         )
         if not result.scalar_one_or_none():
             try:

@@ -22,9 +22,7 @@ class BatchManager:
     Accumulates requests over a short window and executes them as a single batch.
     """
 
-    def __init__(
-        self, engine: InferenceEngine, config: BatchConfig | None = None
-    ) -> None:
+    def __init__(self, engine: InferenceEngine, config: BatchConfig | None = None) -> None:
         self._engine = engine
         self._config = config or BatchConfig()
         # Queues per model: {model_key: Queue[(features, future)]}
@@ -98,9 +96,7 @@ class BatchManager:
 
                     try:
                         # Run batch inference
-                        predictions = await self._engine.batch_predict(
-                            model, features_list
-                        )
+                        predictions = await self._engine.batch_predict(model, features_list)
 
                         # Resolve all futures
                         for i, prediction in enumerate(predictions):
@@ -133,9 +129,7 @@ class BatchManager:
                 task.cancel()
 
             if self._running_tasks:
-                await asyncio.gather(
-                    *self._running_tasks.values(), return_exceptions=True
-                )
+                await asyncio.gather(*self._running_tasks.values(), return_exceptions=True)
 
             self._running_tasks.clear()
             self._queues.clear()

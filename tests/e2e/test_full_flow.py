@@ -19,9 +19,7 @@ async def test_e2e_predict_and_feedback_flow() -> None:
     async with asyncio.timeout(TEST_TIMEOUT):
         async with LifespanManager(app) as manager:
             transport = ASGITransport(app=manager.app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 health_resp = await client.get("/health")
                 assert health_resp.status_code == SUCCESS_STATUS
                 assert health_resp.json()["status"] == "healthy"
