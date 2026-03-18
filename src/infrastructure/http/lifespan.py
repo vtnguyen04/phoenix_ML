@@ -191,11 +191,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             for record in real_features:
                 await feature_store.add_features(record["entity_id"], record["features"])
             logger.info("✅ Seeded %d real feature records", len(real_features))
-        else:
-            # Fallback: one record for basic functionality (30 features)
-            await feature_store.add_features(
-                "customer-good",
-                {
+
+        # Always Seed Fallback: one record for basic functionality (30 features)
+        await feature_store.add_features(
+            "customer-good",
+            {
                     "duration": 0.5,
                     "credit_amount": -0.3,
                     "installment_commitment": 0.8,

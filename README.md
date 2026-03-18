@@ -30,6 +30,16 @@ Standardized on **ONNX Runtime**, the platform provides unified high-performance
 
 ---
 
+## Recent Milestones & Enhancements
+
+- **Frontend SOLID Refactoring**: Migrated the entire React application to highly decoupled, state-isolated components based on SOLID principles. Features include custom React hooks (`useModels`, `useDrift`) and robust unit testing covering isolated UI components.
+- **Backend Quality Assurance**: Fully mitigated code smells using `Ruff` and strict type safety enforced by `Mypy`. Removed legacy structural scripts in favor of dynamic Python setups configured by `pyproject.toml`.
+- **Comprehensive Benchmarking**: Introduced latency (`latency_benchmark.py`) and throughput (`throughput_benchmark.py`) benchmarks to validate concurrent execution metrics on production hardware.
+- **Test-Driven Operations**: Integrated dynamic test mocking via an in-memory lifespan feature seeder that populates `customer-good` mock records during 100% automated End-to-End API test environments.
+- **Continuous Integration (CI/CD)**: Added parallel GitHub Actions workflows spanning Pytest integration pipelines and Vitest DOM testing to guarantee flawless quality gates before code merger.
+
+---
+
 ## Project Structure
 
 The project follows a modular structure reflecting the Inversion of Control principle:
@@ -47,24 +57,27 @@ The project follows a modular structure reflecting the Inversion of Control prin
 │   │   ├── handlers/        # Logic orchestrators
 │   │   └── services/        # Cross-context application services
 │   ├── infrastructure/      # Implementation Layer (Adapters)
-│   │   ├── http/            # FastAPI configuration and routes
+│   │   ├── http/            # FastAPI configuration & Lifespan triggers
 │   │   ├── ml_engines/      # ONNX and TensorRT implementations
 │   │   ├── messaging/       # Kafka producers and consumers
-│   │   ├── persistence/     # PostgreSQL and Redis repositories
-│   │   └── artifact_storage/# Local and S3 model loading
+│   │   ├── persistence/     # PostgreSQL, MLflow, and Redis repositories
+│   │   └── artifact_storage/# Local / S3 artifact loading
 │   └── shared/              # Utilities and Base interfaces
 ├── frontend/                # React + TypeScript Control Plane
 │   ├── src/api/             # Standardized API client
 │   ├── src/components/      # Reusable UI components
-│   └── src/types/           # Shared TypeScript interfaces
-├── tests/                   # Comprehensive Test Suite
+│   ├── src/hooks/           # Custom state hooks (usePredict, useMetrics)
+│   ├── src/types/           # Shared TypeScript interfaces
+│   └── src/test/            # 80+ isolated RTL/Vitest suites
+├── tests/                   # Backend Comprehensive Test Suite
 │   ├── unit/                # Per-layer isolation tests
-│   └── integration/         # End-to-end flow verification
-├── scripts/                 # MLOps Pipelines (Training, Simulation)
+│   ├── integration/         # DB & Feature Store boundary verification
+│   └── e2e/                 # Full prediction & feedback pipelines
+├── scripts/                 # MLOps Pipelines (Training, Seeders)
+├── benchmarks/              # Performance validation (Latency, Throughput)
+├── deploy/                  # Production Helm Charts & Manifests
 ├── grafana/                 # Monitoring Dashboards (Provisioning)
-├── .github/workflows/       # Full-stack CI/CD (Ruff, Mypy, Vitest, Docker)
-├── Dockerfile               # Backend production build
-├── Dockerfile.frontend      # Frontend production build
+├── .github/workflows/       # Full-stack CI/CD (Ruff, Mypy, Vitest, Pytest)
 └── compose.yaml             # Multi-container stack orchestration
 ```
 
@@ -74,12 +87,12 @@ The project follows a modular structure reflecting the Inversion of Control prin
 
 | Category | Component |
 | :--- | :--- |
-| **Backend Framework** | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy (Async) |
-| **ML Runtime** | ONNX Runtime, Scikit-Learn |
-| **Infrastructure** | Apache Kafka (aiokafka), Redis 7, PostgreSQL 15 |
+| **Backend Framework** | Python 3.13, FastAPI, Pydantic, SQLAlchemy (Async), Uvicorn |
+| **ML Runtime** | ONNX Runtime, Scikit-Learn, MLflow Registry |
+| **Infrastructure** | Apache Kafka (aiokafka), Redis, PostgreSQL, MinIO/S3 |
 | **Observability** | Prometheus, Grafana |
-| **Frontend** | React 18, TypeScript, Tailwind CSS, TanStack Query |
-| **Tooling** | Ruff (Linting), Mypy (Type Checking), Pytest (Testing), Docker |
+| **Frontend** | React 18, TypeScript, Tailwind CSS, TanStack Query, Vitest |
+| **Tooling** | `uv` (Package Management), Ruff (Linting), Mypy (Types), Pytest (Testing), Docker |
 
 ---
 
@@ -92,22 +105,22 @@ Deploy the entire stack—including the API, Dashboard, Kafka, and Monitoring—
 docker compose up -d --build
 ```
 
--   **API Gateway**: http://localhost:8000
--   **Control Plane Dashboard**: http://localhost:5173
--   **Grafana (Observability)**: http://localhost:3000 (Credentials: Admin/admin)
--   **Prometheus (Metrics)**: http://localhost:9090
+-   **API Gateway**: `http://localhost:8000`
+-   **Control Plane Dashboard**: `http://localhost:5173`
+-   **Grafana (Observability)**: `http://localhost:3000` (Credentials: Admin/admin)
+-   **Prometheus (Metrics)**: `http://localhost:9090`
 
 ### Local Development Environment
 
-1.  **Environment Setup**:
+1.  **Environment Setup**: We use `uv` for ultra-fast dependency management:
     ```bash
     uv sync
     ```
 
-2.  **Generate Model Artifacts**:
+2.  **Generate Test Artifacts & DB Seed**:
     ```bash
     uv run scripts/train_model.py
-    uv run scripts/train_challenger.py
+    uv run scripts/seed_features.py
     ```
 
 3.  **Start Inference Service**:
@@ -119,19 +132,28 @@ docker compose up -d --build
 
 ## Quality Assurance
 
-We maintain 100% compliance with strict quality gates enforced via CI/CD:
+We maintain 100% compliance with strict quality gates enforced via CI/CD. Run these locally before pushing:
 
 ```bash
-# Python Quality Gate
+# Backend Quality Gate
 uv run ruff check .
 uv run mypy . --explicit-package-bases
-uv run pytest
+uv run pytest tests/
 
 # Frontend Quality Gate
 cd frontend
 npm ci
-npx tsc --noEmit
-npx eslint . --ext ts,tsx
+npm run dev:test     # Run isolated Vitest suites
+```
+
+---
+
+## Benchmarking
+
+Performance tests evaluate latency bottlenecks across the inference pipeline:
+```bash
+uv run python benchmarks/latency_benchmark.py
+uv run python benchmarks/throughput_benchmark.py
 ```
 
 ---
