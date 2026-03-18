@@ -6,6 +6,7 @@ from pathlib import Path
 from src.config import get_settings
 from src.domain.feature_store.repositories.feature_store import FeatureStore
 from src.domain.inference.services.batch_manager import BatchConfig, BatchManager
+from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
 from src.domain.monitoring.services.model_evaluator import ModelEvaluator
 from src.infrastructure.artifact_storage.local_artifact_storage import (
@@ -16,7 +17,6 @@ from src.infrastructure.feature_store.in_memory_feature_store import (
 )
 from src.infrastructure.feature_store.redis_feature_store import RedisFeatureStore
 from src.infrastructure.messaging.kafka_producer import KafkaProducer
-from src.domain.inference.services.inference_engine import InferenceEngine
 from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
 from src.infrastructure.ml_engines.tensorrt_executor import TensorRTExecutor
 from src.infrastructure.ml_engines.triton_client import TritonInferenceClient
