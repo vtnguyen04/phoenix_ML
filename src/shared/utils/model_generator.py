@@ -9,11 +9,15 @@ logger = logging.getLogger(__name__)
 
 def generate_simple_onnx(output_path: Path) -> None:
     """Generates a simple ONNX model (Sigmoid(X*W+B)) for testing purposes."""
-    X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [None, 4])
+    n_features = 30  # Match real model's feature count (20 base + 10 engineered)
+    X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [None, n_features])
     Y = helper.make_tensor_value_info("output", TensorProto.FLOAT, [None, 2])
 
     W = helper.make_tensor(
-        "W", TensorProto.FLOAT, [4, 2], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+        "W",
+        TensorProto.FLOAT,
+        [n_features, 2],
+        [0.1 * (i + 1) for i in range(n_features * 2)],
     )
     B = helper.make_tensor("B", TensorProto.FLOAT, [2], [0.1, 0.2])
 
