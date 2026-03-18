@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # gRPC message types (lightweight substitutes when proto compilation is skipped)
 # ---------------------------------------------------------------------------
 
+
 class PredictRequest:
     """Mirrors proto PredictRequest."""
 
@@ -70,6 +71,7 @@ class HealthCheckResponse:
 # ---------------------------------------------------------------------------
 # Service implementation
 # ---------------------------------------------------------------------------
+
 
 class InferenceServicer:
     """
@@ -126,6 +128,7 @@ class InferenceServicer:
 # ---------------------------------------------------------------------------
 # Server factory
 # ---------------------------------------------------------------------------
+
 
 def create_grpc_server(  # noqa: PLR0913
     model_repo: ModelRepository,

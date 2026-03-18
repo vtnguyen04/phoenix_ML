@@ -56,9 +56,7 @@ class S3ArtifactStorage(ArtifactStorage):
             logger.info("Downloaded %s → %s", remote_uri, local_path)
             return local_path
         except (BotoCoreError, ClientError) as e:
-            raise OSError(
-                f"Failed to download artifact from {remote_uri}: {e}"
-            ) from e
+            raise OSError(f"Failed to download artifact from {remote_uri}: {e}") from e
 
     async def upload(self, local_path: Path, remote_uri: str) -> None:
         """Upload a local artifact to S3."""
@@ -71,9 +69,7 @@ class S3ArtifactStorage(ArtifactStorage):
             self._client.upload_file(str(local_path), bucket, key)
             logger.info("Uploaded %s → %s", local_path, remote_uri)
         except (BotoCoreError, ClientError) as e:
-            raise OSError(
-                f"Failed to upload artifact to {remote_uri}: {e}"
-            ) from e
+            raise OSError(f"Failed to upload artifact to {remote_uri}: {e}") from e
 
     async def exists(self, remote_uri: str) -> bool:
         """Check if an artifact exists in S3."""
@@ -91,6 +87,4 @@ class S3ArtifactStorage(ArtifactStorage):
             self._client.delete_object(Bucket=bucket, Key=key)
             logger.info("Deleted %s", remote_uri)
         except (BotoCoreError, ClientError) as e:
-            raise OSError(
-                f"Failed to delete artifact {remote_uri}: {e}"
-            ) from e
+            raise OSError(f"Failed to delete artifact {remote_uri}: {e}") from e

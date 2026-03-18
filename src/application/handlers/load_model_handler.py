@@ -9,21 +9,15 @@ class LoadModelHandler:
     Initializes the engine with the requested model.
     """
 
-    def __init__(
-        self, model_repo: ModelRepository, inference_engine: InferenceEngine
-    ) -> None:
+    def __init__(self, model_repo: ModelRepository, inference_engine: InferenceEngine) -> None:
         self._model_repo = model_repo
         self._inference_engine = inference_engine
 
     async def execute(self, command: LoadModelCommand) -> bool:
-        model = await self._model_repo.get_by_id(
-            command.model_id, command.model_version
-        )
+        model = await self._model_repo.get_by_id(command.model_id, command.model_version)
 
         if not model:
-            raise ValueError(
-                f"Model {command.model_id}:{command.model_version} not found"
-            )
+            raise ValueError(f"Model {command.model_id}:{command.model_version} not found")
 
         await self._inference_engine.load(model)
 

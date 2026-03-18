@@ -20,9 +20,7 @@ def mock_engine() -> AsyncMock:
 
 
 @pytest.mark.asyncio
-async def test_load_model_handler_success(
-    mock_repo: AsyncMock, mock_engine: AsyncMock
-) -> None:
+async def test_load_model_handler_success(mock_repo: AsyncMock, mock_engine: AsyncMock) -> None:
     handler = LoadModelHandler(mock_repo, mock_engine)
 
     # Setup
@@ -41,9 +39,7 @@ async def test_load_model_handler_success(
 
 
 @pytest.mark.asyncio
-async def test_load_model_handler_not_found(
-    mock_repo: AsyncMock, mock_engine: AsyncMock
-) -> None:
+async def test_load_model_handler_not_found(mock_repo: AsyncMock, mock_engine: AsyncMock) -> None:
     handler = LoadModelHandler(mock_repo, mock_engine)
 
     # Setup

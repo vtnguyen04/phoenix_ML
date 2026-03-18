@@ -163,7 +163,7 @@ async def get_model(
     return {
         "model_id": model.id,
         "version": model.version,
-        "status": model.status,
+        "status": model.stage.value,
         "metadata": model.metadata,
     }
 

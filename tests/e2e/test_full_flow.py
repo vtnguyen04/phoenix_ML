@@ -19,9 +19,7 @@ async def test_e2e_predict_and_feedback_flow() -> None:
     async with asyncio.timeout(TEST_TIMEOUT):
         async with LifespanManager(app) as manager:
             transport = ASGITransport(app=manager.app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 health_resp = await client.get("/health")
                 assert health_resp.status_code == SUCCESS_STATUS
                 assert health_resp.json()["status"] == "healthy"
@@ -34,6 +32,7 @@ async def test_e2e_predict_and_feedback_flow() -> None:
                         "entity_id": "customer-good",
                     },
                 )
+                print(f"DEBUG: {predict_resp.json()}")
                 assert predict_resp.status_code == SUCCESS_STATUS
                 data = predict_resp.json()
                 assert "prediction_id" in data
@@ -61,9 +60,7 @@ async def test_e2e_monitoring_drift_check() -> None:
     async with asyncio.timeout(TEST_TIMEOUT):
         async with LifespanManager(app) as manager:
             transport = ASGITransport(app=manager.app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 health_resp = await client.get("/health")
                 assert health_resp.status_code == SUCCESS_STATUS
 
@@ -90,11 +87,6 @@ async def test_e2e_model_performance_endpoint() -> None:
     async with asyncio.timeout(TEST_TIMEOUT):
         async with LifespanManager(app) as manager:
             transport = ASGITransport(app=manager.app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
-                perf_resp = await client.get(
-                    "/monitoring/performance/credit-risk"
-                )
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                perf_resp = await client.get("/monitoring/performance/credit-risk")
                 assert perf_resp.status_code in (SUCCESS_STATUS, 500)
-

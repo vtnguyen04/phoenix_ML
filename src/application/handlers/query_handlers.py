@@ -5,6 +5,8 @@ Each handler receives a query object and returns data from the appropriate
 repository without side effects.
 """
 
+from typing import Any
+
 from src.application.queries import (
     GetDriftReportQuery,
     GetModelPerformanceQuery,
@@ -51,10 +53,8 @@ class GetPredictionLogsQueryHandler:
     def __init__(self, log_repo: PredictionLogRepository) -> None:
         self._log_repo = log_repo
 
-    async def execute(self, query: GetPredictionLogsQuery) -> list[dict]:
-        raw_logs = await self._log_repo.get_recent_logs(
-            query.model_id, query.limit
-        )
+    async def execute(self, query: GetPredictionLogsQuery) -> list[dict[str, Any]]:
+        raw_logs = await self._log_repo.get_recent_logs(query.model_id, query.limit)
         return [
             {
                 "model_id": command.model_id,
@@ -78,7 +78,7 @@ class GetModelPerformanceQueryHandler:
         self._log_repo = log_repo
         self._evaluator = evaluator
 
-    async def execute(self, query: GetModelPerformanceQuery) -> dict:
+    async def execute(self, query: GetModelPerformanceQuery) -> dict[str, Any]:
         logs = await self._log_repo.get_recent_logs(query.model_id, limit=1000)
         if not logs:
             return {

@@ -14,9 +14,7 @@ class KafkaConsumer:
         self.group_id = group_id
         self._running = False
 
-    async def start(
-        self, topic: str, handler: Callable[[dict[str, Any]], Awaitable[None]]
-    ) -> None:
+    async def start(self, topic: str, handler: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
         """Starts consuming messages from the topic and processes them with the handler."""
         self._running = True
         logger.info("Listening on %s...", topic)
