@@ -6,6 +6,7 @@ from pathlib import Path
 from src.config import get_settings
 from src.domain.feature_store.repositories.feature_store import FeatureStore
 from src.domain.inference.services.batch_manager import BatchConfig, BatchManager
+from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
 from src.domain.monitoring.services.model_evaluator import ModelEvaluator
 from src.infrastructure.artifact_storage.local_artifact_storage import (
@@ -17,13 +18,23 @@ from src.infrastructure.feature_store.in_memory_feature_store import (
 from src.infrastructure.feature_store.redis_feature_store import RedisFeatureStore
 from src.infrastructure.messaging.kafka_producer import KafkaProducer
 from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
+from src.infrastructure.ml_engines.tensorrt_executor import TensorRTExecutor
+from src.infrastructure.ml_engines.triton_client import TritonInferenceClient
 from src.shared.utils.model_generator import generate_simple_onnx
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 artifact_storage = LocalArtifactStorage(base_dir=Path("/tmp/phoenix/remote_storage"))
-inference_engine = ONNXInferenceEngine(cache_dir=Path("/tmp/phoenix/model_cache"))
+
+inference_engine: InferenceEngine
+engine_type = getattr(settings, "INFERENCE_ENGINE", "onnx").lower()
+if engine_type == "tensorrt":
+    inference_engine = TensorRTExecutor(cache_dir=Path("/tmp/phoenix/model_cache"))
+elif engine_type == "triton":
+    inference_engine = TritonInferenceClient(triton_url=getattr(settings, "TRITON_URL", "http://localhost:8000"))
+else:
+    inference_engine = ONNXInferenceEngine(cache_dir=Path("/tmp/phoenix/model_cache"))
 batch_config = BatchConfig(max_batch_size=16, max_wait_time_ms=10)
 batch_manager = BatchManager(inference_engine, config=batch_config)
 kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
