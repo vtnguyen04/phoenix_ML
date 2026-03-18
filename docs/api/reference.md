@@ -98,7 +98,20 @@ Get model performance metrics over time.
 
 ---
 
-## 5. Feature Store
+## 5. Feedback Loop
+
+### `POST /api/feedback`
+Submit ground-truth feedback for a prediction to enable online learning.
+
+**Request Body**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `prediction_id` | string | Yes | ID of the original prediction |
+| `actual_result` | integer | Yes | Ground-truth label |
+
+---
+
+## 6. Feature Store
 
 ### `GET /api/features/{entity_id}`
 Retrieve features for an entity from the online feature store (Redis).
@@ -107,14 +120,19 @@ Retrieve features for an entity from the online feature store (Redis).
 ```json
 {
   "entity_id": "customer-good",
-  "features": [1.2, 0.5, 3.4, ...],
-  "source": "redis"
+  "features": {"income": 50000, "age": 35, "credit_score": 720}
 }
 ```
 
+### `POST /api/features/ingest`
+Ingest feature data into the store.
+
+### `GET /api/features/reference`
+Get reference feature distributions for drift comparison.
+
 ---
 
-## 6. Observability
+## 7. Observability
 
 ### `GET /metrics`
 Prometheus metrics endpoint (scraped automatically).

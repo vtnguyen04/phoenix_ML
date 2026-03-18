@@ -5,6 +5,7 @@ Technical documentation for the **Phoenix ML Platform** — a self-healing real-
 ## Architecture
 
 - **[System Design](architecture/system-design.md)**: Full architecture, Mermaid diagrams, layer structure, design patterns, self-healing flow
+- **[DDD Overview](architecture/ddd-overview.md)**: Bounded contexts, entities, value objects, domain services, repository interfaces, CQRS
 - **[Frontend Architecture](frontend/architecture.md)**: React + TypeScript dashboard, component breakdown, API integration
 
 ## API & Deployment
