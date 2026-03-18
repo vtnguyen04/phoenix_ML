@@ -50,7 +50,8 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Architecture:
-    - Core Design: architecture/system-design.md
+    - System Design: architecture/system-design.md
+    - DDD Overview: architecture/ddd-overview.md
     - Frontend Design: frontend/architecture.md
   - API Reference: api/reference.md
   - Decisions (ADR):
@@ -58,5 +59,6 @@ nav:
     - 002 - ONNX Runtime: adr/002-use-onnx-runtime.md
     - 003 - Kafka Streaming: adr/003-use-kafka-for-event-streaming.md
     - 004 - Observability Stack: adr/004-observability-with-prometheus-grafana.md
+    - 005 - DVC Data Versioning: adr/005-dvc-data-versioning.md
   - Deployment:
     - Docker Stack: deployment/docker-stack.md
