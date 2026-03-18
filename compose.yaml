@@ -14,8 +14,10 @@ services:
       - db
       - kafka
     volumes:
-      - ./models:/models
+      - ./models:/app/models
       - ./src:/app/src
+      - ./data:/app/data
+      - ./pyproject.toml:/app/pyproject.toml:ro
 
   # Frontend Dashboard
   frontend:
@@ -73,12 +75,15 @@ services:
     image: grafana/grafana
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     ports:
       - "3001:3000"
     depends_on:
       - prometheus
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
 
   # Object Storage (DVC Remote)
   minio:
