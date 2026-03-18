@@ -1,141 +1,164 @@
-# Detailed System Architecture: Phoenix ML Platform
+# System Architecture: Phoenix ML Platform
 
-This document provides an exhaustive technical analysis of the Phoenix ML Platform's architecture, data flow, and component interactions.
+## 1. Overview
 
-## 1. Architectural Philosophy
+Phoenix ML is a self-healing real-time ML inference system built with **Domain-Driven Design (DDD)** and **Clean Architecture**. It provides automated model serving, drift detection, anomaly monitoring, and auto-rollback capabilities.
 
-The platform is built on the **Clean Architecture** paradigm, ensuring that high-level business rules (the Domain) are isolated from low-level implementation details (Infrastructure).
-
-### High-Level Architecture (C4 Level 2)
+## 2. Architecture Diagram
 
 ```mermaid
 graph TD
-    Client[External Client] -->|HTTPS/JSON| LB[Load Balancer / Ingress]
-    LB -->|Round Robin| API[Phoenix API Gateway]
-    
-    subgraph "Core Services (FastAPI)"
-        API -->|PredictCommand| InferenceSvc[Inference Handler]
-        API -->|Query| MonitorSvc[Monitoring Service]
+    Client[External Client] -->|REST/gRPC| API[Phoenix API Gateway - FastAPI]
+
+    subgraph "Inference Core"
+        API --> Handler[PredictHandler]
+        Handler --> Pipeline[Request Pipeline - Chain of Responsibility]
+        Pipeline --> Router[Routing Strategy - A/B, Canary, Shadow]
+        Router --> CB[Circuit Breaker]
+        CB --> Engines
+
+        subgraph Engines[Model Executors]
+            ONNX[ONNX Runtime]
+            TRT[TensorRT Engine]
+            Triton[Triton Client]
+        end
     end
-    
-    subgraph "Real-time Data Plane"
-        InferenceSvc -->|MGET < 5ms| Redis[(Redis Feature Store)]
-        InferenceSvc -->|Execute| ONNX[ONNX Runtime Engine]
+
+    subgraph "Data Layer"
+        Handler -->|MGET| Redis[(Redis - Online Features)]
+        Handler -->|Read| Parquet[Parquet - Offline Features]
+        API -->|CRUD| Postgres[(PostgreSQL - Metadata)]
+        API -->|Artifacts| MinIO[(MinIO/S3 - Model Storage)]
     end
-    
-    subgraph "Event & Persistence Plane"
-        InferenceSvc -.->|Async Event| Kafka{Kafka Event Bus}
-        Kafka -->|Topic: inference-events| LogWorker[Postgres Log Repository]
-        LogWorker -->|SQL| DB[(PostgreSQL)]
+
+    subgraph "Event Bus"
+        Handler -.->|Async| Kafka{Apache Kafka}
+        Kafka --> Retrain[Retrain Trigger]
+        Kafka --> Logger[Prediction Logger]
     end
-    
-    subgraph "Observability Stack"
-        InferenceSvc -->|Export| Prom[Prometheus]
-        MonitorSvc -->|Export| Prom
-        Prom -->|Visualize| Grafana[Grafana Dashboard]
+
+    subgraph "Self-Healing Subsystem"
+        Monitor[Monitoring Service] --> Drift[Drift Calculator - KS, PSI, Chi2, Wasserstein]
+        Monitor --> Anomaly[Anomaly Detector - Prediction, Latency, Error Rate]
+        Monitor --> Alert[Alert Manager - Webhook Notifier]
+        Alert --> Rollback[Rollback Manager]
+    end
+
+    subgraph "Observability"
+        API -->|Metrics| Prometheus[Prometheus]
+        Prometheus --> Grafana[Grafana Dashboards]
+        API -->|Traces| Jaeger[Jaeger - Distributed Tracing]
+    end
+
+    subgraph "Frontend"
+        Dashboard[React + TypeScript Dashboard]
+        Dashboard -->|Fetch| API
+        Dashboard -->|Embed iframe| Grafana
+    end
+
+    subgraph "MLOps Pipeline - DVC"
+        DVC[DVC Pipeline] --> TrainChampion[Train Champion - GradientBoosting]
+        DVC --> TrainChallenger[Train Challenger - LogisticRegression]
+        DVC --> SeedFeatures[Seed Reference Features]
+        DVC -->|Push| MinIO
     end
 ```
 
-## 2. Core Workflows
+## 3. Layer Architecture
 
-### 2.1. Real-time Inference Pipeline (Sequence Diagram)
+```
+src/
+├── domain/                    # Pure business logic, zero framework deps
+│   ├── inference/
+│   │   ├── entities/          # Model, Prediction
+│   │   ├── value_objects/     # ModelVersion, ConfidenceScore, LatencyBudget, FeatureVector
+│   │   ├── services/          # InferenceService, RoutingStrategy, CircuitBreaker,
+│   │   │                      # BatchManager, RequestPipeline
+│   │   └── events/            # PredictionMade, ModelLoaded
+│   ├── feature_store/
+│   │   ├── entities/          # FeatureRegistry
+│   │   └── repositories/     # FeatureStore, OfflineFeatureStore
+│   ├── monitoring/
+│   │   ├── entities/          # DriftReport
+│   │   ├── services/          # DriftCalculator, AnomalyDetector,
+│   │   │                      # AlertManager, RollbackManager, ModelEvaluator
+│   │   └── repositories/     # DriftReportRepository, PredictionLogRepository
+│   └── model_registry/
+│       └── repositories/     # ModelRepository, ArtifactStorage
+│
+├── application/               # Use-case orchestration (CQRS)
+│   ├── commands/              # PredictCommand, LoadModelCommand, TriggerRetrainCommand
+│   ├── handlers/              # PredictHandler, RetrainHandler, QueryHandlers
+│   ├── services/              # MonitoringService
+│   └── dto/                   # PredictionRequest, PredictionResponse
+│
+├── infrastructure/            # Framework adapters
+│   ├── http/                  # FastAPI, gRPC, Routes, DI Container
+│   ├── ml_engines/            # ONNX, TensorRT, Triton, MockEngine
+│   ├── feature_store/         # Redis, Parquet, InMemory
+│   ├── persistence/           # Postgres repos, MLflow, InMemory repos
+│   ├── messaging/             # Kafka Producer/Consumer
+│   ├── monitoring/            # Prometheus metrics, Jaeger tracing, Alert notifier
+│   └── artifact_storage/     # S3 (MinIO), Local
+│
+└── shared/                    # Cross-cutting: ingestion, utilities, interfaces
+```
 
-The following diagram illustrates the lifecycle of a prediction request, emphasizing the non-blocking nature of the system.
+## 4. Design Patterns
+
+| Pattern | Implementation | Purpose |
+|---------|---------------|---------|
+| Strategy | `RoutingStrategy` (ABTesting, Canary, Shadow) | Model traffic routing |
+| Circuit Breaker | `CircuitBreaker` (Closed/Open/Half-Open) | Fault tolerance |
+| Chain of Responsibility | `RequestPipeline` (Validation → Cache → Feature → Inference) | Request processing |
+| Command/CQRS | `PredictCommand` → `PredictHandler` | Separate read/write concerns |
+| Repository | `ModelRepository`, `FeatureStore` | Data access abstraction |
+| Observer | Kafka event bus | Async event propagation |
+| Dependency Injection | `Container` class | Framework decoupling |
+
+## 5. Self-Healing Flow
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant API as FastAPI
-    participant H as PredictHandler
-    participant R as Redis (Feature Store)
-    participant E as ONNX Engine
-    participant K as Kafka
+    participant Mon as MonitoringService
+    participant Drift as DriftCalculator
+    participant Anomaly as AnomalyDetector
+    participant Alert as AlertManager
+    participant Rollback as RollbackManager
 
-    C->>API: POST /predict (entity_id="cust_99")
-    API->>H: Execute(PredictCommand)
-    
-    Note over H,R: Parallel Execution via Asyncio
-    par Fetch Features
-        H->>R: HMGET features:cust_99
-        R-->>H: [income, debt, age, hist]
-    and Model Resolution
-        H->>H: RoutingStrategy.select_model()
-        Note right of H: ABTest: Assign v2 (Challenger)
+    Mon->>Drift: detect_drift(features, reference)
+    Drift-->>Mon: DriftReport(ks_stat, p_value)
+
+    Mon->>Anomaly: detect_prediction_anomaly(scores)
+    Anomaly-->>Mon: AnomalyReport(is_anomalous)
+
+    alt Drift or Anomaly detected
+        Mon->>Alert: fire_alert(report)
+        Alert->>Alert: Send webhook notification
+        Mon->>Rollback: evaluate_rollback(model)
+        Rollback-->>Mon: RollbackDecision
     end
-    
-    H->>E: Predict(features)
-    Note over E: Executed in asyncio.to_thread
-    E-->>H: Prediction(Result=1, Conf=0.87)
-    
-    par Async Observability
-        H->>K: Publish("inference-events", event)
-        H->>H: Update Prometheus Metrics
-    end
-    
-    H-->>API: PredictionResponse
-    API-->>C: 200 OK {result: 1, confidence: 0.87}
 ```
 
-## 3. Data Architecture
+## 6. Infrastructure Services
 
-### 3.1. Persistence Layer (ER Diagram)
+| Service | Technology | Port | Purpose |
+|---------|-----------|------|---------|
+| API | FastAPI + Uvicorn | 8001 | ML inference + monitoring REST API |
+| Frontend | React + Vite | 5174 | Dashboard with Grafana embed |
+| Redis | Redis Alpine | 6380 | Online feature store |
+| PostgreSQL | Postgres 15 | 5433 | Model metadata + prediction logs |
+| Kafka | Apache Kafka (KRaft) | 9094 | Async event streaming |
+| Prometheus | Prometheus | 9091 | Metrics collection |
+| Grafana | Grafana | 3001 | Metrics visualization |
+| MinIO | MinIO | 9000/9001 | S3-compatible artifact storage (DVC remote) |
+| Jaeger | Jaeger | 16686 | Distributed tracing |
 
-We maintain a strict schema for model metadata and historical inference logs to facilitate reproducible auditing and drift analysis.
+## 7. Test Coverage
 
-```mermaid
-erDiagram
-    MODELS {
-        string id PK "Model Name (e.g. credit-risk)"
-        string version PK "Semantic Version"
-        string uri "Storage Path"
-        string framework "onnx | tensorrt"
-        string stage "dev | staging | prod"
-        jsonb metadata "Feature names, roles"
-        timestamp created_at
-        boolean is_active
-    }
-
-    PREDICTION_LOGS {
-        uuid id PK
-        string model_id FK
-        string model_version FK
-        jsonb features "The feature vector used"
-        jsonb result "Predicted class/value"
-        float confidence
-        float latency_ms
-        timestamp created_at
-    }
-
-    MODELS ||--o{ PREDICTION_LOGS : "monitors"
-```
-
-## 4. Technical Deep Dive
-
-### 4.1. The Concurrency Model
-To maintain sub-50ms p99 latency, Phoenix ML utilizes a hybrid concurrency approach:
--   **I/O Bound**: Redis and Postgres interactions use `async/await` with `asyncio`, allowing thousands of concurrent connections.
--   **CPU Bound**: Inference via ONNX Runtime is compute-heavy and can block the Python event loop (GIL issues). We offload these calls to a dedicated thread pool using `asyncio.to_thread`, ensuring the API remains responsive.
-
-### 4.2. Model Routing & A/B Testing
-The `PredictHandler` leverages the **Strategy Pattern**. When a request arrives without a specific version:
-1.  It queries the Registry for all `is_active` versions of the model.
-2.  It applies the configured `RoutingStrategy` (e.g., `ABTestStrategy` with a 50/50 split).
-3.  The routing decision is logged in the `prediction_logs`, enabling comparison of Champion vs. Challenger performance in Grafana.
-
-### 4.3. Self-Healing via Drift Detection
-The "Self-Healing" capability is implemented as a continuous loop:
--   **Statistical Engine**: Uses the **Kolmogorov-Smirnov (KS) test** to detect if the distribution of production features deviates significantly from the training baseline.
--   **Automatic Retraining (Trigger)**: Upon detecting drift (p-value < 0.05), the `MonitoringService` issues a system-wide alert. In a full production environment, this event is published to Kafka to trigger an external MLOps pipeline (e.g., Airflow or Kubeflow).
-
-## 5. Error Handling & Resiliency
-
-| Failure Scenario | Mitigation Strategy | Result |
-| :--- | :--- | :--- |
-| **Redis Down** | Fallback to Raw Features in Request | System remains functional but slower for clients. |
-| **Kafka Down** | Retry with Exponential Backoff | Logs are buffered in memory; no data loss for short outages. |
-| **Model Load Fail** | ModelRegistry Validation | Returns 404/500 with detailed diagnostic info. |
-| **GPU Out-of-Memory** | CPU Fallback in ONNX Runtime | Performance degrades but service stays up. |
+- **Backend**: 160+ unit/integration/e2e tests, 85%+ coverage
+- **Frontend**: 96 tests (Vitest + React Testing Library)
+- **CI**: GitHub Actions with Ruff, Mypy, pytest, vitest
 
 ---
-*Document Status: Verified v1.0*  
-*Author: Võ Thành Nguyễn*
+*Document Status: v2.0 — Updated March 2026*
