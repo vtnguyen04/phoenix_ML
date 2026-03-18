@@ -25,11 +25,6 @@ from src.domain.model_registry.repositories.model_repository import ModelReposit
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# gRPC message types (lightweight substitutes when proto compilation is skipped)
-# ---------------------------------------------------------------------------
-
-
 class PredictRequest:
     """Mirrors proto PredictRequest."""
 
@@ -68,9 +63,6 @@ class HealthCheckResponse:
         self.status: int = self.SERVING
 
 
-# ---------------------------------------------------------------------------
-# Service implementation
-# ---------------------------------------------------------------------------
 
 
 class InferenceServicer:
@@ -125,9 +117,6 @@ class InferenceServicer:
         return response
 
 
-# ---------------------------------------------------------------------------
-# Server factory
-# ---------------------------------------------------------------------------
 
 
 def create_grpc_server(  # noqa: PLR0913

@@ -5,7 +5,6 @@ stages:
       - scripts/train_model.py
     outs:
       - models/credit_risk/v1/model.onnx
-      - models/credit_risk/v1/metrics.json
     metrics:
       - models/credit_risk/v1/metrics.json:
           cache: false
@@ -16,7 +15,9 @@ stages:
       - scripts/train_challenger.py
     outs:
       - models/credit_risk/v2/model.onnx
-      - models/credit_risk/v2/metrics.json
+    metrics:
+      - models/credit_risk/v2/metrics.json:
+          cache: false
 
   seed-features:
     cmd: uv run python scripts/seed_features.py

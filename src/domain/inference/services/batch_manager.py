@@ -25,7 +25,6 @@ class BatchManager:
     def __init__(self, engine: InferenceEngine, config: BatchConfig | None = None) -> None:
         self._engine = engine
         self._config = config or BatchConfig()
-        # Queues per model: {model_key: Queue[(features, future)]}
         self._queues: dict[
             str, asyncio.Queue[tuple[FeatureVector, asyncio.Future[Prediction]]]
         ] = {}
@@ -43,7 +42,6 @@ class BatchManager:
         async with self._lock:
             if model.unique_key not in self._queues:
                 self._queues[model.unique_key] = asyncio.Queue()
-                # Start a worker task for this model
                 self._running_tasks[model.unique_key] = asyncio.create_task(
                     self._batch_worker(model),
                     name=f"batch_worker_{model.unique_key}",
@@ -63,7 +61,6 @@ class BatchManager:
             while True:
                 batch_items: list[tuple[FeatureVector, asyncio.Future[Prediction]]] = []
 
-                # 1. Wait for the first item
                 try:
                     item = await queue.get()
                 except asyncio.CancelledError:
@@ -71,7 +68,6 @@ class BatchManager:
 
                 batch_items.append(item)
 
-                # 2. Try to fill the batch until max_batch_size or max_wait_time
                 deadline = time.time() + (self._config.max_wait_time_ms / 1000.0)
 
                 while len(batch_items) < self._config.max_batch_size:
@@ -80,42 +76,38 @@ class BatchManager:
                         break
 
                     try:
-                        # Wait for more items with timeout
                         item = await asyncio.wait_for(queue.get(), timeout=wait_time)
                         batch_items.append(item)
                     except TimeoutError:
                         break
                     except asyncio.CancelledError:
-                        # Will be handled by outer try-finally
                         raise
 
-                # 3. Process the batch
                 if batch_items:
                     features_list = [item[0] for item in batch_items]
                     futures = [item[1] for item in batch_items]
 
-                    try:
-                        # Run batch inference
-                        predictions = await self._engine.batch_predict(model, features_list)
+                    padded_features_list = self._pad_batch(features_list)
 
-                        # Resolve all futures
+                    try:
+                        predictions = await self._engine.batch_predict(model, padded_features_list)
+                        
+                        predictions = predictions[:len(features_list)]
+
                         for i, prediction in enumerate(predictions):
                             if not futures[i].done():
                                 futures[i].set_result(prediction)
 
                     except Exception as e:
-                        # Propagate exception to all callers
                         for future in futures:
                             if not future.done():
                                 future.set_exception(e)
                     finally:
-                        # Mark items as done in queue
                         for _ in range(len(batch_items)):
                             queue.task_done()
         except asyncio.CancelledError:
             pass
         finally:
-            # Fail any items still left in the queue on shutdown
             while not queue.empty():
                 _, future = queue.get_nowait()
                 if not future.done():
@@ -133,3 +125,24 @@ class BatchManager:
 
             self._running_tasks.clear()
             self._queues.clear()
+
+    def _pad_batch(self, features_list: list[FeatureVector]) -> list[FeatureVector]:
+        """
+        Pad batch to the nearest power of 2 for optimal GPU execution.
+        """
+        current_size = len(features_list)
+        if current_size == 0:
+            return features_list
+            
+        # Find next power of 2
+        power = 1
+        while power < current_size:
+            power *= 2
+            
+        if power == current_size:
+            return features_list
+            
+        # Pad with copies of the last element
+        padding_size = power - current_size
+        padding = [features_list[-1]] * padding_size
+        return features_list + padding

@@ -139,7 +139,6 @@ async def check_drift(
         rh = RetrainHandler(root, model_repo, model_evaluator)
         ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
 
-        # Load real reference distributions from training data
         reference_data = _load_reference_distributions(root)
         return await ms.check_drift(
             model_id=model_id, reference_data=reference_data, feature_index=0
@@ -201,7 +200,6 @@ def _load_reference_distributions(project_root: Path) -> list[float]:
         with open(ref_path) as f:
             data = json.load(f)
             if isinstance(data, list) and len(data) > 0:
-                # Extract first feature values from reference records
                 return [
                     float(record[0]) if isinstance(record, list) else float(record)
                     for record in data

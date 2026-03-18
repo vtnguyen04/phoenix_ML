@@ -5,17 +5,17 @@ from scipy import stats
 
 from src.domain.monitoring.entities.drift_report import DriftReport
 
-# Drift Threshold Constants
 PSI_NO_DRIFT = 0.1
 PSI_MODERATE_DRIFT = 0.25
 WASSERSTEIN_THRESHOLD_FACTOR = 0.5
 CRITICAL_DRIFT_THRESHOLD = 0.5
+CHI2_DEFAULT_BINS = 10
 
 
 class DriftCalculator:
     """
     Domain Service responsible for calculating statistical drift.
-    Supports KS-test, PSI, and Wasserstein distance.
+    Supports KS-test, PSI, Wasserstein distance, and Chi-squared test.
     """
 
     def calculate_drift(
@@ -41,6 +41,8 @@ class DriftCalculator:
             return self._psi_test(feature_name, ref_arr, cur_arr)
         if test_type == "wasserstein":
             return self._wasserstein_test(feature_name, ref_arr, cur_arr)
+        if test_type == "chi2":
+            return self._chi2_test(feature_name, ref_arr, cur_arr, threshold)
 
         raise ValueError(f"Unsupported test type: {test_type}")
 
@@ -78,7 +80,6 @@ class DriftCalculator:
     ) -> DriftReport:
         """Population Stability Index"""
         bins = np.percentile(reference, np.linspace(0, 100, n_bins + 1))
-        # Ensure bin edges are unique and handle edge cases
         bins = np.unique(bins)
         if len(bins) < 2:  # noqa: PLR2004
             bins = np.array([-np.inf, np.inf])
@@ -89,14 +90,12 @@ class DriftCalculator:
         ref_counts = np.histogram(reference, bins=bins)[0] / len(reference)
         cur_counts = np.histogram(current, bins=bins)[0] / len(current)
 
-        # Add small epsilon to avoid division by zero or log(0)
         eps = 1e-10
         ref_counts = np.clip(ref_counts, eps, 1.0)
         cur_counts = np.clip(cur_counts, eps, 1.0)
 
         psi = np.sum((cur_counts - ref_counts) * np.log(cur_counts / ref_counts))
 
-        # PSI thresholds: < 0.1 no drift, 0.1-0.25 moderate, > 0.25 significant
         drift_detected = bool(psi > PSI_MODERATE_DRIFT)
         p_value = 0.01 if drift_detected else (0.1 if psi > PSI_NO_DRIFT else 0.5)
 
@@ -119,8 +118,6 @@ class DriftCalculator:
         """Earth Mover's Distance"""
         distance = float(stats.wasserstein_distance(reference, current))
 
-        # Scale-dependent, hard to set a universal threshold
-        # We'll use a heuristic for demonstration
         threshold = float(np.std(reference) * WASSERSTEIN_THRESHOLD_FACTOR)
         drift_detected = bool(distance > threshold)
 
@@ -137,6 +134,46 @@ class DriftCalculator:
             sample_size=len(current),
         )
 
+    def _chi2_test(
+        self,
+        feature_name: str,
+        reference: np.ndarray,
+        current: np.ndarray,
+        threshold: float = 0.05,
+    ) -> DriftReport:
+        """Chi-squared test for categorical/binned continuous features."""
+        combined = np.concatenate([reference, current])
+        bins = np.histogram_bin_edges(combined, bins=CHI2_DEFAULT_BINS)
+
+        ref_counts = np.histogram(reference, bins=bins)[0].astype(float)
+        cur_counts = np.histogram(current, bins=bins)[0].astype(float)
+
+        ref_counts += 1.0
+        cur_counts += 1.0
+
+        ref_proportions = ref_counts / ref_counts.sum()
+        expected = ref_proportions * cur_counts.sum()
+
+        result: Any = stats.chisquare(cur_counts, f_exp=expected)
+        statistic: float = float(result.statistic)
+        p_value: float = float(result.pvalue)
+        drift_detected = bool(p_value < threshold)
+
+        recommendation = self._generate_recommendation(
+            drift_detected, statistic, feature_name
+        )
+
+        return DriftReport(
+            feature_name=feature_name,
+            drift_detected=drift_detected,
+            p_value=p_value,
+            statistic=statistic,
+            threshold=threshold,
+            method="chi2",
+            recommendation=recommendation,
+            sample_size=len(current),
+        )
+
     def _generate_recommendation(
         self, drift_detected: bool, score: float, feature_name: str
     ) -> str:
@@ -149,3 +186,4 @@ class DriftCalculator:
                 "Immediate retraining and pipeline check required."
             )
         return f"WARNING: Drift detected in {feature_name}. Scheduling auto-retraining pipeline."
+
