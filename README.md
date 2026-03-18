@@ -1,158 +1,336 @@
-# Phoenix ML Platform
+<div align="center">
 
-> High-Throughput, Low-Latency Real-time ML Inference System with Autonomous Self-Healing
+# 🔥 Phoenix ML Platform
 
-**[🌐 View Live Documentation](https://vtnguyen04.github.io/phoenix_ML/)**
+### High-Throughput, Low-Latency Real-time ML Inference System with Autonomous Self-Healing
 
-Phoenix ML is an enterprise-grade machine learning inference platform designed for high-availability, scalability, and deep observability. It implements Domain-Driven Design (DDD) to isolate complex ML orchestration from infrastructure concerns, ensuring a robust and maintainable system.
+[![CI/CD](https://github.com/vtnguyen04/phoenix_ML/actions/workflows/ci.yaml/badge.svg)](https://github.com/vtnguyen04/phoenix_ML/actions)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React_18-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![ONNX](https://img.shields.io/badge/ONNX_Runtime-005CED?logo=onnx&logoColor=white)](https://onnxruntime.ai)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://docker.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
----
+**[📖 Documentation](https://vtnguyen04.github.io/phoenix_ML/)** · **[🚀 Quick Start](#-quick-start)** · **[📊 Architecture](#-system-architecture)** · **[🧪 Testing](#-quality-assurance)**
 
-## Architectural Philosophy
-
-The system is built upon four fundamental technical pillars:
-
-### 1. Domain-Driven Design (DDD)
-The codebase is strictly partitioned into four layers:
--   **Domain Layer**: Contains pure business logic, entities (Model, Prediction), and value objects. It is framework-agnostic and maintains zero external dependencies.
--   **Application Layer**: Orchestrates use cases (Predict, Load Model, Monitor) using the Command Pattern. This layer handles the execution flow without being concerned with data persistence or API details.
--   **Infrastructure Layer**: Provides concrete implementations for the interfaces defined in the Domain. This includes FastAPI for the REST gateway, ONNX Runtime for model execution, and Redis for the online feature store.
--   **Shared Kernel**: Houses common utilities, base exceptions, and shared interfaces used across all layers.
-
-### 2. Event-Driven Observability
-Every inference request is treated as an event. These events are published asynchronously to **Apache Kafka**, decoupling the critical inference path from auxiliary tasks like auditing and drift analysis. This ensures that logging and monitoring overhead never impacts client-facing latency.
-
-### 3. Autonomous Self-Healing
-The platform features an integrated background monitoring service. It performs real-time statistical analysis (Kolmogorov-Smirnov Test) on production data streams to detect Data Drift. Upon detection of significant distribution shifts, the system automatically updates Prometheus metrics and triggers simulated retraining workflows.
-
-### 4. High-Performance Execution
-Standardized on **ONNX Runtime**, the platform provides unified high-performance execution for models trained in any framework (PyTorch, Scikit-Learn, etc.). Combined with a dynamic model routing engine, it supports seamless A/B testing and Canary deployments.
+</div>
 
 ---
 
-## Recent Milestones & Enhancements
+## 📌 What is Phoenix ML?
 
-- **Frontend SOLID Refactoring**: Migrated the entire React application to highly decoupled, state-isolated components based on SOLID principles. Features include custom React hooks (`useModels`, `useDrift`) and robust unit testing covering isolated UI components.
-- **Backend Quality Assurance**: Fully mitigated code smells using `Ruff` and strict type safety enforced by `Mypy`. Removed legacy structural scripts in favor of dynamic Python setups configured by `pyproject.toml`.
-- **Comprehensive Benchmarking**: Introduced latency (`latency_benchmark.py`) and throughput (`throughput_benchmark.py`) benchmarks to validate concurrent execution metrics on production hardware.
-- **Test-Driven Operations**: Integrated dynamic test mocking via an in-memory lifespan feature seeder that populates `customer-good` mock records during 100% automated End-to-End API test environments.
-- **Continuous Integration (CI/CD)**: Added parallel GitHub Actions workflows spanning Pytest integration pipelines and Vitest DOM testing to guarantee flawless quality gates before code merger.
+Phoenix ML is a **production-grade machine learning inference platform** that goes beyond simple model serving. It combines real-time inference with autonomous monitoring, drift detection, and self-healing capabilities — all built with **Domain-Driven Design (DDD)** and **Clean Architecture** principles.
+
+<div align="center">
+
+![System Architecture](docs/assets/system-architecture.png)
+
+</div>
+
+### ✨ Key Capabilities
+
+| Capability | Description |
+|-----------|-------------|
+| ⚡ **Real-time Inference** | Sub-50ms p99 latency with ONNX Runtime, TensorRT, and Triton support |
+| 🔄 **Self-Healing** | Automated drift detection (KS, PSI, Chi², Wasserstein) + auto-rollback |
+| 🎯 **A/B Testing** | Dynamic model routing with Champion/Challenger traffic splitting |
+| 🛡️ **Circuit Breaker** | Fault tolerance with automatic failover and recovery |
+| 📊 **Full Observability** | Prometheus metrics, Grafana dashboards, Jaeger distributed tracing |
+| 🔬 **Anomaly Detection** | Real-time monitoring for prediction anomalies, latency spikes, error rates |
+| 📦 **DVC Pipelines** | Reproducible model training with versioned data and artifacts |
 
 ---
 
-## Project Structure
+## 🏗️ System Architecture
 
-The project follows a modular structure reflecting the Inversion of Control principle:
+### Inference Pipeline
 
-```text
-.
-├── src/
-│   ├── domain/              # Pure Logic Layer (Zero dependencies)
-│   ├── application/         # Orchestration Layer (Commands & Handlers)
-│   ├── infrastructure/      # Implementation Layer (Adapters)
-│   │   ├── http/            # FastAPI configuration & Lifespan triggers
-│   │   ├── ml_engines/      # ONNX and TensorRT implementations
-│   │   ├── messaging/       # Kafka producers and consumers
-│   │   ├── persistence/     # PostgreSQL, MLflow, and Redis repositories
-│   │   └── artifact_storage/# Local / S3 artifact loading
-│   └── shared/              # Utilities and Base interfaces
-├── frontend/                # React + TypeScript Control Plane
-│   ├── src/api/             # Standardized API client
-│   ├── src/components/      # Reusable UI components
-│   ├── src/hooks/           # Custom state hooks (usePredict, useMetrics)
-│   ├── src/types/           # Shared TypeScript interfaces
-│   └── src/test/            # 80+ isolated RTL/Vitest suites
-├── tests/                   # Backend Comprehensive Test Suite
-│   ├── unit/                # Per-layer isolation tests
-│   ├── integration/         # DB & Feature Store boundary verification
-│   └── e2e/                 # Full prediction & feedback pipelines
-├── scripts/                 # MLOps Pipelines (Training, Seeders)
-├── benchmarks/              # Performance validation (Latency, Throughput)
-├── deploy/                  # Production Helm Charts & Manifests
-├── grafana/                 # Monitoring Dashboards (Provisioning)
-├── .github/workflows/       # Full-stack CI/CD (Ruff, Mypy, Vitest, Pytest)
-└── compose.yaml             # Multi-container stack orchestration
+```mermaid
+graph LR
+    Client([🌐 Client]) -->|REST/gRPC| Gateway[⚡ API Gateway<br/>FastAPI]
+    Gateway --> Pipeline[🔗 Request Pipeline<br/>Chain of Responsibility]
+    Pipeline --> Router{🎯 Router<br/>A/B · Canary · Shadow}
+
+    Router --> CB1[🛡️ Circuit<br/>Breaker]
+    CB1 --> ONNX[ONNX Runtime]
+
+    Router --> CB2[🛡️ Circuit<br/>Breaker]
+    CB2 --> TRT[TensorRT]
+
+    Router --> CB3[🛡️ Circuit<br/>Breaker]
+    CB3 --> Triton[Triton Server]
+
+    Gateway -.->|Async| Kafka[(📨 Kafka)]
+    Gateway -->|MGET| Redis[(🔴 Redis<br/>Features)]
+    Gateway -->|Query| PG[(🐘 PostgreSQL)]
+
+    style Client fill:#667eea,stroke:#764ba2,color:#fff
+    style Gateway fill:#f093fb,stroke:#f5576c,color:#fff
+    style Router fill:#4facfe,stroke:#00f2fe,color:#fff
+    style ONNX fill:#43e97b,stroke:#38f9d7,color:#000
+    style TRT fill:#43e97b,stroke:#38f9d7,color:#000
+    style Triton fill:#43e97b,stroke:#38f9d7,color:#000
+```
+
+### Self-Healing MLOps Loop
+
+<div align="center">
+
+![MLOps Pipeline](docs/assets/mlops-pipeline.png)
+
+</div>
+
+```mermaid
+graph TD
+    Train[🏋️ Model Training<br/>DVC Pipeline] --> Deploy[📦 Deployment<br/>ONNX + Docker]
+    Deploy --> Serve[⚡ Real-time Inference<br/>FastAPI + Routing]
+    Serve --> Monitor[📊 Monitoring<br/>Drift Detection]
+    Monitor --> Anomaly[🔍 Anomaly Detection<br/>Prediction · Latency · Errors]
+    Anomaly --> Decision{Anomaly<br/>Detected?}
+    Decision -->|No| Serve
+    Decision -->|Yes| Alert[🚨 Alert Manager<br/>Webhook Notify]
+    Alert --> Rollback[⏪ Auto-Rollback<br/>Version Restore]
+    Rollback --> Train
+
+    style Train fill:#667eea,stroke:#764ba2,color:#fff
+    style Deploy fill:#764ba2,stroke:#667eea,color:#fff
+    style Serve fill:#f093fb,stroke:#f5576c,color:#fff
+    style Monitor fill:#4facfe,stroke:#00f2fe,color:#fff
+    style Anomaly fill:#fa709a,stroke:#fee140,color:#fff
+    style Decision fill:#ffecd2,stroke:#fcb69f,color:#000
+    style Alert fill:#f5576c,stroke:#ff6b6b,color:#fff
+    style Rollback fill:#ff9a9e,stroke:#fad0c4,color:#000
 ```
 
 ---
 
-## Technology Stack
+## 🛠️ Tech Stack
 
-| Category | Component |
-| :--- | :--- |
-| **Backend Framework** | Python 3.13, FastAPI, Pydantic, SQLAlchemy (Async), Uvicorn |
-| **ML Runtime** | ONNX Runtime, Scikit-Learn, MLflow Registry |
-| **Infrastructure** | Apache Kafka (aiokafka), Redis, PostgreSQL, MinIO/S3 |
-| **Observability** | Prometheus, Grafana |
-| **Frontend** | React 18, TypeScript, Tailwind CSS, TanStack Query, Vitest |
-| **Tooling** | `uv` (Package Management), Ruff (Linting), Mypy (Types), Pytest (Testing), Docker |
+<div align="center">
+
+![Tech Stack](docs/assets/tech-stack.png)
+
+</div>
+
+| Layer | Technologies |
+|-------|-------------|
+| **Inference** | ONNX Runtime · TensorRT · Triton Inference Server |
+| **Backend** | Python 3.11+ · FastAPI · gRPC · Pydantic v2 · SQLAlchemy Async |
+| **Data** | Redis (features) · PostgreSQL (metadata) · Apache Kafka (events) · MinIO/S3 (artifacts) |
+| **MLOps** | DVC (data versioning) · MLflow (experiment tracking) · XGBoost · Scikit-Learn |
+| **Observability** | Prometheus · Grafana · Jaeger (OpenTelemetry) |
+| **Frontend** | React 18 · TypeScript · Vite · Vanilla CSS · Vitest |
+| **Infrastructure** | Docker · Kubernetes (Helm) · GitHub Actions CI/CD · `uv` package manager |
 
 ---
 
-## Deployment and Getting Started
+## 🏛️ Architecture & Design Patterns
 
-### Production-ready Deployment (Docker)
-Deploy the entire stack—including the API, Dashboard, Kafka, and Monitoring—with a single command:
+### Clean Architecture (DDD)
+
+```
+src/
+├── domain/                    # 🧠 Pure business logic (zero framework deps)
+│   ├── inference/             #    Model, Prediction, InferenceEngine interface
+│   ├── feature_store/         #    FeatureRegistry, FeatureStore interface
+│   ├── model_registry/        #    ModelRepository, ArtifactStorage interface
+│   └── monitoring/            #    DriftReport, DriftCalculator, AnomalyDetector
+│
+├── application/               # 🎯 Use-case orchestration (CQRS)
+│   ├── commands/              #    PredictCommand, LoadModelCommand, TriggerRetrainCommand
+│   ├── handlers/              #    PredictHandler, QueryHandlers
+│   └── services/              #    MonitoringService
+│
+├── infrastructure/            # 🔌 Framework adapters
+│   ├── http/                  #    FastAPI, gRPC, Routes, DI Container
+│   ├── ml_engines/            #    ONNX, TensorRT, Triton implementations
+│   ├── feature_store/         #    Redis, Parquet, InMemory
+│   ├── persistence/           #    Postgres, MLflow, InMemory repos
+│   ├── messaging/             #    Kafka Producer/Consumer
+│   ├── monitoring/            #    Prometheus, Jaeger, Alert Notifier
+│   └── artifact_storage/      #    S3 (MinIO), Local
+│
+└── shared/                    # 🔧 Cross-cutting utilities
+```
+
+### Design Patterns Implemented
+
+| Pattern | Implementation | Purpose |
+|---------|---------------|---------|
+| **Strategy** | `RoutingStrategy` (ABTesting, Canary, Shadow) | Dynamic model traffic routing |
+| **Circuit Breaker** | `CircuitBreaker` (Closed → Open → Half-Open) | Fault tolerance & auto-recovery |
+| **Chain of Responsibility** | `RequestPipeline` (Validate → Cache → Feature → Infer) | Composable request processing |
+| **Command/CQRS** | `PredictCommand` → `PredictHandler` | Separate read/write concerns |
+| **Repository** | `ModelRepository`, `FeatureStore` | Data access abstraction |
+| **Observer** | Kafka event bus | Async event propagation |
+| **Dependency Injection** | `Container` class | Framework decoupling |
+
+---
+
+## 🚀 Quick Start
+
+### Docker Compose (Full Stack — 9 Services)
 
 ```bash
+# Clone and start everything
+git clone https://github.com/vtnguyen04/phoenix_ML.git
+cd phoenix_ML
 docker compose up -d --build
+
+# Train the model via DVC
+uv run dvc repro
+
+# Seed feature store
+uv run python scripts/seed_features.py
 ```
 
--   **API Gateway**: `http://localhost:8000`
--   **Control Plane Dashboard**: `http://localhost:5173`
--   **Grafana (Observability)**: `http://localhost:3000` (Credentials: Admin/admin)
--   **Prometheus (Metrics)**: `http://localhost:9090`
+| Service | URL | Purpose |
+|---------|-----|---------|
+| 🔗 **API** | http://localhost:8001 | ML inference + monitoring |
+| 🖥️ **Dashboard** | http://localhost:5174 | React control plane |
+| 📊 **Grafana** | http://localhost:3001 | Metrics visualization |
+| 📈 **Prometheus** | http://localhost:9091 | Metrics collection |
+| 💾 **MinIO** | http://localhost:9001 | Model artifact storage |
+| 🔍 **Jaeger** | http://localhost:16686 | Distributed tracing |
 
-### Local Development Environment
-
-1.  **Environment Setup**: We use `uv` for ultra-fast dependency management:
-    ```bash
-    uv sync
-    ```
-
-2.  **Generate Test Artifacts & DB Seed**:
-    ```bash
-    uv run scripts/train_model.py
-    uv run scripts/seed_features.py
-    ```
-
-3.  **Start Inference Service**:
-    ```bash
-    uv run python -m src.infrastructure.http.fastapi_server
-    ```
-
----
-
-## Quality Assurance
-
-We maintain 100% compliance with strict quality gates enforced via CI/CD. Run these locally before pushing:
+### Make a Prediction
 
 ```bash
-# Backend Quality Gate
-uv run ruff check .
-uv run mypy . --explicit-package-bases
-uv run pytest tests/
+# Via entity ID (features from Redis)
+curl -X POST http://localhost:8001/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "credit-risk", "entity_id": "customer-good"}'
 
-# Frontend Quality Gate
-cd frontend
-npm ci
-npm run dev:test     # Run isolated Vitest suites
+# Via raw features
+curl -X POST http://localhost:8001/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "credit-risk", "features": [0.5, 0.3, 0.8, ...]}'
 ```
 
----
+### Local Development
 
-## Benchmarking
-
-Performance tests evaluate latency bottlenecks across the inference pipeline:
 ```bash
-uv run python benchmarks/latency_benchmark.py
-uv run python benchmarks/throughput_benchmark.py
+# Install dependencies
+uv sync
+
+# Run API server
+uv run python -m src.infrastructure.http.fastapi_server
+
+# Run frontend
+cd frontend && npm install && npm run dev
 ```
 
 ---
 
-## Author
+## 🧪 Quality Assurance
+
+### Test Coverage
+
+| Suite | Tests | Coverage | Framework |
+|-------|-------|----------|-----------|
+| **Backend Unit** | 130+ | 85%+ | Pytest + pytest-cov |
+| **Backend Integration** | 10+ | — | Pytest + httpx |
+| **Backend E2E** | 5+ | — | Pytest |
+| **Frontend** | 96 | — | Vitest + React Testing Library |
+| **Total** | **243+** | — | — |
+
+### CI/CD Pipeline
+
+```bash
+# Backend quality gates
+uv run ruff check .                       # Linting
+uv run mypy . --explicit-package-bases    # Type checking
+uv run pytest tests/ --cov=src            # Tests + coverage
+
+# Frontend quality gates
+cd frontend && npx vitest run             # Component tests
+```
+
+---
+
+## 📊 Benchmarking
+
+```bash
+# Latency benchmark — measures p50/p95/p99
+uv run python benchmarks/latency_benchmark.py --requests 500 --concurrency 20
+
+# Throughput benchmark — measures RPS under load
+uv run python benchmarks/throughput_benchmark.py --duration 10 --concurrency 10
+
+# Locust load test — interactive web UI
+pip install locust
+locust -f benchmarks/locustfile.py --host http://localhost:8001
+# Open http://localhost:8089
+```
+
+---
+
+## 📁 Repository Structure
+
+```
+phoenix-ml-platform/
+├── src/                         # Backend (DDD layers)
+├── frontend/                    # React + TypeScript dashboard
+├── tests/                       # Unit / Integration / E2E
+│   ├── unit/                    # 130+ isolated tests
+│   ├── integration/             # API + DB boundary tests
+│   └── e2e/                     # Full pipeline tests
+├── scripts/                     # Training & seeding pipelines
+├── benchmarks/                  # Latency, throughput, Locust
+├── deploy/helm/                 # Kubernetes Helm charts
+├── grafana/                     # Provisioned dashboards
+├── docs/                        # Architecture, ADRs, API reference
+│   ├── architecture/            # System design + DDD overview
+│   ├── adr/                     # 5 Architecture Decision Records
+│   ├── api/                     # REST API reference
+│   ├── deployment/              # Docker stack guide
+│   └── frontend/                # Frontend architecture
+├── .github/workflows/           # CI/CD pipelines
+├── dvc.yaml                     # ML pipeline stages
+├── compose.yaml                 # 9-service Docker stack
+└── pyproject.toml               # Python dependencies
+```
+
+---
+
+## 📜 Architecture Decision Records
+
+| ADR | Decision | Rationale |
+|-----|----------|-----------|
+| [001](docs/adr/001-use-ddd-architecture.md) | DDD + Clean Architecture | Testability, flexibility, maintainability |
+| [002](docs/adr/002-use-onnx-runtime.md) | ONNX Runtime standardization | Framework-agnostic, 2-10x inference speedup |
+| [003](docs/adr/003-use-kafka-for-event-streaming.md) | Kafka for event streaming | Decouple inference from logging, durability |
+| [004](docs/adr/004-observability-with-prometheus-grafana.md) | Prometheus + Grafana | Real-time metrics, dashboard-as-code |
+| [005](docs/adr/005-dvc-data-versioning.md) | DVC + MinIO | Reproducible pipelines, S3-compatible storage |
+
+---
+
+## 🤝 Contributing
+
+```bash
+# Fork → Branch → Commit → Push → PR
+git checkout -b feature/your-feature
+git commit -m "feat(scope): description"
+git push origin feature/your-feature
+```
+
+**Branch naming**: `feature/`, `fix/`, `docs/`, `refactor/`
+**Commit style**: [Conventional Commits](https://www.conventionalcommits.org/)
+
+---
+
+<div align="center">
+
+## 👤 Author
+
 **Võ Thành Nguyễn**
--   Email: nguyenvothanh04@gmail.com
--   GitHub: @vtnguyen04
--   Repository: phoenix_ML
+
+[![GitHub](https://img.shields.io/badge/GitHub-@vtnguyen04-181717?logo=github)](https://github.com/vtnguyen04)
+[![Email](https://img.shields.io/badge/Email-nguyenvothanh04@gmail.com-EA4335?logo=gmail&logoColor=white)](mailto:nguyenvothanh04@gmail.com)
+
+---
+
+*Built with ❤️ using DDD, SOLID, and a passion for production-grade ML systems*
+
+</div>

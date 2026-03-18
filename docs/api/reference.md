@@ -1,89 +1,156 @@
 # API Reference: Phoenix ML Platform
 
-The Phoenix ML API provides a high-performance REST interface for real-time inference and system monitoring.
-
-## Base URL
--   **Local**: `http://localhost:8000`
--   **Production**: Defined by your ingress controller (e.g., `https://ml.phoenix.com`)
+Base URL: `http://localhost:8001`
 
 ---
 
-## 1. Real-time Inference
+## 1. Health & Status
 
-### `POST /predict`
-Executes a machine learning model prediction. The system will automatically route to the best model version unless a specific version is requested.
+### `GET /api/health`
+Service health check with dependency status.
 
-#### Request Body (JSON)
+**Response (200)**
+```json
+{
+  "status": "healthy",
+  "model_loaded": true,
+  "redis_connected": true,
+  "kafka_connected": true,
+  "database_connected": true
+}
+```
+
+---
+
+## 2. Inference
+
+### `POST /api/predict`
+Execute ML model prediction with automatic model routing.
+
+**Request Body**
 | Field | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `model_id` | string | Yes | The name of the model group (e.g., `credit-risk`). |
-| `model_version` | string | No | Specific version (e.g., `v1`). Defaults to dynamic A/B routing. |
-| `entity_id` | string | No | ID to fetch features from the Feature Store (Redis). |
-| `features` | array[float] | No | Raw feature vector. Overrides Feature Store if provided. |
+|-------|------|----------|-------------|
+| `model_id` | string | Yes | Model group name (e.g., `credit-risk`) |
+| `model_version` | string | No | Specific version. Defaults to A/B routing |
+| `entity_id` | string | No | Entity ID to fetch features from Redis |
+| `features` | array[float] | No | Raw feature vector (overrides feature store) |
 
-#### Example Request
+**Response (200)**
 ```json
 {
   "model_id": "credit-risk",
-  "entity_id": "customer-good"
+  "version": "v1",
+  "result": 1,
+  "confidence": 0.87,
+  "latency_ms": 12.3
 }
 ```
 
-#### Response (200 OK)
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `model_id` | string | The model ID used for inference. |
-| `version` | string | The assigned version (determined by router). |
-| `result` | integer | The prediction class (e.g., `0` or `1`). |
-| `confidence` | float | The confidence score (0.0 to 1.0). |
-| `latency_ms` | float | Server-side execution time in milliseconds. |
-
 ---
 
-## 2. Model Monitoring
+## 3. Model Management
 
-### `GET /monitoring/drift/{model_id}`
-Triggers an on-demand statistical drift check for a specific model group.
+### `GET /api/models/{model_id}`
+Get model metadata and performance metrics.
 
-#### Path Parameters
--   `model_id` (string, required): The ID of the model to analyze.
-
-#### Response (200 OK)
+**Response (200)**
 ```json
 {
-  "feature_name": "feature_0",
-  "drift_detected": true,
-  "p_value": 0.00001,
-  "statistic": 0.875,
-  "threshold": 0.05
+  "model_id": "credit-risk",
+  "model_type": "GradientBoostingClassifier",
+  "dataset": "german-credit-openml",
+  "n_features": 30,
+  "train_samples": 800,
+  "metrics": {
+    "accuracy": 0.785,
+    "f1_score": 0.854,
+    "precision": 0.813,
+    "recall": 0.900
+  }
 }
 ```
 
 ---
 
-## 3. System Observability
+## 4. Monitoring
+
+### `GET /api/monitoring/drift/{model_id}`
+Trigger on-demand drift detection using statistical tests.
+
+**Response (200)**
+```json
+{
+  "feature_name": "credit_amount",
+  "drift_detected": true,
+  "method": "ks_2samp",
+  "p_value": 0.00001,
+  "statistic": 0.875,
+  "threshold": 0.05,
+  "sample_size": 100
+}
+```
+
+### `GET /api/monitoring/reports/{model_id}`
+Get historical drift reports.
+
+### `GET /api/monitoring/performance/{model_id}`
+Get model performance metrics over time.
+
+---
+
+## 5. Feedback Loop
+
+### `POST /api/feedback`
+Submit ground-truth feedback for a prediction to enable online learning.
+
+**Request Body**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `prediction_id` | string | Yes | ID of the original prediction |
+| `actual_result` | integer | Yes | Ground-truth label |
+
+---
+
+## 6. Feature Store
+
+### `GET /api/features/{entity_id}`
+Retrieve features for an entity from the online feature store (Redis).
+
+**Response (200)**
+```json
+{
+  "entity_id": "customer-good",
+  "features": {"income": 50000, "age": 35, "credit_score": 720}
+}
+```
+
+### `POST /api/features/ingest`
+Ingest feature data into the store.
+
+### `GET /api/features/reference`
+Get reference feature distributions for drift comparison.
+
+---
+
+## 7. Observability
 
 ### `GET /metrics`
-Exposes system-wide Prometheus metrics. Used by the Prometheus scraper.
-
-### `GET /health`
-Liveness and readiness probe for the service.
+Prometheus metrics endpoint (scraped automatically).
 
 ---
 
 ## Error Handling
 
-All errors return a standard JSON object:
 ```json
-{
-  "detail": "Error message description"
-}
+{"detail": "Error message description"}
 ```
 
-### Common HTTP Status Codes
-| Code | Name | Scenario |
-| :--- | :--- | :--- |
-| **404** | Not Found | Requested model or version is not registered or active. |
-| **422** | Validation Error | Input data does not match the expected schema (e.g., non-numeric features). |
-| **500** | Internal Error | Inference engine crash or database connection failure. |
-| **503** | Service Unavailable | Circuit breaker is open due to repeated upstream failures. |
+| Code | Scenario |
+|------|----------|
+| 404 | Model or version not found |
+| 422 | Invalid request schema |
+| 500 | Inference engine or database failure |
+| 503 | Circuit breaker open |
+
+---
+*Updated March 2026*
