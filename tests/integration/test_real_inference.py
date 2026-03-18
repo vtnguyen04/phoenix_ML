@@ -5,6 +5,7 @@ Tests the full prediction pipeline with a REAL ONNX model trained on
 the German Credit dataset and REAL feature records.
 """
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -62,36 +63,18 @@ def real_model() -> Model:
         framework="onnx",
         metadata={
             "features": [
-                "duration",
-                "credit_amount",
-                "installment_commitment",
-                "residence_since",
-                "age",
-                "existing_credits",
-                "num_dependents",
-                "checking_status",
-                "credit_history",
-                "purpose",
-                "savings_status",
-                "employment",
-                "personal_status",
-                "other_parties",
-                "property_magnitude",
-                "other_payment_plans",
-                "housing",
-                "job",
-                "own_telephone",
-                "foreign_worker",
-                "credit_per_month",
-                "age_credit_ratio",
-                "installment_credit_ratio",
-                "age_employment_score",
-                "credit_risk_density",
-                "duration_installment",
-                "checking_savings_interact",
-                "age_checking_interact",
-                "credit_existing_interact",
-                "log_credit_amount",
+                "duration", "credit_amount", "installment_commitment",
+                "residence_since", "age", "existing_credits",
+                "num_dependents", "checking_status", "credit_history",
+                "purpose", "savings_status", "employment",
+                "personal_status", "other_parties", "property_magnitude",
+                "other_payment_plans", "housing", "job",
+                "own_telephone", "foreign_worker",
+                "credit_per_month", "age_credit_ratio",
+                "installment_credit_ratio", "age_employment_score",
+                "credit_risk_density", "duration_installment",
+                "checking_savings_interact", "age_checking_interact",
+                "credit_existing_interact", "log_credit_amount",
             ],
             "role": "champion",
         },
@@ -101,7 +84,7 @@ def real_model() -> Model:
 @pytest.fixture
 def onnx_engine(tmp_path: Path) -> ONNXInferenceEngine:
     """ONNX engine with cache pointing to the real model location."""
-    import shutil  # noqa: PLC0415
+    import shutil
 
     cache_dir = tmp_path / "model_cache"
     model_cache_path = cache_dir / "credit-risk" / "v1" / "model.onnx"
@@ -133,7 +116,9 @@ class TestRealModelInference:
         onnx_engine: ONNXInferenceEngine,
     ) -> None:
         """Verify real model produces meaningful predictions."""
-        fv = FeatureVector(values=np.array([float(i) * 0.1 for i in range(30)], dtype=np.float32))
+        fv = FeatureVector(
+            values=np.array([float(i) * 0.1 for i in range(30)], dtype=np.float32)
+        )
         await onnx_engine.load(real_model)
         prediction = await onnx_engine.predict(real_model, fv)
 
@@ -189,7 +174,9 @@ class TestRealModelInference:
         # Create a batch of feature vectors
         vectors = [
             FeatureVector(
-                values=np.array([np.random.normal() for _ in range(30)], dtype=np.float32)
+                values=np.array(
+                    [np.random.normal() for _ in range(30)], dtype=np.float32
+                )
             )
             for _ in range(10)
         ]
@@ -224,7 +211,7 @@ class TestRealDriftDetection:
 
     async def test_no_drift_with_same_distribution(self) -> None:
         """Reference data vs itself should show NO drift."""
-        from src.domain.monitoring.services.drift_calculator import DriftCalculator  # noqa: PLC0415
+        from src.domain.monitoring.services.drift_calculator import DriftCalculator
 
         ref_path = ROOT / "data" / "reference_data.json"
         if not ref_path.exists():
@@ -250,7 +237,7 @@ class TestRealDriftDetection:
 
     async def test_drift_detected_with_shifted_data(self) -> None:
         """Shifted data should trigger drift detection."""
-        from src.domain.monitoring.services.drift_calculator import DriftCalculator  # noqa: PLC0415
+        from src.domain.monitoring.services.drift_calculator import DriftCalculator
 
         ref_path = ROOT / "data" / "reference_data.json"
         if not ref_path.exists():

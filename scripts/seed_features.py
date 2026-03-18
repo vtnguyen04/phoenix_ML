@@ -7,7 +7,6 @@ Usage:
 
 import json
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from sklearn.compose import ColumnTransformer
@@ -15,41 +14,20 @@ from sklearn.datasets import fetch_openml
 from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 
 NUMERIC_FEATURES = [
-    "duration",
-    "credit_amount",
-    "installment_commitment",
-    "residence_since",
-    "age",
-    "existing_credits",
-    "num_dependents",
+    "duration", "credit_amount", "installment_commitment",
+    "residence_since", "age", "existing_credits", "num_dependents",
 ]
 CATEGORICAL_FEATURES = [
-    "checking_status",
-    "credit_history",
-    "purpose",
-    "savings_status",
-    "employment",
-    "personal_status",
-    "other_parties",
-    "property_magnitude",
-    "other_payment_plans",
-    "housing",
-    "job",
-    "own_telephone",
-    "foreign_worker",
+    "checking_status", "credit_history", "purpose", "savings_status",
+    "employment", "personal_status", "other_parties", "property_magnitude",
+    "other_payment_plans", "housing", "job", "own_telephone", "foreign_worker",
 ]
 ALL_BASE_FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 ENGINEERED_NAMES = [
-    "credit_per_month",
-    "age_credit_ratio",
-    "installment_credit_ratio",
-    "age_employment_score",
-    "credit_risk_density",
-    "duration_installment",
-    "checking_savings_interact",
-    "age_checking_interact",
-    "credit_existing_interact",
-    "log_credit_amount",
+    "credit_per_month", "age_credit_ratio", "installment_credit_ratio",
+    "age_employment_score", "credit_risk_density", "duration_installment",
+    "checking_savings_interact", "age_checking_interact",
+    "credit_existing_interact", "log_credit_amount",
 ]
 FINAL_FEATURE_NAMES = ALL_BASE_FEATURES + ENGINEERED_NAMES
 
@@ -60,40 +38,18 @@ def _engineer_features(X: np.ndarray) -> np.ndarray:
     dur, credit, inst, age = X[:, 0:1], X[:, 1:2], X[:, 2:3], X[:, 4:5]
     existing = X[:, 5:6]
     n_num = len(NUMERIC_FEATURES)
-    emp = X[
-        :,
-        n_num + CATEGORICAL_FEATURES.index("employment") : n_num
-        + CATEGORICAL_FEATURES.index("employment")
-        + 1,
-    ]
-    chk = X[
-        :,
-        n_num + CATEGORICAL_FEATURES.index("checking_status") : n_num
-        + CATEGORICAL_FEATURES.index("checking_status")
-        + 1,
-    ]
-    sav = X[
-        :,
-        n_num + CATEGORICAL_FEATURES.index("savings_status") : n_num
-        + CATEGORICAL_FEATURES.index("savings_status")
-        + 1,
-    ]
+    emp = X[:, n_num + CATEGORICAL_FEATURES.index("employment"):
+             n_num + CATEGORICAL_FEATURES.index("employment") + 1]
+    chk = X[:, n_num + CATEGORICAL_FEATURES.index("checking_status"):
+             n_num + CATEGORICAL_FEATURES.index("checking_status") + 1]
+    sav = X[:, n_num + CATEGORICAL_FEATURES.index("savings_status"):
+             n_num + CATEGORICAL_FEATURES.index("savings_status") + 1]
 
-    return np.hstack(
-        [
-            X,
-            credit / (dur + eps),
-            age / (credit + eps),
-            inst / (credit + eps),
-            age * (emp + 1),
-            credit * inst / (dur + eps),
-            dur * inst,
-            chk * sav,
-            age * chk,
-            credit * existing,
-            np.log1p(np.abs(credit)),
-        ]
-    )
+    return np.hstack([X,
+        credit / (dur + eps), age / (credit + eps), inst / (credit + eps),
+        age * (emp + 1), credit * inst / (dur + eps), dur * inst,
+        chk * sav, age * chk, credit * existing, np.log1p(np.abs(credit)),
+    ])
 
 
 def seed_features(
@@ -108,14 +64,9 @@ def seed_features(
     preprocessor = ColumnTransformer(
         transformers=[
             ("num", StandardScaler(), NUMERIC_FEATURES),
-            (
-                "cat",
-                OrdinalEncoder(
-                    handle_unknown="use_encoded_value",
-                    unknown_value=-1,
-                ),
-                CATEGORICAL_FEATURES,
-            ),
+            ("cat", OrdinalEncoder(
+                handle_unknown="use_encoded_value", unknown_value=-1,
+            ), CATEGORICAL_FEATURES),
         ]
     )
 
@@ -125,14 +76,15 @@ def seed_features(
 
     records = []
     for i in range(min(num_records, len(X))):
-        features = {name: round(float(X[i, j]), 6) for j, name in enumerate(FINAL_FEATURE_NAMES)}
-        records.append(
-            {
-                "entity_id": f"customer-{i:04d}",
-                "features": features,
-                "label": int(y[i]),
-            }
-        )
+        features = {
+            name: round(float(X[i, j]), 6)
+            for j, name in enumerate(FINAL_FEATURE_NAMES)
+        }
+        records.append({
+            "entity_id": f"customer-{i:04d}",
+            "features": features,
+            "label": int(y[i]),
+        })
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -141,7 +93,7 @@ def seed_features(
     print(f"✅ {len(records)} records ({len(FINAL_FEATURE_NAMES)} features)")
 
     ref_path = path.parent / "reference_data.json"
-    reference: dict[str, Any] = {
+    reference = {
         "feature_names": FINAL_FEATURE_NAMES,
         "n_features": len(FINAL_FEATURE_NAMES),
         "reference_distributions": {},

@@ -3,7 +3,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from pathlib import Path
 
 from fastapi import FastAPI
 from sqlalchemy import select
@@ -56,13 +56,13 @@ def _load_reference_data() -> list[float]:
                     len(distributions[first_key]),
                     ref_path,
                 )
-                return cast(list[float], distributions[first_key])
+                return distributions[first_key]
 
     logger.warning("⚠️ No reference data found, using empty reference")
     return []
 
 
-def _load_real_features() -> list[dict[str, Any]]:
+def _load_real_features() -> list[dict]:
     """Load real feature records seeded from the German Credit dataset."""
     root = find_project_root()
     feat_path = root / "data" / "reference_features.json"
@@ -70,17 +70,17 @@ def _load_real_features() -> list[dict[str, Any]]:
         with open(feat_path) as f:
             records = json.load(f)
         logger.info("✅ Loaded %d real feature records from %s", len(records), feat_path)
-        return cast(list[dict[str, Any]], records)
+        return records
     return []
 
 
-def _load_real_metrics() -> dict[str, Any]:
+def _load_real_metrics() -> dict:
     """Load real training metrics from the model training output."""
     root = find_project_root()
     metrics_path = root / "models" / "credit_risk" / "v1" / "metrics.json"
     if metrics_path.exists():
         with open(metrics_path) as f:
-            return cast(dict[str, Any], json.load(f))
+            return json.load(f)
     return {"accuracy": 0.0, "f1_score": 0.0}
 
 
@@ -128,7 +128,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         model_repo = PostgresModelRegistry(db)
 
         result = await db.execute(
-            select(ModelORM).where(ModelORM.id == "credit-risk", ModelORM.version == "v1")
+            select(ModelORM).where(
+                ModelORM.id == "credit-risk", ModelORM.version == "v1"
+            )
         )
         if not result.scalar_one_or_none():
             try:
@@ -142,31 +144,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     framework="onnx",
                     metadata={
                         "features": [
-                            "duration",
-                            "credit_amount",
-                            "installment_commitment",
-                            "residence_since",
-                            "age",
-                            "existing_credits",
-                            "num_dependents",
-                            "checking_status",
-                            "credit_history",
-                            "purpose",
-                            "savings_status",
-                            "employment",
-                            "personal_status",
-                            "other_parties",
-                            "property_magnitude",
-                            "other_payment_plans",
-                            "housing",
-                            "job",
-                            "own_telephone",
+                            "duration", "credit_amount",
+                            "installment_commitment", "residence_since",
+                            "age", "existing_credits", "num_dependents",
+                            "checking_status", "credit_history", "purpose",
+                            "savings_status", "employment",
+                            "personal_status", "other_parties",
+                            "property_magnitude", "other_payment_plans",
+                            "housing", "job", "own_telephone",
                             "foreign_worker",
-                            "credit_per_month",
-                            "age_credit_ratio",
+                            "credit_per_month", "age_credit_ratio",
                             "installment_credit_ratio",
-                            "age_employment_score",
-                            "credit_risk_density",
+                            "age_employment_score", "credit_risk_density",
                             "duration_installment",
                             "checking_savings_interact",
                             "age_checking_interact",
@@ -189,43 +178,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         real_features = _load_real_features()
         if real_features:
             for record in real_features:
-                await feature_store.add_features(record["entity_id"], record["features"])
+                await feature_store.add_features(
+                    record["entity_id"], record["features"]
+                )
             logger.info("✅ Seeded %d real feature records", len(real_features))
         else:
             # Fallback: one record for basic functionality (30 features)
             await feature_store.add_features(
                 "customer-good",
                 {
-                    "duration": 0.5,
-                    "credit_amount": -0.3,
-                    "installment_commitment": 0.8,
-                    "residence_since": 0.5,
-                    "age": 0.5,
-                    "existing_credits": 0.5,
-                    "num_dependents": 0.5,
-                    "checking_status": 0.5,
-                    "credit_history": 0.5,
-                    "purpose": 0.5,
-                    "savings_status": 0.5,
-                    "employment": 0.5,
-                    "personal_status": 0.5,
-                    "other_parties": 0.5,
-                    "property_magnitude": 0.5,
-                    "other_payment_plans": 0.5,
-                    "housing": 0.5,
-                    "job": 0.5,
-                    "own_telephone": 0.5,
-                    "foreign_worker": 0.5,
-                    "credit_per_month": 0.5,
-                    "age_credit_ratio": 0.5,
-                    "installment_credit_ratio": 0.5,
-                    "age_employment_score": 0.5,
-                    "credit_risk_density": 0.5,
-                    "duration_installment": 0.5,
-                    "checking_savings_interact": 0.5,
-                    "age_checking_interact": 0.5,
-                    "credit_existing_interact": 0.5,
-                    "log_credit_amount": 0.5,
+                    "duration": 0.5, "credit_amount": -0.3,
+                    "installment_commitment": 0.0, "residence_since": 0.2,
+                    "age": 1.0, "existing_credits": 0.0,
+                    "num_dependents": 0.0, "checking_status": 1.0,
+                    "credit_history": 2.0, "purpose": 0.0,
+                    "savings_status": 1.0, "employment": 2.0,
+                    "personal_status": 1.0, "other_parties": 0.0,
+                    "property_magnitude": 1.0, "other_payment_plans": 0.0,
+                    "housing": 1.0, "job": 2.0,
+                    "own_telephone": 0.0, "foreign_worker": 0.0,
+                    "credit_per_month": -0.6, "age_credit_ratio": -3.3,
+                    "installment_credit_ratio": 0.0,
+                    "age_employment_score": 3.0, "credit_risk_density": 0.0,
+                    "duration_installment": 0.0,
+                    "checking_savings_interact": 1.0,
+                    "age_checking_interact": 1.0,
+                    "credit_existing_interact": 0.0,
+                    "log_credit_amount": 0.53,
                 },
             )
         break

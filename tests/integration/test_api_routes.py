@@ -3,7 +3,7 @@ API Route Integration Tests — Tests the FastAPI endpoints with mocked dependen
 Fills the critical test gap: verifies route wiring, request/response schemas, and error handling.
 """
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -35,8 +35,8 @@ class TestPredictEndpoint:
     """Tests for POST /predict."""
 
     def test_predict_returns_200(self, client: TestClient) -> None:
-        from src.infrastructure.http.dependencies import get_predict_handler  # noqa: PLC0415
-        from src.infrastructure.persistence.database import get_db  # noqa: PLC0415
+        from src.infrastructure.http.dependencies import get_predict_handler
+        from src.infrastructure.persistence.database import get_db
 
         mock_prediction = Prediction(
             model_id="credit-risk",
@@ -81,9 +81,7 @@ class TestPredictEndpoint:
         assert response.status_code == 422
 
     def test_predict_invalid_json_returns_422(self, client: TestClient) -> None:
-        response = client.post(
-            "/predict", content="not json", headers={"Content-Type": "application/json"}
-        )
+        response = client.post("/predict", content="not json", headers={"Content-Type": "application/json"})
         assert response.status_code == 422
 
 
@@ -94,6 +92,7 @@ class TestFeedbackEndpoint:
         # Missing prediction_id should fail
         response = client.post("/feedback", json={"ground_truth": 1})
         assert response.status_code == 422
+
 
 
 class TestDriftEndpoint:

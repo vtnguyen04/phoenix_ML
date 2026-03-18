@@ -25,16 +25,14 @@ class TestInMemoryFeatureStore:
 
     @pytest.mark.asyncio()
     async def test_get_missing_entity_returns_none(
-        self,
-        store: InMemoryFeatureStore,
+        self, store: InMemoryFeatureStore,
     ) -> None:
         result = await store.get_online_features("nonexistent", ["age"])
         assert result is None
 
     @pytest.mark.asyncio()
     async def test_get_missing_feature_defaults_to_zero(
-        self,
-        store: InMemoryFeatureStore,
+        self, store: InMemoryFeatureStore,
     ) -> None:
         await store.add_features("entity-1", {"age": 30.0})
         result = await store.get_online_features("entity-1", ["age", "missing"])
