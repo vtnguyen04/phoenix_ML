@@ -3,31 +3,31 @@ import { render, screen } from '@testing-library/react';
 import { StatsGrid } from '../../components/dashboard/StatsGrid';
 
 describe('StatsGrid', () => {
-  it('renders all four stat cards', () => {
-    render(<StatsGrid predictionCount={5} lastLatency={0.42} modelAccuracy="78.5%" />);
-    expect(screen.getByText('Total Predictions')).toBeInTheDocument();
-    expect(screen.getByText('Last Latency')).toBeInTheDocument();
-    expect(screen.getByText('Model Accuracy')).toBeInTheDocument();
-    expect(screen.getByText('Active Models')).toBeInTheDocument();
+  it('renders all four metric cards', () => {
+    render(<StatsGrid accuracy={0.785} f1Score={0.854} precision={0.813} recall={0.9} />);
+    expect(screen.getByText('Accuracy')).toBeInTheDocument();
+    expect(screen.getByText('F1 Score')).toBeInTheDocument();
+    expect(screen.getByText('Precision')).toBeInTheDocument();
+    expect(screen.getByText('Recall')).toBeInTheDocument();
   });
 
-  it('displays prediction count', () => {
-    render(<StatsGrid predictionCount={42} lastLatency={null} modelAccuracy="80%" />);
-    expect(screen.getByText('42')).toBeInTheDocument();
-  });
-
-  it('displays formatted latency', () => {
-    render(<StatsGrid predictionCount={0} lastLatency={1.234} modelAccuracy="80%" />);
-    expect(screen.getByText('1.2ms')).toBeInTheDocument();
-  });
-
-  it('displays dash when latency is null', () => {
-    render(<StatsGrid predictionCount={0} lastLatency={null} modelAccuracy="80%" />);
-    expect(screen.getByText('—')).toBeInTheDocument();
-  });
-
-  it('displays model accuracy', () => {
-    render(<StatsGrid predictionCount={0} lastLatency={null} modelAccuracy="78.5%" />);
+  it('formats percentages correctly', () => {
+    render(<StatsGrid accuracy={0.785} f1Score={0.854} precision={0.813} recall={0.9} />);
     expect(screen.getByText('78.5%')).toBeInTheDocument();
+    expect(screen.getByText('85.4%')).toBeInTheDocument();
+    expect(screen.getByText('81.3%')).toBeInTheDocument();
+    expect(screen.getByText('90.0%')).toBeInTheDocument();
+  });
+
+  it('shows dashes for null values', () => {
+    render(<StatsGrid accuracy={null} f1Score={null} precision={null} recall={null} />);
+    const dashes = screen.getAllByText('—');
+    expect(dashes).toHaveLength(4);
+  });
+
+  it('shows subtitles for each card', () => {
+    render(<StatsGrid accuracy={0.785} f1Score={0.854} precision={0.813} recall={0.9} />);
+    expect(screen.getByText('Test set evaluation')).toBeInTheDocument();
+    expect(screen.getByText('Harmonic mean P/R')).toBeInTheDocument();
   });
 });

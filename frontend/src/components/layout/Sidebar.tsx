@@ -4,10 +4,6 @@ interface SidebarProps {
   health: HealthResponse | null;
 }
 
-/**
- * Sidebar — Navigation and system status.
- * SRP: Only handles navigation rendering and health status display.
- */
 export function Sidebar({ health }: SidebarProps) {
   return (
     <aside className="sidebar">
@@ -18,10 +14,11 @@ export function Sidebar({ health }: SidebarProps) {
 
       <nav className="sidebar-nav">
         <a className="nav-item active" href="#dashboard">📊 Dashboard</a>
-        <a className="nav-item" href="#inference">🎯 Inference</a>
-        <a className="nav-item" href="#monitoring">🛡️ Monitoring</a>
         <a className="nav-item" href="http://localhost:3001" target="_blank" rel="noreferrer">
           📈 Grafana
+        </a>
+        <a className="nav-item" href="http://localhost:16686" target="_blank" rel="noreferrer">
+          🔍 Jaeger
         </a>
         <a className="nav-item" href="http://localhost:9091" target="_blank" rel="noreferrer">
           🔥 Prometheus

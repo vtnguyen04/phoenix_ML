@@ -1,41 +1,41 @@
 import { StatCard } from '../ui/StatCard';
 
 interface StatsGridProps {
-  predictionCount: number;
-  lastLatency: number | null;
-  modelAccuracy: string;
+  accuracy: number | null;
+  f1Score: number | null;
+  precision: number | null;
+  recall: number | null;
 }
 
-/**
- * StatsGrid — Displays key metrics in a responsive grid.
- * SRP: Only responsible for layout of stat cards.
- * OCP: New stats can be added without modifying existing cards.
- */
-export function StatsGrid({ predictionCount, lastLatency, modelAccuracy }: StatsGridProps) {
+function fmt(v: number | null): string {
+  return v !== null ? `${(v * 100).toFixed(1)}%` : '—';
+}
+
+export function StatsGrid({ accuracy, f1Score, precision, recall }: StatsGridProps) {
   return (
     <div className="stats-grid">
       <StatCard
-        label="Total Predictions"
-        value={String(predictionCount)}
-        sub="this session"
+        label="Accuracy"
+        value={fmt(accuracy)}
+        sub="Test set evaluation"
         color="blue"
       />
       <StatCard
-        label="Last Latency"
-        value={lastLatency ? `${lastLatency.toFixed(1)}ms` : '—'}
-        sub="sub-millisecond"
+        label="F1 Score"
+        value={fmt(f1Score)}
+        sub="Harmonic mean P/R"
         color="orange"
       />
       <StatCard
-        label="Model Accuracy"
-        value={modelAccuracy}
-        sub="GradientBoosting · 30 features"
+        label="Precision"
+        value={fmt(precision)}
+        sub="True positive rate"
         color="green"
       />
       <StatCard
-        label="Active Models"
-        value="2"
-        sub="Champion + Challenger"
+        label="Recall"
+        value={fmt(recall)}
+        sub="Sensitivity"
         color="red"
       />
     </div>
