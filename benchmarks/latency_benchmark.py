@@ -67,22 +67,24 @@ async def run_latency_test(
         return {"error": "All requests failed"}
 
     arr = np.array(latencies)
-    output = {
+    latency_ms: dict[str, float] = {
+        "min": round(float(np.min(arr)), 2),
+        "p50": round(float(np.percentile(arr, 50)), 2),
+        "p95": round(float(np.percentile(arr, 95)), 2),
+        "p99": round(float(np.percentile(arr, 99)), 2),
+        "max": round(float(np.max(arr)), 2),
+        "mean": round(float(np.mean(arr)), 2),
+        "std": round(float(np.std(arr)), 2),
+    }
+
+    output: dict[str, Any] = {
         "total_requests": n_requests,
         "successful": len(latencies),
         "errors": errors,
         "concurrency": concurrency,
         "total_time_s": round(total_time, 2),
         "rps": round(len(latencies) / total_time, 2),
-        "latency_ms": {
-            "min": round(float(np.min(arr)), 2),
-            "p50": round(float(np.percentile(arr, 50)), 2),
-            "p95": round(float(np.percentile(arr, 95)), 2),
-            "p99": round(float(np.percentile(arr, 99)), 2),
-            "max": round(float(np.max(arr)), 2),
-            "mean": round(float(np.mean(arr)), 2),
-            "std": round(float(np.std(arr)), 2),
-        },
+        "latency_ms": latency_ms,
     }
 
     print("\n" + "=" * 50)
@@ -92,10 +94,10 @@ async def run_latency_test(
     print(f"  {'successful':>20}: {output['successful']}")
     print(f"  {'errors':>20}: {output['errors']}")
     print(f"  {'rps':>20}: {output['rps']}")
-    print(f"  {'p50 (ms)':>20}: {output['latency_ms']['p50']}")
-    print(f"  {'p95 (ms)':>20}: {output['latency_ms']['p95']}")
-    print(f"  {'p99 (ms)':>20}: {output['latency_ms']['p99']}")
-    print(f"  {'max (ms)':>20}: {output['latency_ms']['max']}")
+    print(f"  {'p50 (ms)':>20}: {latency_ms['p50']}")
+    print(f"  {'p95 (ms)':>20}: {latency_ms['p95']}")
+    print(f"  {'p99 (ms)':>20}: {latency_ms['p99']}")
+    print(f"  {'max (ms)':>20}: {latency_ms['max']}")
     print("=" * 50)
 
     with open("benchmarks/latency_results.json", "w") as f:
