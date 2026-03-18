@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
@@ -6,10 +8,26 @@ from src.config import get_settings
 from src.infrastructure.http.feature_routes import feature_router
 from src.infrastructure.http.lifespan import lifespan
 from src.infrastructure.http.routes import router
+from src.infrastructure.monitoring.tracing import init_tracing
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
+jaeger_endpoint = getattr(settings, "JAEGER_ENDPOINT", "http://localhost:4317")
+init_tracing(service_name=settings.APP_NAME, otlp_endpoint=jaeger_endpoint)
+
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    _instrument_fastapi = True
+except ImportError:
+    _instrument_fastapi = False
+    logger.info("OTEL FastAPI instrumentation not installed, skipping")
+
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
+
+if _instrument_fastapi:
+    FastAPIInstrumentor.instrument_app(app)
 
 app.add_middleware(
     CORSMiddleware,

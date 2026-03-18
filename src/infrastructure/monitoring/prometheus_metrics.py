@@ -1,6 +1,5 @@
 from prometheus_client import Counter, Gauge, Histogram
 
-# --- INFERENCE METRICS ---
 PREDICTION_COUNT = Counter(
     "prediction_count", "Total number of predictions", ["model_id", "version", "status"]
 )
@@ -19,7 +18,6 @@ MODEL_CONFIDENCE = Histogram(
     buckets=(0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99, 1.0),
 )
 
-# --- DRIFT METRICS ---
 DRIFT_SCORE = Gauge(
     "feature_drift_score",
     "Drift score (KS/PSI) for a specific feature",
@@ -32,7 +30,6 @@ DRIFT_DETECTED_COUNT = Counter(
     ["model_id", "feature_name"],
 )
 
-# --- PERFORMANCE METRICS ---
 MODEL_ACCURACY = Gauge("model_accuracy", "Overall accuracy of the model", ["model_id", "version"])
 
 MODEL_F1_SCORE = Gauge("model_f1_score", "F1 Score of the model", ["model_id", "version"])

@@ -51,7 +51,6 @@ def _load_reference_data() -> list[float]:
             with open(ref_path) as f:
                 data = json.load(f)
             distributions = data.get("reference_distributions", {})
-            # Use the first feature (income) distribution
             first_key = next(iter(distributions), None)
             if first_key:
                 logger.info(
@@ -127,13 +126,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Initialize gRPC server reference
     grpc_server = None
 
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
         
-        # Instantiate gRPC server sharing the lifespan DB session for simplicity
         grpc_server = create_grpc_server(
             model_repo=model_repo,
             inference_engine=inference_engine,
@@ -201,14 +198,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except Exception as e:
                 logger.error("❌ Failed to seed model: %s", e)
 
-        # Seed REAL feature records from German Credit dataset
         real_features = _load_real_features()
         if real_features:
             for record in real_features:
                 await feature_store.add_features(record["entity_id"], record["features"])
             logger.info("✅ Seeded %d real feature records", len(real_features))
 
-        # Always Seed Fallback: one record for basic functionality (30 features)
         await feature_store.add_features(
             "customer-good",
             {
