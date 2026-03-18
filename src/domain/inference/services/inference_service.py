@@ -69,8 +69,11 @@ class InferenceService:
             if not request.entity_id:
                 raise ValueError("No features provided and no entity_id for lookup")
 
-            # TODO: Get required features from model metadata
-            required_features = ["f1", "f2", "f3", "f4"]
+            metadata = model.metadata or {}
+            required_features = metadata.get("features")
+            if not isinstance(required_features, list) or not required_features:
+                required_features = ["f1", "f2", "f3", "f4"]
+
             feature_values = await self._feature_store.get_online_features(
                 request.entity_id, required_features
             )

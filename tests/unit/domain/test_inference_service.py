@@ -95,3 +95,27 @@ async def test_inference_service_with_feature_lookup(
     mock_components["fs"].get_online_features.assert_awaited_once_with(
         "user-123", ["f1", "f2", "f3", "f4"]
     )
+
+
+@pytest.mark.asyncio
+async def test_inference_service_uses_model_metadata_features(
+    inference_service: InferenceService, mock_components: dict[str, Any]
+) -> None:
+    model = Model(
+        id="m1",
+        version="v1",
+        uri="loc://v1",
+        framework="onnx",
+        metadata={"features": ["income", "debt", "age", "credit_history"]},
+    )
+    mock_components["repo"].get_by_id.return_value = model
+    mock_components["fs"].get_online_features.return_value = [2.0, -1.5, 1.0, 1.5]
+
+    req = PredictionRequest(model_id="m1", model_version="v1", entity_id="user-123")
+
+    with patch("pathlib.Path.exists", return_value=True):
+        await inference_service.predict(req)
+
+    mock_components["fs"].get_online_features.assert_awaited_once_with(
+        "user-123", ["income", "debt", "age", "credit_history"]
+    )
