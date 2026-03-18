@@ -1,0 +1,27 @@
+stages:
+  train-champion:
+    cmd: uv run python scripts/train_model.py
+    deps:
+      - scripts/train_model.py
+    outs:
+      - models/credit_risk/v1/model.onnx
+      - models/credit_risk/v1/metrics.json
+    metrics:
+      - models/credit_risk/v1/metrics.json:
+          cache: false
+
+  train-challenger:
+    cmd: uv run python scripts/train_challenger.py
+    deps:
+      - scripts/train_challenger.py
+    outs:
+      - models/credit_risk/v2/model.onnx
+      - models/credit_risk/v2/metrics.json
+
+  seed-features:
+    cmd: uv run python scripts/seed_features.py
+    deps:
+      - scripts/seed_features.py
+    outs:
+      - data/reference_features.json
+      - data/reference_data.json

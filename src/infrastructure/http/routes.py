@@ -1,6 +1,8 @@
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -9,7 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.commands.predict_command import PredictCommand
 from src.application.handlers.predict_handler import PredictHandler
+from src.application.handlers.query_handlers import (
+    GetDriftReportQueryHandler,
+    GetModelPerformanceQueryHandler,
+    GetModelQueryHandler,
+)
 from src.application.handlers.retrain_handler import RetrainHandler
+from src.application.queries import (
+    GetDriftReportQuery,
+    GetModelPerformanceQuery,
+    GetModelQuery,
+)
 from src.application.services.monitoring_service import MonitoringService
 from src.config import get_settings
 from src.domain.inference.entities.prediction import Prediction
@@ -127,9 +139,72 @@ async def check_drift(
         rh = RetrainHandler(root, model_repo, model_evaluator)
         ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
 
-        mock_reference_data = [float(x) for x in range(100)]
+        # Load real reference distributions from training data
+        reference_data = _load_reference_distributions(root)
         return await ms.check_drift(
-            model_id=model_id, reference_data=mock_reference_data, feature_index=0
+            model_id=model_id, reference_data=reference_data, feature_index=0
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/models/{model_id}")
+async def get_model(
+    model_id: str,
+    version: str | None = None,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Retrieve model information from the registry."""
+    model_repo = PostgresModelRegistry(db)
+    handler = GetModelQueryHandler(model_repo)
+    model = await handler.execute(GetModelQuery(model_id=model_id, version=version))
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
+    return {
+        "model_id": model.id,
+        "version": model.version,
+        "status": model.status,
+        "metadata": model.metadata,
+    }
+
+
+@router.get("/monitoring/reports/{model_id}")
+async def get_drift_reports(
+    model_id: str,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> list[DriftReport]:
+    """Return historical drift reports for a model."""
+    drift_repo = PostgresDriftReportRepository(db)
+    handler = GetDriftReportQueryHandler(drift_repo)
+    return await handler.execute(GetDriftReportQuery(model_id=model_id, limit=limit))
+
+
+@router.get("/monitoring/performance/{model_id}")
+async def get_model_performance(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Return aggregated performance metrics for a model."""
+    log_repo = PostgresPredictionLogRepository(db)
+    handler = GetModelPerformanceQueryHandler(log_repo, model_evaluator)
+    return await handler.execute(GetModelPerformanceQuery(model_id=model_id))
+
+
+def _load_reference_distributions(project_root: Path) -> list[float]:
+    """Load reference feature distributions from training data.
+
+    Falls back to synthetic data if the reference file doesn't exist.
+    """
+    ref_path = project_root / "data" / "reference_data.json"
+    if ref_path.exists():
+        with open(ref_path) as f:
+            data = json.load(f)
+            if isinstance(data, list) and len(data) > 0:
+                # Extract first feature values from reference records
+                return [
+                    float(record[0]) if isinstance(record, list) else float(record)
+                    for record in data
+                ]
+    logger.warning("Reference data not found at %s, using synthetic fallback", ref_path)
+    return [float(x) for x in range(100)]
