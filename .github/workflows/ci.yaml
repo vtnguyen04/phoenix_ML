@@ -62,5 +62,8 @@ jobs:
     - name: Lint with ESLint
       run: npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
 
+    - name: Run Tests
+      run: npm run test
+
     - name: Verify Frontend Docker Build
       run: docker build -f ../Dockerfile.frontend . -t phoenix-dashboard:test
