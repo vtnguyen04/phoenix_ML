@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 /* ═══════════════════════════════════════════════════════
    PHOENIX ML PLATFORM — Design System
    Premium dark theme with glassmorphism and micro-animations
@@ -67,8 +69,6 @@ body {
 
 #root { min-height: 100vh; }
 
-/* --- Google Fonts import --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* --- Layout --- */
 .app-layout {
@@ -514,3 +514,114 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+/* --- Header Badges --- */
+.header-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* --- Model Info Card --- */
+.model-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.model-info-row:last-child { border-bottom: none; }
+
+.model-info-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.model-info-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.model-info-value.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* --- Grafana Embed --- */
+.grafana-card { overflow: hidden; }
+
+.grafana-embed-container {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #111;
+}
+
+/* --- Pipeline Status --- */
+.pipeline-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.pipeline-stage-wrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pipeline-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-glass);
+  min-width: 110px;
+  transition: all var(--transition-default);
+}
+
+.pipeline-completed {
+  border-color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.pipeline-active {
+  border-color: var(--accent-orange);
+  background: var(--accent-orange-dim);
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+.pipeline-pending {
+  opacity: 0.4;
+}
+
+.pipeline-icon { font-size: 24px; margin-bottom: 6px; }
+.pipeline-name { font-size: 11px; font-weight: 600; color: var(--text-primary); }
+.pipeline-detail { font-size: 10px; color: var(--text-muted); margin-top: 2px; font-family: var(--font-mono); }
+
+.pipeline-connector {
+  width: 24px;
+  height: 2px;
+  background: var(--border-default);
+  flex-shrink: 0;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.3); }
+  50% { box-shadow: 0 0 12px 2px rgba(249, 115, 22, 0.15); }
+}

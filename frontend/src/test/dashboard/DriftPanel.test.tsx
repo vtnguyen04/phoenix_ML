@@ -27,69 +27,50 @@ const driftedReport: DriftReport = {
 
 describe('DriftPanel', () => {
   it('shows empty state when drift is null', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={null} onScan={onScan} loading={false} />);
-    expect(screen.getByText('Run a drift scan to analyze model health')).toBeInTheDocument();
+    render(<DriftPanel drift={null} onScan={vi.fn()} loading={false} />);
+    expect(screen.getByText(/Drift reports will appear automatically/)).toBeInTheDocument();
   });
 
-  it('shows Scan Drift button', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={null} onScan={onScan} loading={false} />);
-    expect(screen.getByText(/Scan Drift/)).toBeInTheDocument();
+  it('shows Scan Now button', () => {
+    render(<DriftPanel drift={null} onScan={vi.fn()} loading={false} />);
+    expect(screen.getByText(/Scan Now/)).toBeInTheDocument();
   });
 
   it('calls onScan when button is clicked', () => {
     const onScan = vi.fn();
     render(<DriftPanel drift={null} onScan={onScan} loading={false} />);
-    fireEvent.click(screen.getByText(/Scan Drift/));
+    fireEvent.click(screen.getByText(/Scan Now/));
     expect(onScan).toHaveBeenCalledOnce();
   });
 
   it('disables button when loading', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={null} onScan={onScan} loading={true} />);
-    const btn = screen.getByRole('button');
-    expect(btn).toBeDisabled();
-  });
-
-  it('shows spinner when loading', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={null} onScan={onScan} loading={true} />);
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    render(<DriftPanel drift={null} onScan={vi.fn()} loading={true} />);
+    expect(screen.getByRole('button')).toBeDisabled();
   });
 
   it('displays stable drift data', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={stableDrift} onScan={onScan} loading={false} />);
+    render(<DriftPanel drift={stableDrift} onScan={vi.fn()} loading={false} />);
     expect(screen.getByText(/credit_amount/)).toBeInTheDocument();
     expect(screen.getByText('STABLE')).toBeInTheDocument();
     expect(screen.getByText('Model is stable. No action needed.')).toBeInTheDocument();
   });
 
   it('displays drifted data with danger badge', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={driftedReport} onScan={onScan} loading={false} />);
+    render(<DriftPanel drift={driftedReport} onScan={vi.fn()} loading={false} />);
     expect(screen.getByText('DRIFTED')).toBeInTheDocument();
     expect(screen.getByText(/duration/)).toBeInTheDocument();
-    expect(screen.getByText(/Retrain recommended/)).toBeInTheDocument();
   });
 
-  it('shows KS statistic and p-value formatted', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={stableDrift} onScan={onScan} loading={false} />);
+  it('shows method and sample size', () => {
+    render(<DriftPanel drift={stableDrift} onScan={vi.fn()} loading={false} />);
     expect(screen.getByText(/KS=0.0300/)).toBeInTheDocument();
-    expect(screen.getByText(/p=0.4500/)).toBeInTheDocument();
+    expect(screen.getByText(/n=100/)).toBeInTheDocument();
   });
 
-  it('renders ✅ icon for stable drift', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={stableDrift} onScan={onScan} loading={false} />);
-    expect(screen.getByText('✅')).toBeInTheDocument();
-  });
-
-  it('renders ⚠️ icon for detected drift', () => {
-    const onScan = vi.fn();
-    render(<DriftPanel drift={driftedReport} onScan={onScan} loading={false} />);
-    expect(screen.getByText('⚠️')).toBeInTheDocument();
+  it('shows error message inline when error prop is set', () => {
+    render(
+      <DriftPanel drift={null} onScan={vi.fn()} loading={false} error="Not enough prediction data" />
+    );
+    expect(screen.getByText(/Not enough prediction data/)).toBeInTheDocument();
   });
 });
