@@ -2,7 +2,6 @@
 Tests for LocalArtifactStorage — stores model artifacts on local filesystem.
 """
 
-import shutil
 from pathlib import Path
 
 import pytest
@@ -57,9 +56,7 @@ class TestLocalArtifactStorage:
             await storage.download("local:///nonexistent/file", dest)
 
     @pytest.mark.asyncio()
-    async def test_upload_copies_file(
-        self, storage: LocalArtifactStorage, tmp_path: Path
-    ) -> None:
+    async def test_upload_copies_file(self, storage: LocalArtifactStorage, tmp_path: Path) -> None:
         source = tmp_path / "local_model.onnx"
         source.write_bytes(b"upload-data")
         remote = f"local://{tmp_path / 'remote' / 'model.onnx'}"

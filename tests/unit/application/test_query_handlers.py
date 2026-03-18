@@ -49,16 +49,12 @@ class TestGetModelQueryHandler:
         mock_model_repo.get_by_id.return_value = mock_model
 
         handler = GetModelQueryHandler(mock_model_repo)
-        result = await handler.execute(
-            GetModelQuery(model_id="credit-risk", version="v1")
-        )
+        result = await handler.execute(GetModelQuery(model_id="credit-risk", version="v1"))
 
         assert result is mock_model
         mock_model_repo.get_by_id.assert_awaited_once_with("credit-risk", "v1")
 
-    async def test_get_model_no_version_returns_champion(
-        self, mock_model_repo: AsyncMock
-    ) -> None:
+    async def test_get_model_no_version_returns_champion(self, mock_model_repo: AsyncMock) -> None:
         mock_model = MagicMock(id="credit-risk", version="v2")
         mock_model_repo.get_champion.return_value = mock_model
 
@@ -86,9 +82,7 @@ class TestGetDriftReportQueryHandler:
         mock_drift_repo.get_history.return_value = mock_reports
 
         handler = GetDriftReportQueryHandler(mock_drift_repo)
-        result = await handler.execute(
-            GetDriftReportQuery(model_id="credit-risk", limit=5)
-        )
+        result = await handler.execute(GetDriftReportQuery(model_id="credit-risk", limit=5))
 
         assert result == mock_reports
         mock_drift_repo.get_history.assert_awaited_once_with("credit-risk", 5)
@@ -102,17 +96,13 @@ class TestGetDriftReportQueryHandler:
 class TestGetPredictionLogsQueryHandler:
     async def test_get_prediction_logs(self, mock_log_repo: AsyncMock) -> None:
         mock_command = MagicMock(model_id="m1", model_version="v1")
-        mock_prediction = MagicMock(
-            result=[0.8], confidence=MagicMock(value=0.95), latency_ms=12.5
-        )
+        mock_prediction = MagicMock(result=[0.8], confidence=MagicMock(value=0.95), latency_ms=12.5)
         mock_log_repo.get_recent_logs.return_value = [
             (mock_command, mock_prediction),
         ]
 
         handler = GetPredictionLogsQueryHandler(mock_log_repo)
-        result = await handler.execute(
-            GetPredictionLogsQuery(model_id="m1", limit=50)
-        )
+        result = await handler.execute(GetPredictionLogsQuery(model_id="m1", limit=50))
 
         assert len(result) == 1
         assert result[0]["model_id"] == "m1"
@@ -128,18 +118,14 @@ class TestGetModelPerformanceQueryHandler:
     async def test_performance_with_logs(
         self, mock_log_repo: AsyncMock, mock_evaluator: MagicMock
     ) -> None:
-        pred = MagicMock(
-            result=[0.9], confidence=MagicMock(value=0.92), latency_ms=15.0
-        )
+        pred = MagicMock(result=[0.9], confidence=MagicMock(value=0.92), latency_ms=15.0)
         mock_log_repo.get_recent_logs.return_value = [
             (MagicMock(), pred),
             (MagicMock(), pred),
         ]
 
         handler = GetModelPerformanceQueryHandler(mock_log_repo, mock_evaluator)
-        result = await handler.execute(
-            GetModelPerformanceQuery(model_id="m1")
-        )
+        result = await handler.execute(GetModelPerformanceQuery(model_id="m1"))
 
         assert result["total_predictions"] == 2
         assert result["metrics"]["avg_latency_ms"] == 15.0
@@ -151,9 +137,7 @@ class TestGetModelPerformanceQueryHandler:
         mock_log_repo.get_recent_logs.return_value = []
 
         handler = GetModelPerformanceQueryHandler(mock_log_repo, mock_evaluator)
-        result = await handler.execute(
-            GetModelPerformanceQuery(model_id="m1")
-        )
+        result = await handler.execute(GetModelPerformanceQuery(model_id="m1"))
 
         assert result["total_predictions"] == 0
         assert result["metrics"] == {}

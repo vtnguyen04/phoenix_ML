@@ -11,6 +11,7 @@ Usage:
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from skl2onnx import convert_sklearn
@@ -24,20 +25,41 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 
 NUMERIC_FEATURES = [
-    "duration", "credit_amount", "installment_commitment",
-    "residence_since", "age", "existing_credits", "num_dependents",
+    "duration",
+    "credit_amount",
+    "installment_commitment",
+    "residence_since",
+    "age",
+    "existing_credits",
+    "num_dependents",
 ]
 CATEGORICAL_FEATURES = [
-    "checking_status", "credit_history", "purpose", "savings_status",
-    "employment", "personal_status", "other_parties", "property_magnitude",
-    "other_payment_plans", "housing", "job", "own_telephone", "foreign_worker",
+    "checking_status",
+    "credit_history",
+    "purpose",
+    "savings_status",
+    "employment",
+    "personal_status",
+    "other_parties",
+    "property_magnitude",
+    "other_payment_plans",
+    "housing",
+    "job",
+    "own_telephone",
+    "foreign_worker",
 ]
 ALL_BASE_FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 ENGINEERED_NAMES = [
-    "credit_per_month", "age_credit_ratio", "installment_credit_ratio",
-    "age_employment_score", "credit_risk_density", "duration_installment",
-    "checking_savings_interact", "age_checking_interact",
-    "credit_existing_interact", "log_credit_amount",
+    "credit_per_month",
+    "age_credit_ratio",
+    "installment_credit_ratio",
+    "age_employment_score",
+    "credit_risk_density",
+    "duration_installment",
+    "checking_savings_interact",
+    "age_checking_interact",
+    "credit_existing_interact",
+    "log_credit_amount",
 ]
 FINAL_FEATURE_NAMES = ALL_BASE_FEATURES + ENGINEERED_NAMES
 N_FEATURES = len(FINAL_FEATURE_NAMES)  # 30
@@ -55,22 +77,24 @@ def _engineer_features(X: np.ndarray) -> np.ndarray:
     emp_i = n_num + CATEGORICAL_FEATURES.index("employment")
     chk_i = n_num + CATEGORICAL_FEATURES.index("checking_status")
     sav_i = n_num + CATEGORICAL_FEATURES.index("savings_status")
-    emp = X[:, emp_i:emp_i + 1]
-    chk = X[:, chk_i:chk_i + 1]
-    sav = X[:, sav_i:sav_i + 1]
+    emp = X[:, emp_i : emp_i + 1]
+    chk = X[:, chk_i : chk_i + 1]
+    sav = X[:, sav_i : sav_i + 1]
 
-    engineered = np.hstack([
-        credit / (dur + eps),         # credit_per_month
-        age / (credit + eps),         # age_credit_ratio
-        inst / (credit + eps),        # installment_credit_ratio
-        age * (emp + 1),              # age_employment_score
-        credit * inst / (dur + eps),  # credit_risk_density
-        dur * inst,                   # duration_installment
-        chk * sav,                    # checking_savings_interact
-        age * chk,                    # age_checking_interact
-        credit * existing,            # credit_existing_interact
-        np.log1p(np.abs(credit)),     # log_credit_amount
-    ])
+    engineered = np.hstack(
+        [
+            credit / (dur + eps),  # credit_per_month
+            age / (credit + eps),  # age_credit_ratio
+            inst / (credit + eps),  # installment_credit_ratio
+            age * (emp + 1),  # age_employment_score
+            credit * inst / (dur + eps),  # credit_risk_density
+            dur * inst,  # duration_installment
+            chk * sav,  # checking_savings_interact
+            age * chk,  # age_checking_interact
+            credit * existing,  # credit_existing_interact
+            np.log1p(np.abs(credit)),  # log_credit_amount
+        ]
+    )
     return np.hstack([X, engineered])
 
 
@@ -83,9 +107,14 @@ def load_dataset() -> tuple[np.ndarray, np.ndarray]:
     preprocessor = ColumnTransformer(
         transformers=[
             ("num", StandardScaler(), NUMERIC_FEATURES),
-            ("cat", OrdinalEncoder(
-                handle_unknown="use_encoded_value", unknown_value=-1,
-            ), CATEGORICAL_FEATURES),
+            (
+                "cat",
+                OrdinalEncoder(
+                    handle_unknown="use_encoded_value",
+                    unknown_value=-1,
+                ),
+                CATEGORICAL_FEATURES,
+            ),
         ]
     )
 
@@ -108,7 +137,11 @@ def train_and_export(
     X, y = load_dataset()
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=0, stratify=y,
+        X,
+        y,
+        test_size=0.2,
+        random_state=0,
+        stratify=y,
     )
 
     model = GradientBoostingClassifier(
@@ -156,7 +189,9 @@ def train_and_export(
 
     importances = model.feature_importances_
     top = sorted(
-        zip(FINAL_FEATURE_NAMES, importances), key=lambda x: x[1], reverse=True,
+        zip(FINAL_FEATURE_NAMES, importances, strict=False),
+        key=lambda x: x[1],
+        reverse=True,
     )[:7]
     print("\n🔍 Top 7 features:")
     for fname, imp in top:
@@ -183,7 +218,7 @@ def train_and_export(
     ref_path = reference_path or str(
         Path(output_path).parent.parent.parent / "data" / "reference_data.json"
     )
-    reference = {
+    reference: dict[str, Any] = {
         "feature_names": FINAL_FEATURE_NAMES,
         "n_features": N_FEATURES,
         "reference_distributions": {},

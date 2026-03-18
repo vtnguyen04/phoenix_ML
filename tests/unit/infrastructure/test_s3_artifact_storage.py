@@ -1,5 +1,6 @@
 """Unit tests for S3ArtifactStorage."""
 
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -10,7 +11,7 @@ from src.infrastructure.artifact_storage.s3_artifact_storage import S3ArtifactSt
 
 
 @pytest.fixture
-def mock_boto3_client() -> MagicMock:
+def mock_boto3_client() -> Generator[MagicMock, None, None]:
     with patch("src.infrastructure.artifact_storage.s3_artifact_storage.boto3") as mock:
         client = MagicMock()
         mock.client.return_value = client
@@ -76,9 +77,7 @@ class TestS3Upload:
         await storage.upload(local, "s3://bucket/models/model.onnx")
         mock_boto3_client.upload_file.assert_called_once()
 
-    async def test_upload_missing_file_raises(
-        self, storage: S3ArtifactStorage
-    ) -> None:
+    async def test_upload_missing_file_raises(self, storage: S3ArtifactStorage) -> None:
         with pytest.raises(FileNotFoundError):
             await storage.upload(Path("/nonexistent/model.onnx"), "s3://b/k")
 
@@ -105,6 +104,4 @@ class TestS3Delete:
         self, storage: S3ArtifactStorage, mock_boto3_client: MagicMock
     ) -> None:
         await storage.delete("s3://bucket/model.onnx")
-        mock_boto3_client.delete_object.assert_called_once_with(
-            Bucket="bucket", Key="model.onnx"
-        )
+        mock_boto3_client.delete_object.assert_called_once_with(Bucket="bucket", Key="model.onnx")

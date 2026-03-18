@@ -1,4 +1,6 @@
+# ========================================
 # Python
+# ========================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -22,50 +24,73 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# ========================================
 # Virtual Environment
+# ========================================
+.venv/
 .env
-.venv
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
+# ========================================
+# Testing & Coverage
+# ========================================
 .coverage
 .coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
+htmlcov/
 .pytest_cache/
-cover/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+coverage.xml
+nosetests.xml
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IDEs
+# ========================================
+# IDE / Editor
+# ========================================
 .vscode/
 .idea/
 *.swp
 *.swo
+.DS_Store
 
-# Project specific
+# ========================================
+# Project Data & Models (tracked by DVC)
+# ========================================
 data/
 models/
-logs/
-site/
-.DS_Store
-.gitnexus
+*.db
+*.sqlite3
 
+# ========================================
+# Build Artifacts
+# ========================================
+site/
+logs/
+*.log
+
+# ========================================
+# Frontend
+# ========================================
+frontend/node_modules/
+frontend/dist/
+
+# ========================================
+# DVC Cache
+# ========================================
+.dvc/cache/
+.dvc/tmp/
+
+# ========================================
 # AI Agent files
+# ========================================
 .claude/
-AGENTS.md
-CLAUDE.md
+.gemini/
+.gitnexus/
 project.md.save
-phoenix.db
+
+# ========================================
+# Docker
+# ========================================
+*.tar
