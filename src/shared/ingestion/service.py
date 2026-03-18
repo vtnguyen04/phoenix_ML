@@ -23,8 +23,6 @@ class IngestionService:
         """
         logger.info("Processing data for entity: %s", entity_id)
 
-        # In a real system, perform cleaning, normalization, etc.
-        # For this prototype, we assume data is already cleaned.
         cleaned_data = {k: float(v) for k, v in raw_features.items()}
 
         return await self._ingestor.ingest(entity_id, cleaned_data)

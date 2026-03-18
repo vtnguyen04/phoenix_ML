@@ -4,7 +4,8 @@ import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
-from src.infrastructure.http.fastapi_server import app, find_project_root
+from src.infrastructure.http.container import find_project_root
+from src.infrastructure.http.fastapi_server import app
 from src.infrastructure.persistence.database import get_db
 from src.infrastructure.persistence.postgres_drift_repo import (
     PostgresDriftReportRepository,

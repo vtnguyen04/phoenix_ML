@@ -26,7 +26,6 @@ class ApiDataIngestor(IDataIngestor):
         """
         try:
             async with httpx.AsyncClient() as client:
-                # In real Clean Arch, this would call FeatureStore API.
                 response = await client.get(f"{self.base_url}/health")
                 return response.status_code == SUCCESS_STATUS
         except Exception as e:
