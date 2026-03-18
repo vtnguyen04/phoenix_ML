@@ -72,6 +72,10 @@ python_version = "3.11"
 strict = true
 ignore_missing_imports = true
 disallow_untyped_defs = true
+exclude = [
+    ".*_pb2\\.py$",
+    ".*_pb2_grpc\\.py$",
+]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -96,4 +100,5 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.14.10",
+    "types-protobuf>=6.32.1.20260221",
 ]
