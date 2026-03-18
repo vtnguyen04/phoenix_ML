@@ -6,12 +6,12 @@ import numpy as np
 from src.domain.feature_store.repositories.feature_store import FeatureStore
 from src.domain.inference.entities.model import Model
 from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.repositories.model_repository import ModelRepository
 from src.domain.inference.services.batch_manager import BatchManager
 from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.inference.services.routing_strategy import RoutingStrategy
 from src.domain.inference.value_objects.feature_vector import FeatureVector
 from src.domain.model_registry.repositories.artifact_storage import ArtifactStorage
+from src.domain.model_registry.repositories.model_repository import ModelRepository
 
 
 @dataclass(frozen=True)
@@ -51,9 +51,7 @@ class InferenceService:
         Coordinates the full prediction flow.
         """
         # 1. Select Model Version
-        model = await self._select_model(
-            request.model_id, request.model_version, request.entity_id
-        )
+        model = await self._select_model(request.model_id, request.model_version, request.entity_id)
 
         # 2. Ensure artifact is local
         local_model_path = self._cache_dir / model.id / model.version / "model.onnx"
@@ -69,8 +67,11 @@ class InferenceService:
             if not request.entity_id:
                 raise ValueError("No features provided and no entity_id for lookup")
 
-            # TODO: Get required features from model metadata
-            required_features = ["f1", "f2", "f3", "f4"]
+            metadata = model.metadata or {}
+            required_features = metadata.get("features")
+            if not isinstance(required_features, list) or not required_features:
+                required_features = ["f1", "f2", "f3", "f4"]
+
             feature_values = await self._feature_store.get_online_features(
                 request.entity_id, required_features
             )
@@ -78,9 +79,7 @@ class InferenceService:
             if feature_values is None:
                 raise ValueError(f"Features not found for entity {request.entity_id}")
 
-        feature_vector = FeatureVector(
-            values=np.array(feature_values, dtype=np.float32)
-        )
+        feature_vector = FeatureVector(values=np.array(feature_values, dtype=np.float32))
 
         # 5. Perform Prediction via BatchManager
         return await self._batch_manager.predict(model, feature_vector)

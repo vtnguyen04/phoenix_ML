@@ -8,6 +8,7 @@ class PredictionMade:
     """
     Domain Event triggered when a prediction is successfully generated.
     """
+
     prediction_id: str
     model_id: str
     model_version: str

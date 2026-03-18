@@ -16,6 +16,7 @@ class ModelORM(Base):
     framework: Mapped[str] = mapped_column(String, nullable=False)
     stage: Mapped[str] = mapped_column(String, nullable=False, default="development")
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default={})
+    metrics_json: Mapped[dict[str, float]] = mapped_column(JSON, default={})
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -30,6 +31,7 @@ class PredictionLogORM(Base):
     result: Mapped[int] = mapped_column(JSON, nullable=False)
     confidence: Mapped[float] = mapped_column(JSON, nullable=False)
     latency_ms: Mapped[float] = mapped_column(JSON, nullable=False)
+    ground_truth: Mapped[int | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

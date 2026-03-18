@@ -1,0 +1,6 @@
+apiVersion: v2
+name: phoenix-ml
+description: A Helm chart for Phoenix ML Platform
+type: application
+version: 0.1.0
+appVersion: "1.16.0"

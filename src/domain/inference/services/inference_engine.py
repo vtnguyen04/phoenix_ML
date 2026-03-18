@@ -10,7 +10,7 @@ class InferenceEngine(ABC):
     Interface for ML Inference Engines (ONNX, TensorRT, etc.)
     Defined in Domain layer to follow Dependency Inversion Principle.
     """
-    
+
     @abstractmethod
     async def load(self, model: Model) -> None:
         """Load a model into the engine"""
