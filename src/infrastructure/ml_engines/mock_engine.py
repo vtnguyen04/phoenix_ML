@@ -18,7 +18,6 @@ class MockInferenceEngine(InferenceEngine):
         self.loaded_models: dict[str, Model] = {}
 
     async def load(self, model: Model) -> None:
-        # Simulate loading latency
         self.loaded_models[model.unique_key] = model
 
     async def predict(self, model: Model, features: FeatureVector) -> Prediction:
@@ -27,7 +26,6 @@ class MockInferenceEngine(InferenceEngine):
 
         start_time = time.time()
 
-        # Mock logic: result is just the mean of the features
         result = float(np.mean(features.values))
         confidence = ConfidenceScore(value=0.99)
 
