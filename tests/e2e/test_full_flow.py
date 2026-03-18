@@ -29,9 +29,10 @@ async def test_e2e_predict_and_feedback_flow() -> None:
                     json={
                         "model_id": "credit-risk",
                         "model_version": "v1",
-                        "entity_id": "customer-0000",
+                        "entity_id": "customer-good",
                     },
                 )
+                print(f"DEBUG: {predict_resp.json()}")
                 assert predict_resp.status_code == SUCCESS_STATUS
                 data = predict_resp.json()
                 assert "prediction_id" in data

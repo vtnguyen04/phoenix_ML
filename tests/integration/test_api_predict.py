@@ -26,7 +26,7 @@ async def test_api_predict_dynamic_batching() -> None:
                 payload = {
                     "model_id": "credit-risk",
                     "model_version": "v1",
-                    "entity_id": "customer-0000",
+                    "entity_id": "customer-good",
                 }
 
                 # Simulating concurrent requests to trigger BatchManager
