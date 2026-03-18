@@ -48,14 +48,7 @@ The project follows a modular structure reflecting the Inversion of Control prin
 .
 ├── src/
 │   ├── domain/              # Pure Logic Layer (Zero dependencies)
-│   │   ├── inference/       # Core ML logic (Entities, Value Objects, Routing)
-│   │   ├── feature_store/   # Feature retrieval interfaces
-│   │   ├── model_registry/  # Artifact storage interfaces
-│   │   └── monitoring/      # Statistical drift algorithms
 │   ├── application/         # Orchestration Layer (Commands & Handlers)
-│   │   ├── commands/        # Command objects (Predict, LoadModel)
-│   │   ├── handlers/        # Logic orchestrators
-│   │   └── services/        # Cross-context application services
 │   ├── infrastructure/      # Implementation Layer (Adapters)
 │   │   ├── http/            # FastAPI configuration & Lifespan triggers
 │   │   ├── ml_engines/      # ONNX and TensorRT implementations
