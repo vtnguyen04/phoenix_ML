@@ -6,24 +6,24 @@ interface DriftPanelProps {
   drift: DriftReport | null;
   onScan: () => void;
   loading: boolean;
+  error?: string | null;
 }
 
-/**
- * DriftPanel — Self-healing drift monitoring display.
- * SRP: Only handles drift data visualization and scan trigger.
- * DIP: Depends on DriftReport interface, not drift calculation logic.
- */
-export function DriftPanel({ drift, onScan, loading }: DriftPanelProps) {
+export function DriftPanel({ drift, onScan, loading, error }: DriftPanelProps) {
   return (
     <div className="card">
       <div className="card-header">
-        <h2 className="card-title">🛡️ Self-Healing Monitor</h2>
+        <h2 className="card-title">🛡️ Drift Monitor</h2>
         <button className="btn btn-sm" onClick={onScan} disabled={loading}>
-          {loading ? <Spinner /> : '🔄'} Scan Drift
+          {loading ? <Spinner /> : '🔄'} Scan Now
         </button>
       </div>
 
-      {drift ? (
+      {error ? (
+        <div className="drift-recommendation" style={{ color: 'var(--text-muted)' }}>
+          ⚠️ {error}
+        </div>
+      ) : drift ? (
         <DriftDetails drift={drift} />
       ) : (
         <EmptyDriftState />
@@ -32,7 +32,6 @@ export function DriftPanel({ drift, onScan, loading }: DriftPanelProps) {
   );
 }
 
-/** Drift detail view — separated for testability. */
 function DriftDetails({ drift }: { drift: DriftReport }) {
   return (
     <>
@@ -50,7 +49,7 @@ function DriftDetails({ drift }: { drift: DriftReport }) {
               color: 'var(--text-muted)',
               fontFamily: 'var(--font-mono)',
             }}>
-              KS={drift.statistic.toFixed(4)} · p={drift.p_value.toFixed(4)}
+              {drift.method.toUpperCase()}={drift.statistic.toFixed(4)} · p={drift.p_value.toFixed(4)} · n={drift.sample_size}
             </div>
           </div>
         </div>
@@ -65,12 +64,13 @@ function DriftDetails({ drift }: { drift: DriftReport }) {
   );
 }
 
-/** Empty state when no drift scan has been performed. */
 function EmptyDriftState() {
   return (
     <div className="empty-state">
       <div className="empty-state-icon">📊</div>
-      <div className="empty-state-text">Run a drift scan to analyze model health</div>
+      <div className="empty-state-text">
+        Drift reports will appear automatically once predictions are logged by the monitoring loop.
+      </div>
     </div>
   );
 }
