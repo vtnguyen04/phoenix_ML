@@ -23,9 +23,7 @@ class ModelVersion:
         pattern = r"^(\d+)\.(\d+)\.(\d+)$"
         match = re.match(pattern, version_str)
         if not match:
-            raise ValueError(
-                f"Invalid version format: {version_str}. Expected 'MAJOR.MINOR.PATCH'"
-            )
+            raise ValueError(f"Invalid version format: {version_str}. Expected 'MAJOR.MINOR.PATCH'")
 
         return cls(
             major=int(match.group(1)),

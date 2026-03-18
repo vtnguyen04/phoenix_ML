@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package phoenix.inference.v1;
+
+option python_generic_services = true;
+
+// Health check messages following gRPC health checking protocol.
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+  }
+  ServingStatus status = 1;
+}
+
+// Inference messages.
+message PredictRequest {
+  string model_id = 1;
+  string model_version = 2;
+  string entity_id = 3;
+  repeated float features = 4;
+}
+
+message PredictResponse {
+  string prediction_id = 1;
+  string model_id = 2;
+  string version = 3;
+  repeated float result = 4;
+  float confidence = 5;
+  float latency_ms = 6;
+}
+
+// Service definitions.
+service InferenceService {
+  rpc Predict (PredictRequest) returns (PredictResponse);
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}

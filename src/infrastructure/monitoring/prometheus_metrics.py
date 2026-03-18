@@ -33,16 +33,10 @@ DRIFT_DETECTED_COUNT = Counter(
 )
 
 # --- PERFORMANCE METRICS ---
-MODEL_ACCURACY = Gauge(
-    "model_accuracy", "Overall accuracy of the model", ["model_id", "version"]
-)
+MODEL_ACCURACY = Gauge("model_accuracy", "Overall accuracy of the model", ["model_id", "version"])
 
-MODEL_F1_SCORE = Gauge(
-    "model_f1_score", "F1 Score of the model", ["model_id", "version"]
-)
+MODEL_F1_SCORE = Gauge("model_f1_score", "F1 Score of the model", ["model_id", "version"])
 
-MODEL_PRECISION = Gauge(
-    "model_precision", "Precision of the model", ["model_id", "version"]
-)
+MODEL_PRECISION = Gauge("model_precision", "Precision of the model", ["model_id", "version"])
 
 MODEL_RECALL = Gauge("model_recall", "Recall of the model", ["model_id", "version"])

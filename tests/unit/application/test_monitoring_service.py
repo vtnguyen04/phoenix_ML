@@ -95,9 +95,7 @@ async def test_check_drift_success(
     )
 
     # Execute
-    report = await monitoring_service.check_drift(
-        "m1", reference_data=[0.0] * 5, feature_index=0
-    )
+    report = await monitoring_service.check_drift("m1", reference_data=[0.0] * 5, feature_index=0)
 
     # Verify
     assert report.drift_detected is True
@@ -116,9 +114,7 @@ async def test_check_drift_psi(
     real_calculator = DriftCalculator()
     monitoring_service._drift_calculator = real_calculator
 
-    logs = [
-        (PredictCommand(model_id="m1", features=[float(i)]), Mock()) for i in range(10)
-    ]
+    logs = [(PredictCommand(model_id="m1", features=[float(i)]), Mock()) for i in range(10)]
     mock_log_repo.get_recent_logs.return_value = logs
 
     # Execute with PSI

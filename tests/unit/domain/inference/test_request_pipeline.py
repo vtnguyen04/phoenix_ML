@@ -1,13 +1,12 @@
 import pytest
 
+from src.domain.inference.services.inference_service import PredictionRequest
 from src.domain.inference.services.request_pipeline import (
     CacheHandler,
-    FeatureEnrichmentHandler,
     RateLimitHandler,
     ValidationHandler,
     build_pipeline,
 )
-from src.domain.inference.services.inference_service import PredictionRequest
 
 
 @pytest.mark.asyncio

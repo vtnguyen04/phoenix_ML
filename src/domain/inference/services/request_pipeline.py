@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import replace
-from typing import Any
+from typing import Any, cast
 
 from src.domain.inference.services.inference_service import PredictionRequest
 
@@ -81,7 +81,7 @@ class CacheHandler(PipelineHandler):
 
         if cached is not None:
             logger.info("Cache hit for %s", cache_key)
-            return cached
+            return cast(PredictionRequest, cached)
 
         result = await super().handle(request)
         self._cache[cache_key] = result

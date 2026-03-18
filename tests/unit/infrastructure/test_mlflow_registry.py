@@ -32,13 +32,15 @@ async def test_mlflow_save_model(mlflow_registry: MlflowModelRegistry) -> None:
     mv.creation_timestamp = None
     mock_client.search_model_versions.return_value = [mv]
 
-    with patch("mlflow.tracking.MlflowClient", return_value=mock_client), patch(
-        "mlflow.start_run"
-    ), patch("mlflow.log_params"), patch("mlflow.log_param"), patch(
-        "mlflow.log_metric"
-    ) as mock_log_metric, patch("mlflow.onnx.log_model") as mock_log_model, patch(
-        "onnx.load"
-    ) as mock_onnx_load:
+    with (
+        patch("mlflow.tracking.MlflowClient", return_value=mock_client),
+        patch("mlflow.start_run"),
+        patch("mlflow.log_params"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_metric") as mock_log_metric,
+        patch("mlflow.onnx.log_model") as mock_log_model,
+        patch("onnx.load") as mock_onnx_load,
+    ):
         mock_onnx_load.return_value = MagicMock()
         await mlflow_registry.save(model)
         mock_log_model.assert_called_once()

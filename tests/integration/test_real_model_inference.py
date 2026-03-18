@@ -29,10 +29,8 @@ async def test_real_credit_risk_model_inference() -> None:
         framework="onnx",
     )
 
-    # 2. Input data (4 features as defined in training script)
-    # Case 1: Likely Positive (dựa trên coef lớn của feature 1)
-    # Coeffs: [0.04, 3.17, 0.30, 0.79]
-    input_data = np.array([0.5, 2.0, 0.5, 0.5], dtype=np.float32)
+    # Case 1: Likely Positive
+    input_data = np.array([0.5] * 30, dtype=np.float32)
     features = FeatureVector(values=input_data.tolist())
 
     # 3. Predict
@@ -51,8 +49,8 @@ async def test_real_credit_risk_model_inference() -> None:
     assert isinstance(prediction.latency_ms, float)
     assert prediction.latency_ms > 0
 
-    # Case 2: Likely Negative (Feature 1 âm lớn)
-    input_data_neg = np.array([0.5, -2.0, 0.5, 0.5], dtype=np.float32)
+    # Case 2: Likely Negative
+    input_data_neg = np.array([-0.5] * 30, dtype=np.float32)
     features_neg = FeatureVector(values=input_data_neg.tolist())
     prediction_neg = await engine.predict(model, features_neg)
 

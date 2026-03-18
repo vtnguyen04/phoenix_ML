@@ -7,7 +7,6 @@ class InMemoryFeatureStore(FeatureStore):
     """
 
     def __init__(self) -> None:
-        # Mock data storage: entity_id -> {feature_name: value}
         self._store: dict[str, dict[str, float]] = {}
 
     async def get_online_features(

@@ -68,9 +68,7 @@ class RetrainHandler:
 
         if champion and "metrics" in champion.metadata:
             champion_metrics = champion.metadata["metrics"]
-            should_promote = self._evaluator.is_better(
-                champion_metrics, challenger_metrics
-            )
+            should_promote = self._evaluator.is_better(champion_metrics, challenger_metrics)
             logger.info(
                 "📊 Comparison: Challenger F1=%s vs Champion F1=%s",
                 challenger_metrics["f1_score"],
@@ -93,9 +91,7 @@ class RetrainHandler:
 
         if should_promote:
             await self._model_repo.update_stage(command.model_id, version, "champion")
-            logger.info(
-                "👑 Model %s:%s promoted to CHAMPION", command.model_id, version
-            )
+            logger.info("👑 Model %s:%s promoted to CHAMPION", command.model_id, version)
 
         # 6. Update Prometheus
         self._update_prometheus(command.model_id, version, challenger_metrics)
@@ -120,16 +116,8 @@ class RetrainHandler:
             logger.error("❌ Training failed: %s", e)
             return False
 
-    def _update_prometheus(
-        self, model_id: str, version: str, metrics: dict[str, float]
-    ) -> None:
-        MODEL_ACCURACY.labels(model_id=model_id, version=version).set(
-            metrics["accuracy"]
-        )
-        MODEL_F1_SCORE.labels(model_id=model_id, version=version).set(
-            metrics["f1_score"]
-        )
-        MODEL_PRECISION.labels(model_id=model_id, version=version).set(
-            metrics["precision"]
-        )
+    def _update_prometheus(self, model_id: str, version: str, metrics: dict[str, float]) -> None:
+        MODEL_ACCURACY.labels(model_id=model_id, version=version).set(metrics["accuracy"])
+        MODEL_F1_SCORE.labels(model_id=model_id, version=version).set(metrics["f1_score"])
+        MODEL_PRECISION.labels(model_id=model_id, version=version).set(metrics["precision"])
         MODEL_RECALL.labels(model_id=model_id, version=version).set(metrics["recall"])
