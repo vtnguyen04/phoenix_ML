@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 import numpy as np
+
+_EPSILON = 1e-10
+_ANOMALY_RATIO_THRESHOLD = 0.1
 
 
 class AnomalyType(Enum):
@@ -35,8 +37,8 @@ class AnomalyDetector:
     def detect_prediction_anomaly(
         self,
         confidence_scores: list[float],
-        baseline_mean: Optional[float] = None,
-        baseline_std: Optional[float] = None,
+        baseline_mean: float | None = None,
+        baseline_std: float | None = None,
     ) -> AnomalyReport:
         arr = np.array(confidence_scores, dtype=np.float64)
         if len(arr) == 0:
@@ -52,7 +54,7 @@ class AnomalyDetector:
         mean = baseline_mean if baseline_mean is not None else float(np.mean(arr))
         std = baseline_std if baseline_std is not None else float(np.std(arr))
 
-        if std < 1e-10:
+        if std < _EPSILON:
             return AnomalyReport(
                 anomaly_type=AnomalyType.PREDICTION_ANOMALY,
                 is_anomalous=False,
@@ -65,7 +67,7 @@ class AnomalyDetector:
         z_scores = np.abs((arr - mean) / std)
         max_z = float(np.max(z_scores))
         anomaly_ratio = float(np.mean(z_scores > self._z_threshold))
-        is_anomalous = anomaly_ratio > 0.1
+        is_anomalous = anomaly_ratio > _ANOMALY_RATIO_THRESHOLD
 
         return AnomalyReport(
             anomaly_type=AnomalyType.PREDICTION_ANOMALY,
