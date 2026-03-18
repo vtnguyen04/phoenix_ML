@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🔥 Phoenix ML Platform
+<img src="docs/assets/logo.png" alt="Phoenix ML Logo" width="280"/>
+
+# Phoenix ML Platform
 
 ### High-Throughput, Low-Latency Real-time ML Inference System with Autonomous Self-Healing
 
