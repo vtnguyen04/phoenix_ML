@@ -39,7 +39,7 @@ async def test_opens_after_threshold_failures() -> None:
     assert cb.failure_count == 2
 
     result = await cb.execute(_failure, _fallback)
-    assert cb.state == CircuitState.OPEN
+    assert cb.state == CircuitState.OPEN  # type: ignore
     assert result == "fallback_result"
 
 
@@ -64,7 +64,7 @@ async def test_half_open_recovery() -> None:
     assert cb.state == CircuitState.OPEN
 
     result = await cb.execute(_success, _fallback)
-    assert cb.state == CircuitState.HALF_OPEN
+    assert cb.state == CircuitState.HALF_OPEN  # type: ignore
     assert result == "ok"
 
     result = await cb.execute(_success, _fallback)
@@ -79,5 +79,5 @@ async def test_reset() -> None:
     assert cb.state == CircuitState.OPEN
 
     cb.reset()
-    assert cb.state == CircuitState.CLOSED
+    assert cb.state == CircuitState.CLOSED  # type: ignore
     assert cb.failure_count == 0

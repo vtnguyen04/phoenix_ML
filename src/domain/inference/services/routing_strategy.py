@@ -64,6 +64,8 @@ class CanaryStrategy(RoutingStrategy):
         if challenger and random.random() < self.canary_percentage / 100:
             logger.info("Canary routing: selected challenger %s", challenger.unique_key)
             return challenger
+        if champion is None:
+            raise ValueError("No champion model found")
         return champion
 
     def _find_by_role(self, models: list[Model], role: str) -> Model | None:
@@ -92,12 +94,14 @@ class ShadowStrategy(RoutingStrategy):
         champion = self._find_by_role(models, "champion")
         self._shadow_model = self._find_by_role(models, "challenger")
 
-        if self._shadow_model:
+        if champion and self._shadow_model:
             logger.info(
                 "Shadow routing: champion=%s, shadow=%s",
                 champion.unique_key,
                 self._shadow_model.unique_key,
             )
+        if champion is None:
+            raise ValueError("No champion model found")
         return champion
 
     def _find_by_role(self, models: list[Model], role: str) -> Model | None:

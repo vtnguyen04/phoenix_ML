@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 import mlflow
 import mlflow.onnx
@@ -183,7 +183,7 @@ class MlflowModelRegistry(ModelRepository):
 
     @staticmethod
     def _client() -> _MlflowClient:
-        return mlflow.tracking.MlflowClient()
+        return cast(_MlflowClient, mlflow.tracking.MlflowClient())
 
     @staticmethod
     def _ensure_supported_framework(framework: str) -> None:
@@ -191,8 +191,8 @@ class MlflowModelRegistry(ModelRepository):
             raise ValueError(f"Unsupported framework for MLflow registry: {framework}")
 
     @staticmethod
-    def _load_onnx(path: Path):  # returns onnx.ModelProto
-        import onnx  # type: ignore # noqa: PLC0415
+    def _load_onnx(path: Path) -> Any:  # returns onnx.ModelProto
+        import onnx  # noqa: PLC0415
 
         return onnx.load(str(path))
 

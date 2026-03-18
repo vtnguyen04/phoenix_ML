@@ -20,15 +20,12 @@ class TensorRTExecutor(InferenceEngine):
         if model.framework != "tensorrt":
             raise ValueError(f"Model framework {model.framework} not supported by TensorRTExecutor")
 
-        # Mock loading
         self._engines[model.unique_key] = "MockTRTEngine"
 
     async def predict(self, model: Model, features: FeatureVector) -> Prediction:
         if model.unique_key not in self._engines:
             await self.load(model)
 
-        # Mock Inference
-        # In real code: buffer allocation, cuda stream execution, memcpy
         return Prediction(
             model_id=model.id,
             model_version=model.version,

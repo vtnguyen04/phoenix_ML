@@ -1,9 +1,10 @@
 import asyncio
+import json
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any, cast
 
-import numpy as np
 from fastapi import FastAPI
 from sqlalchemy import select
 
@@ -35,10 +36,62 @@ from src.infrastructure.persistence.postgres_model_registry import (
 logger = logging.getLogger(__name__)
 
 
+def _load_reference_data() -> list[float]:
+    """Load real reference data from the training pipeline output."""
+    root = find_project_root()
+    ref_paths = [
+        root / "data" / "reference_data.json",
+        root / "models" / "data" / "reference_data.json",
+    ]
+    for ref_path in ref_paths:
+        if ref_path.exists():
+            with open(ref_path) as f:
+                data = json.load(f)
+            distributions = data.get("reference_distributions", {})
+            # Use the first feature (income) distribution
+            first_key = next(iter(distributions), None)
+            if first_key:
+                logger.info(
+                    "✅ Loaded %d real reference points from %s",
+                    len(distributions[first_key]),
+                    ref_path,
+                )
+                return cast(list[float], distributions[first_key])
+
+    logger.warning("⚠️ No reference data found, using empty reference")
+    return []
+
+
+def _load_real_features() -> list[dict[str, Any]]:
+    """Load real feature records seeded from the German Credit dataset."""
+    root = find_project_root()
+    feat_path = root / "data" / "reference_features.json"
+    if feat_path.exists():
+        with open(feat_path) as f:
+            records = json.load(f)
+        logger.info("✅ Loaded %d real feature records from %s", len(records), feat_path)
+        return cast(list[dict[str, Any]], records)
+    return []
+
+
+def _load_real_metrics() -> dict[str, Any]:
+    """Load real training metrics from the model training output."""
+    root = find_project_root()
+    metrics_path = root / "models" / "credit_risk" / "v1" / "metrics.json"
+    if metrics_path.exists():
+        with open(metrics_path) as f:
+            return cast(dict[str, Any], json.load(f))
+    return {"accuracy": 0.0, "f1_score": 0.0}
+
+
 async def run_monitoring_loop() -> None:
     """Background task that periodically checks for data drift."""
     logger.info("🚀 Starting Drift Monitoring Loop...")
-    reference_data = np.random.normal(0, 1, 100).tolist()
+    reference_data = _load_reference_data()
+
+    if not reference_data:
+        logger.warning("⚠️ No reference data — drift monitoring disabled")
+        return
 
     while not shutdown_event.is_set():
         try:
@@ -80,6 +133,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         if not result.scalar_one_or_none():
             try:
                 real_model_path = ensure_model_exists()
+                real_metrics = _load_real_metrics()
                 logger.info("✅ Seeding model from %s", real_model_path)
                 credit_model_v1 = Model(
                     id="credit-risk",
@@ -87,22 +141,93 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     uri=f"local://{real_model_path}",
                     framework="onnx",
                     metadata={
-                        "features": ["income", "debt", "age", "credit_history"],
+                        "features": [
+                            "duration",
+                            "credit_amount",
+                            "installment_commitment",
+                            "residence_since",
+                            "age",
+                            "existing_credits",
+                            "num_dependents",
+                            "checking_status",
+                            "credit_history",
+                            "purpose",
+                            "savings_status",
+                            "employment",
+                            "personal_status",
+                            "other_parties",
+                            "property_magnitude",
+                            "other_payment_plans",
+                            "housing",
+                            "job",
+                            "own_telephone",
+                            "foreign_worker",
+                            "credit_per_month",
+                            "age_credit_ratio",
+                            "installment_credit_ratio",
+                            "age_employment_score",
+                            "credit_risk_density",
+                            "duration_installment",
+                            "checking_savings_interact",
+                            "age_checking_interact",
+                            "credit_existing_interact",
+                            "log_credit_amount",
+                        ],
                         "role": "champion",
-                        "metrics": {"accuracy": 0.85, "f1_score": 0.84},
+                        "metrics": real_metrics,
+                        "dataset": "german-credit-openml",
                     },
                 )
                 await model_repo.save(credit_model_v1)
                 await model_repo.update_stage("credit-risk", "v1", "champion")
                 await db.commit()
-                logger.info("✅ Successfully registered Credit Risk model v1")
+                logger.info("✅ Registered model with real metrics: %s", real_metrics)
             except Exception as e:
                 logger.error("❌ Failed to seed model: %s", e)
 
-        await feature_store.add_features(
-            "customer-good",
-            {"income": 2.0, "debt": -1.5, "age": 1.0, "credit_history": 1.5},
-        )
+        # Seed REAL feature records from German Credit dataset
+        real_features = _load_real_features()
+        if real_features:
+            for record in real_features:
+                await feature_store.add_features(record["entity_id"], record["features"])
+            logger.info("✅ Seeded %d real feature records", len(real_features))
+        else:
+            # Fallback: one record for basic functionality (30 features)
+            await feature_store.add_features(
+                "customer-good",
+                {
+                    "duration": 0.5,
+                    "credit_amount": -0.3,
+                    "installment_commitment": 0.8,
+                    "residence_since": 0.5,
+                    "age": 0.5,
+                    "existing_credits": 0.5,
+                    "num_dependents": 0.5,
+                    "checking_status": 0.5,
+                    "credit_history": 0.5,
+                    "purpose": 0.5,
+                    "savings_status": 0.5,
+                    "employment": 0.5,
+                    "personal_status": 0.5,
+                    "other_parties": 0.5,
+                    "property_magnitude": 0.5,
+                    "other_payment_plans": 0.5,
+                    "housing": 0.5,
+                    "job": 0.5,
+                    "own_telephone": 0.5,
+                    "foreign_worker": 0.5,
+                    "credit_per_month": 0.5,
+                    "age_credit_ratio": 0.5,
+                    "installment_credit_ratio": 0.5,
+                    "age_employment_score": 0.5,
+                    "credit_risk_density": 0.5,
+                    "duration_installment": 0.5,
+                    "checking_savings_interact": 0.5,
+                    "age_checking_interact": 0.5,
+                    "credit_existing_interact": 0.5,
+                    "log_credit_amount": 0.5,
+                },
+            )
         break
 
     shutdown_event.clear()

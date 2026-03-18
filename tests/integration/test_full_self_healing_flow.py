@@ -31,7 +31,7 @@ async def test_full_self_healing_flow() -> None:
             # --- PHASE 1: Generate Drifted Data ---
             payload = {
                 "model_id": "credit-risk",
-                "features": [100.0, 100.0, 100.0, 100.0],
+                "features": [100.0] * 30,
             }
 
             for _ in range(DRIFT_REQUEST_COUNT):
