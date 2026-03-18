@@ -93,10 +93,16 @@ class BatchManager:
                 if batch_items:
                     features_list = [item[0] for item in batch_items]
                     futures = [item[1] for item in batch_items]
+                    
+                    # Pad batch size for optimal GPU utilization patterns (powers of 2)
+                    padded_features_list = self._pad_batch(features_list)
 
                     try:
                         # Run batch inference
-                        predictions = await self._engine.batch_predict(model, features_list)
+                        predictions = await self._engine.batch_predict(model, padded_features_list)
+                        
+                        # Strip padding
+                        predictions = predictions[:len(features_list)]
 
                         # Resolve all futures
                         for i, prediction in enumerate(predictions):
@@ -133,3 +139,24 @@ class BatchManager:
 
             self._running_tasks.clear()
             self._queues.clear()
+
+    def _pad_batch(self, features_list: list[FeatureVector]) -> list[FeatureVector]:
+        """
+        Pad batch to the nearest power of 2 for optimal GPU execution.
+        """
+        current_size = len(features_list)
+        if current_size == 0:
+            return features_list
+            
+        # Find next power of 2
+        power = 1
+        while power < current_size:
+            power *= 2
+            
+        if power == current_size:
+            return features_list
+            
+        # Pad with copies of the last element
+        padding_size = power - current_size
+        padding = [features_list[-1]] * padding_size
+        return features_list + padding

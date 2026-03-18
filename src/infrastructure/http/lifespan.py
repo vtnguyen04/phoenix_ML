@@ -12,15 +12,18 @@ from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.model import Model
 from src.infrastructure.http.container import (
+    artifact_storage,
     batch_manager,
     drift_calculator,
     ensure_model_exists,
     feature_store,
     find_project_root,
+    inference_engine,
     kafka_producer,
     model_evaluator,
     shutdown_event,
 )
+from src.infrastructure.http.grpc_server import create_grpc_server
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
 from src.infrastructure.persistence.postgres_drift_repo import (
@@ -124,8 +127,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Initialize gRPC server reference
+    grpc_server = None
+
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
+        
+        # Instantiate gRPC server sharing the lifespan DB session for simplicity
+        grpc_server = create_grpc_server(
+            model_repo=model_repo,
+            inference_engine=inference_engine,
+            batch_manager=batch_manager,
+            feature_store=feature_store,
+            artifact_storage=artifact_storage,
+            port=50051,
+        )
 
         result = await db.execute(
             select(ModelORM).where(ModelORM.id == "credit-risk", ModelORM.version == "v1")
@@ -231,6 +247,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         break
 
     shutdown_event.clear()
+    
+    if grpc_server:
+        await grpc_server.start()
+        
     await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
@@ -239,6 +259,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("🧹 Lifespan shutdown started...")
     shutdown_event.set()
     monitor_task.cancel()
+    
+    if grpc_server:
+        await grpc_server.stop(grace=2.0)
+        
     await batch_manager.stop()
     await kafka_producer.stop()
     try:

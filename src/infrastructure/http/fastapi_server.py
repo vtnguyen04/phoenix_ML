@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
 from src.config import get_settings
+from src.infrastructure.http.feature_routes import feature_router
 from src.infrastructure.http.lifespan import lifespan
 from src.infrastructure.http.routes import router
 
@@ -21,6 +22,7 @@ app.add_middleware(
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 app.include_router(router)
+app.include_router(feature_router)
 
 if __name__ == "__main__":
     import uvicorn
