@@ -96,12 +96,16 @@ def _train_model(**kwargs: Any) -> None:
     """Train a new ML model version and export as ONNX."""
     from scripts.train_model import train_and_export
 
+    conf = kwargs.get("dag_run", {}).conf or {}
+    model_id = conf.get("model_id", "credit-risk")
+    fs_model_id = model_id.replace("-", "_")
+
     timestamp = int(time.time())
     version = f"v{timestamp}"
 
-    output_path = f"models/credit_risk/{version}/model.onnx"
-    metrics_path = f"models/credit_risk/{version}/metrics.json"
-    reference_path = f"models/credit_risk/{version}/reference_features.json"
+    output_path = f"models/{fs_model_id}/{version}/model.onnx"
+    metrics_path = f"models/{fs_model_id}/{version}/metrics.json"
+    reference_path = f"models/{fs_model_id}/{version}/reference_features.json"
 
     logger.info("Training new model version: %s", version)
     train_and_export(
@@ -124,9 +128,12 @@ def _log_mlflow(**kwargs: Any) -> None:
     version = ti.xcom_pull(task_ids="train_model", key="version")
     metrics_path = ti.xcom_pull(task_ids="train_model", key="metrics_path")
 
+    conf = kwargs.get("dag_run", {}).conf or {}
+    model_id = conf.get("model_id", "credit-risk")
+
     tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
     mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_experiment("credit-risk-production")
+    mlflow.set_experiment(f"{model_id}-production")
 
     with open(metrics_path) as f:
         metrics = json.load(f)
@@ -155,10 +162,13 @@ def _register_model(**kwargs: Any) -> None:
     with open(metrics_path) as f:
         metrics = json.load(f)
 
+    conf = kwargs.get("dag_run", {}).conf or {}
+    model_id = conf.get("model_id", "credit-risk")
+
     resp = httpx.post(
         f"{_API_URL}/models/register",
         json={
-            "model_id": "credit-risk",
+            "model_id": model_id,
             "version": version,
             "uri": f"local:///{output_path}",
             "framework": "onnx",

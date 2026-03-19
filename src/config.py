@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./phoenix.db"
 
     # Model Config
+    DEFAULT_MODEL_ID: str = "credit-risk"
+    DEFAULT_MODEL_VERSION: str = "v1"
     DEFAULT_MODEL_PATH: str = "local://models/demo.onnx"
 
     # Observability Config

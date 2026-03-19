@@ -46,19 +46,21 @@ class PostgresModelRegistry(ModelRepository):
         return self._to_entity(orm) if orm else None
 
     async def update_stage(self, model_id: str, version: str, stage: str) -> None:
+        is_active = stage not in ("archived", "retired")
+
         if stage == "champion":
-            # Demote old champion
+            # Demote old champion — also deactivate it
             stmt = (
                 update(ModelORM)
                 .where(ModelORM.id == model_id, ModelORM.stage == "champion")
-                .values(stage="retired")
+                .values(stage="retired", is_active=False)
             )
             await self._session.execute(stmt)
 
         stmt = (
             update(ModelORM)
             .where(ModelORM.id == model_id, ModelORM.version == version)
-            .values(stage=stage)
+            .values(stage=stage, is_active=is_active)
         )
         await self._session.execute(stmt)
         await self._session.commit()

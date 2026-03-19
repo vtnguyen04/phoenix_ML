@@ -59,10 +59,19 @@ def find_project_root() -> Path:
     return Path.cwd()
 
 
-def ensure_model_exists() -> Path:
+def ensure_model_exists(
+    model_id: str | None = None,
+    version: str | None = None,
+) -> Path:
     """Ensures model artifact exists, generating one if in CI/test context."""
+    model_id = model_id or settings.DEFAULT_MODEL_ID
+    version = version or settings.DEFAULT_MODEL_VERSION
+
+    # Normalize model_id for filesystem (e.g. credit-risk -> credit_risk)
+    fs_model_id = model_id.replace("-", "_")
+
     root = find_project_root()
-    model_path = root / "models" / "credit_risk" / "v1" / "model.onnx"
+    model_path = root / "models" / fs_model_id / version / "model.onnx"
 
     if model_path.exists():
         return model_path.absolute()

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from sqlalchemy import select
 
 from src.application.services.monitoring_service import MonitoringService
+from src.config import get_settings
 from src.domain.inference.entities.model import Model
 from src.domain.monitoring.services.alert_manager import (
     AlertManager,
@@ -109,8 +110,10 @@ def _load_real_features() -> list[dict[str, Any]]:
 
 def _load_real_metrics() -> dict[str, Any]:
     """Load real training metrics from the model training output."""
+    _settings = get_settings()
+    fs_model_id = _settings.DEFAULT_MODEL_ID.replace("-", "_")
     root = find_project_root()
-    metrics_path = root / "models" / "credit_risk" / "v1" / "metrics.json"
+    metrics_path = root / "models" / fs_model_id / _settings.DEFAULT_MODEL_VERSION / "metrics.json"
     if metrics_path.exists():
         with open(metrics_path) as f:
             return cast(dict[str, Any], json.load(f))
@@ -145,7 +148,7 @@ async def run_monitoring_loop() -> None:
                 )
 
                 await ms.check_drift(
-                    model_id="credit-risk",
+                    model_id=get_settings().DEFAULT_MODEL_ID,
                     reference_data=reference_data,
                     feature_index=0,
                 )
@@ -175,17 +178,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             port=50051,
         )
 
+        _settings = get_settings()
+        _model_id = _settings.DEFAULT_MODEL_ID
+        _model_version = _settings.DEFAULT_MODEL_VERSION
+
         result = await db.execute(
-            select(ModelORM).where(ModelORM.id == "credit-risk", ModelORM.version == "v1")
+            select(ModelORM).where(
+                ModelORM.id == _model_id, ModelORM.version == _model_version
+            )
         )
         if not result.scalar_one_or_none():
             try:
-                real_model_path = ensure_model_exists()
+                real_model_path = ensure_model_exists(_model_id, _model_version)
                 real_metrics = _load_real_metrics()
-                logger.info("✅ Seeding model from %s", real_model_path)
-                credit_model_v1 = Model(
-                    id="credit-risk",
-                    version="v1",
+                logger.info(
+                    "✅ Seeding model %s:%s from %s",
+                    _model_id, _model_version, real_model_path,
+                )
+                seed_model = Model(
+                    id=_model_id,
+                    version=_model_version,
                     uri=f"local://{real_model_path}",
                     framework="onnx",
                     metadata={
@@ -226,8 +238,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                         "dataset": "german-credit-openml",
                     },
                 )
-                await model_repo.save(credit_model_v1)
-                await model_repo.update_stage("credit-risk", "v1", "champion")
+                await model_repo.save(seed_model)
+                await model_repo.update_stage(_model_id, _model_version, "champion")
                 await db.commit()
                 logger.info("✅ Registered model with real metrics: %s", real_metrics)
             except Exception as e:
