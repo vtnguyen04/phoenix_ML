@@ -118,7 +118,7 @@ async def run_monitoring_loop() -> None:
         except asyncio.CancelledError:
             return
         except Exception as e:
-            logger.error("⚠️ Monitoring Loop Error: %s", e)
+            logger.error("⚠️ Monitoring Loop Error: %s", e, exc_info=True)
 
 
 @asynccontextmanager

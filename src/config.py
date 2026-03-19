@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Model Config
     DEFAULT_MODEL_PATH: str = "local://models/demo.onnx"
 
+    # Observability Config
+    JAEGER_ENDPOINT: str = "http://localhost:4317"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -13,8 +13,7 @@ from src.infrastructure.monitoring.tracing import init_tracing
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-jaeger_endpoint = getattr(settings, "JAEGER_ENDPOINT", "http://localhost:4317")
-init_tracing(service_name=settings.APP_NAME, otlp_endpoint=jaeger_endpoint)
+init_tracing(service_name=settings.APP_NAME, otlp_endpoint=settings.JAEGER_ENDPOINT)
 
 try:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor

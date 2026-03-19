@@ -100,6 +100,7 @@ class RetrainHandler:
 
     async def _run_training(self, script: Path, output: Path, metrics: Path) -> bool:
         try:
+            logger.info("🏋️ Running training: %s --output %s --metrics %s", script, output, metrics)
             process = await asyncio.create_subprocess_exec(
                 sys.executable,
                 str(script),
@@ -111,9 +112,17 @@ class RetrainHandler:
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await process.communicate()
-            return process.returncode == 0
+            if stdout:
+                logger.info("🏋️ Training stdout: %s", stdout.decode()[-500:])
+            if stderr:
+                logger.warning("🏋️ Training stderr: %s", stderr.decode()[-500:])
+            if process.returncode != 0:
+                logger.error("❌ Training script failed with code %s", process.returncode)
+                return False
+            logger.info("✅ Training script completed successfully")
+            return True
         except Exception as e:
-            logger.error("❌ Training failed: %s", e)
+            logger.error("❌ Training failed: %s", e, exc_info=True)
             return False
 
     def _update_prometheus(self, model_id: str, version: str, metrics: dict[str, float]) -> None:
