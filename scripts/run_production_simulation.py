@@ -121,13 +121,16 @@ async def step_2_register_mlflow() -> None:
         print("   ⚠️  MLflow not reachable. Skipping. (Check docker compose logs mlflow)")
 
 
-async def step_3_normal_traffic(n: int = N_NORMAL_TRAFFIC) -> dict:
+async def step_3_normal_traffic(n: int = N_NORMAL_TRAFFIC) -> dict[str, object]:
     """Generate normal production traffic."""
     print("\n" + "=" * 60)
     print(f"🚀 STEP 3: Generating {n} normal predictions")
     print("=" * 60)
 
-    results = {"success": 0, "error": 0, "latencies": [], "predictions": []}
+    success = 0
+    error = 0
+    latencies: list[float] = []
+    predictions: list[int] = []
     start = time.perf_counter()
 
     async with httpx.AsyncClient(base_url=API_URL, timeout=10.0) as client:
@@ -140,32 +143,31 @@ async def step_3_normal_traffic(n: int = N_NORMAL_TRAFFIC) -> dict:
                 })
                 if resp.status_code == 200:
                     data = resp.json()
-                    results["success"] += 1
-                    results["latencies"].append(data.get("latency_ms", 0))
-                    results["predictions"].append(data.get("result", -1))
+                    success += 1
+                    latencies.append(data.get("latency_ms", 0))
+                    predictions.append(data.get("result", -1))
                 else:
-                    results["error"] += 1
+                    error += 1
             except Exception:
-                results["error"] += 1
+                error += 1
 
             if (i + 1) % 100 == 0:
                 print(f"   Sent {i + 1}/{n}...")
 
     elapsed = time.perf_counter() - start
-    lats = results["latencies"]
 
     print("\n   ✅ Normal traffic complete:")
-    print(f"      Success: {results['success']}, Errors: {results['error']}")
+    print(f"      Success: {success}, Errors: {error}")
     print(f"      RPS: {n / elapsed:.1f}")
-    if lats:
-        print(f"      Latency P50: {sorted(lats)[len(lats)//2]:.2f}ms")
-        print(f"      Latency P99: {sorted(lats)[int(len(lats)*0.99)]:.2f}ms")
-    if results["predictions"]:
-        good = sum(1 for p in results["predictions"] if p == 1)
-        bad = sum(1 for p in results["predictions"] if p == 0)
+    if latencies:
+        print(f"      Latency P50: {sorted(latencies)[len(latencies)//2]:.2f}ms")
+        print(f"      Latency P99: {sorted(latencies)[int(len(latencies)*0.99)]:.2f}ms")
+    if predictions:
+        good = sum(1 for p in predictions if p == 1)
+        bad = sum(1 for p in predictions if p == 0)
         print(f"      Predictions: {good} good, {bad} bad credit")
 
-    return results
+    return {"success": success, "error": error, "latencies": latencies, "predictions": predictions}
 
 
 async def step_4_drifted_traffic(n: int = N_DRIFTED_TRAFFIC) -> None:
