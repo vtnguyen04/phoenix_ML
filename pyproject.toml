@@ -32,6 +32,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
     "httpx>=0.26.0",
     "dvc[s3]>=3.50.0",
+    "opentelemetry-instrumentation-fastapi>=0.41b0",
 ]
 
 [project.optional-dependencies]
