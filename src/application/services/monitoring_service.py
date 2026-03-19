@@ -1,6 +1,6 @@
 import logging
+import os
 
-from src.domain.model_registry.repositories.model_repository import ModelRepository
 from src.domain.monitoring.entities.drift_report import DriftReport
 from src.domain.monitoring.repositories.drift_report_repository import (
     DriftReportRepository,
@@ -10,7 +10,6 @@ from src.domain.monitoring.repositories.prediction_log_repository import (
 )
 from src.domain.monitoring.services.alert_manager import AlertManager
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
-from src.infrastructure.monitoring.alert_notifier import AlertNotifier
 from src.infrastructure.monitoring.prometheus_metrics import (
     DRIFT_DETECTED_COUNT,
     DRIFT_SCORE,
@@ -18,30 +17,31 @@ from src.infrastructure.monitoring.prometheus_metrics import (
 
 logger = logging.getLogger(__name__)
 
+# DAG name must match the Airflow DAG id
+_AIRFLOW_DAG_ID = "self_healing_pipeline"
+
 
 class MonitoringService:
     """
-    Application Service for Monitoring and Self-Healing.
-    Responsible for Drift Detection, Alerting, Rollback, and Retraining Triggers.
+    Application Service for Monitoring — Detection Only.
+
+    Detects drift and triggers the Airflow Self-Healing Pipeline.
+    All remediation (alert, rollback, retrain, register) is handled by Airflow.
     """
 
     MIN_DATA_POINTS = 5
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         log_repo: PredictionLogRepository,
         drift_calculator: DriftCalculator,
         drift_report_repo: DriftReportRepository,
         alert_manager: AlertManager | None = None,
-        alert_notifier: AlertNotifier | None = None,
-        model_repo: ModelRepository | None = None,
     ) -> None:
         self._log_repo = log_repo
         self._drift_calculator = drift_calculator
         self._drift_report_repo = drift_report_repo
         self._alert_manager = alert_manager
-        self._alert_notifier = alert_notifier
-        self._model_repo = model_repo
 
     async def check_drift(
         self,
@@ -52,6 +52,8 @@ class MonitoringService:
     ) -> DriftReport:
         """
         Check for drift on a specific feature index against reference data.
+        If drift is detected, trigger the Airflow self-healing pipeline
+        (with deduplication — skips if a run is already active).
         """
         logs = await self._log_repo.get_recent_logs(model_id, limit=1000)
 
@@ -92,120 +94,67 @@ class MonitoringService:
 
             logger.warning("🚨 DRIFT DETECTED: %s", report.recommendation)
 
-            # 1. Alert Manager — evaluate rules & fire alerts
-            await self._dispatch_alerts(model_id, report)
+            # Evaluate alert rules locally (for Prometheus metrics)
+            if self._alert_manager:
+                self._alert_manager.evaluate(
+                    metric_name="drift_score",
+                    value=report.statistic,
+                    model_id=model_id,
+                )
 
-            # 2. Rollback — restore champion model immediately
-            await self._rollback_to_champion(model_id)
-
-            # 3. Airflow — trigger retraining pipeline
-            await self._trigger_retrain(model_id, report)
+            # Trigger Airflow self-healing pipeline (with dedup)
+            await self._trigger_self_healing(model_id, report)
 
         return report
 
-    async def _dispatch_alerts(
-        self, model_id: str, report: DriftReport
-    ) -> None:
-        """Evaluate alert rules and send webhook notifications."""
-        if not self._alert_manager:
-            return
-
-        alerts = self._alert_manager.evaluate(
-            metric_name="drift_score",
-            value=report.statistic,
-            model_id=model_id,
-        )
-
-        if self._alert_notifier and alerts:
-            for alert in alerts:
-                await self._alert_notifier.notify(alert)
-            logger.info(
-                "📢 Dispatched %d alert(s) for model %s",
-                len(alerts),
-                model_id,
-            )
-
-    async def _rollback_to_champion(self, model_id: str) -> None:
-        """
-        Immediately rollback any active challenger to 'archived' stage,
-        ensuring the champion model continues serving traffic.
-        """
-        if not self._model_repo:
-            return
-
-        try:
-            models = await self._model_repo.get_active_versions(model_id)
-            champion = None
-            challengers = []
-
-            for m in models:
-                role = m.metadata.get("role", "")
-                if role == "champion":
-                    champion = m
-                elif role == "challenger":
-                    challengers.append(m)
-
-            if not champion:
-                logger.warning(
-                    "⚠️ No champion found for %s — skipping rollback",
-                    model_id,
-                )
-                return
-
-            if not challengers:
-                logger.info(
-                    "ℹ️ No active challengers for %s — nothing to rollback",
-                    model_id,
-                )
-                return
-
-            for c in challengers:
-                await self._model_repo.update_stage(
-                    model_id, c.version, "archived"
-                )
-                logger.info(
-                    "⏪ ROLLBACK: challenger %s → archived, "
-                    "champion %s remains active",
-                    c.version,
-                    champion.version,
-                )
-        except Exception as e:
-            logger.error("❌ Rollback failed: %s", e)
-
-    async def _trigger_retrain(
+    async def _trigger_self_healing(
         self, model_id: str, report: DriftReport
     ) -> None:
         """
-        Trigger the auto-retraining pipeline via Airflow REST API.
+        Trigger the Airflow Self-Healing Pipeline with deduplication.
+        Checks if a run is already active before triggering a new one.
         """
-        import os  # noqa: PLC0415
-
         import httpx  # noqa: PLC0415
-
-        logger.info(
-            "🔄 Triggering Airflow Retrain DAG for model %s...", model_id
-        )
 
         airflow_url = os.environ.get(
             "AIRFLOW_API_URL", "http://airflow-webserver:8080"
         )
+        auth = ("admin", "admin")
 
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
+                # --- Deduplication: check for active runs ---
+                check_resp = await client.get(
+                    f"{airflow_url}/api/v1/dags/{_AIRFLOW_DAG_ID}/dagRuns",
+                    params={"state": "running,queued", "limit": 1},
+                    auth=auth,
+                )
+                if check_resp.status_code == 200:  # noqa: PLR2004
+                    active_runs = check_resp.json().get("dag_runs", [])
+                    if active_runs:
+                        logger.info(
+                            "⏭️ Self-healing already running (run=%s) — skipping",
+                            active_runs[0].get("dag_run_id"),
+                        )
+                        return
+
+                # --- Trigger new run ---
                 resp = await client.post(
-                    f"{airflow_url}/api/v1/dags/retrain_pipeline/dagRuns",
+                    f"{airflow_url}/api/v1/dags/{_AIRFLOW_DAG_ID}/dagRuns",
                     json={
                         "conf": {
                             "model_id": model_id,
                             "reason": report.recommendation,
+                            "drift_score": report.statistic,
                         }
                     },
-                    auth=("admin", "admin"),
+                    auth=auth,
                 )
                 if resp.status_code == 200:  # noqa: PLR2004
                     dag_run_id = resp.json().get("dag_run_id")
                     logger.info(
-                        "✅ Airflow DAG triggered: %s", dag_run_id
+                        "🌀 Self-healing pipeline triggered: %s",
+                        dag_run_id,
                     )
                 else:
                     logger.error(

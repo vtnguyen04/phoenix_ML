@@ -133,11 +133,9 @@ async def check_drift(
     try:
         log_repo = PostgresPredictionLogRepository(db)
         drift_repo = PostgresDriftReportRepository(db)
-        model_repo = PostgresModelRegistry(db)
 
         from src.infrastructure.http.lifespan import (  # noqa: PLC0415
             alert_manager,
-            alert_notifier,
         )
 
         ms = MonitoringService(
@@ -145,8 +143,6 @@ async def check_drift(
             drift_calculator,
             drift_repo,
             alert_manager=alert_manager,
-            alert_notifier=alert_notifier,
-            model_repo=model_repo,
         )
 
         root = find_project_root()

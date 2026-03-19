@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any, cast
@@ -28,7 +27,6 @@ from src.infrastructure.http.container import (
     shutdown_event,
 )
 from src.infrastructure.http.grpc_server import create_grpc_server
-from src.infrastructure.monitoring.alert_notifier import AlertNotifier
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
 from src.infrastructure.persistence.postgres_drift_repo import (
@@ -43,7 +41,7 @@ from src.infrastructure.persistence.postgres_model_registry import (
 
 logger = logging.getLogger(__name__)
 
-# --- Self-Healing components (initialized once) ---
+# --- Self-Healing: Alert rules for Prometheus metrics ---
 alert_manager = AlertManager()
 alert_manager.register_rule(
     AlertRule(
@@ -67,9 +65,9 @@ alert_manager.register_rule(
         description="Data drift score exceeds warning threshold",
     )
 )
-alert_notifier = AlertNotifier(
-    webhook_url=os.environ.get("ALERT_WEBHOOK_URL"),
-)
+
+# Monitoring interval (seconds) — Production: 30s to avoid false-positive flood
+MONITORING_INTERVAL_SECONDS = 30
 
 
 def _load_reference_data() -> list[float]:
@@ -130,7 +128,8 @@ async def run_monitoring_loop() -> None:
 
     while not shutdown_event.is_set():
         try:
-            for _ in range(50):
+            # Production monitoring interval
+            for _ in range(MONITORING_INTERVAL_SECONDS * 10):
                 if shutdown_event.is_set():
                     return
                 await asyncio.sleep(0.1)
@@ -138,14 +137,11 @@ async def run_monitoring_loop() -> None:
             async for db in get_db():
                 log_repo = PostgresPredictionLogRepository(db)
                 drift_repo = PostgresDriftReportRepository(db)
-                model_repo = PostgresModelRegistry(db)
                 ms = MonitoringService(
                     log_repo,
                     drift_calculator,
                     drift_repo,
                     alert_manager=alert_manager,
-                    alert_notifier=alert_notifier,
-                    model_repo=model_repo,
                 )
 
                 await ms.check_drift(
