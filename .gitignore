@@ -89,6 +89,8 @@ frontend/dist/
 .gemini/
 .gitnexus/
 project.md.save
+HUONG_DAN_HOC_CODE.md
+pytest_final.log
 
 # ========================================
 # Docker
