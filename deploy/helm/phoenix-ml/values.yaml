@@ -37,7 +37,10 @@ autoscaling:
 
 env:
   - name: DATABASE_URL
-    value: "postgresql+asyncpg://user:pass@phoenix-db:5432/phoenix"
+    valueFrom:
+      secretKeyRef:
+        name: phoenix-db-secret
+        key: database-url
   - name: REDIS_URL
     value: "redis://phoenix-redis:6379"
   - name: KAFKA_URL

@@ -119,7 +119,9 @@ class MonitoringService:
         airflow_url = os.environ.get(
             "AIRFLOW_API_URL", "http://airflow-webserver:8080"
         )
-        auth = ("admin", "admin")
+        airflow_user = os.environ.get("AIRFLOW_ADMIN_USER", "admin")
+        airflow_pass = os.environ.get("AIRFLOW_ADMIN_PASSWORD", "admin")
+        auth = (airflow_user, airflow_pass)
 
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
