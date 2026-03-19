@@ -1,5 +1,8 @@
 """
-Seed Real Features — German Credit (30 Features with Engineering).
+[EXAMPLE] Seed Real Features — German Credit (30 Features with Engineering).
+
+This is a REFERENCE IMPLEMENTATION for the German Credit dataset.
+Adapt this script for your own ML problem type and dataset.
 
 Usage:
     python scripts/seed_features.py

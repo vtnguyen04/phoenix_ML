@@ -29,7 +29,7 @@ async def test_tensorrt_executor_predict(tmp_path: Path, mock_model: Model) -> N
     generate_simple_onnx(model_dir / "model.onnx")
 
     executor = TensorRTExecutor(cache_dir=cache_dir)
-    features = FeatureVector(values=np.array([0.1] * 30, dtype=np.float32))
+    features = FeatureVector(values=np.array([0.1] * 4, dtype=np.float32))
 
     prediction = await executor.predict(mock_model, features)
 
@@ -48,8 +48,8 @@ async def test_tensorrt_executor_batch_predict(tmp_path: Path, mock_model: Model
 
     executor = TensorRTExecutor(cache_dir=cache_dir)
     features_list = [
-        FeatureVector(values=np.array([0.1] * 30, dtype=np.float32)),
-        FeatureVector(values=np.array([0.4] * 30, dtype=np.float32)),
+        FeatureVector(values=np.array([0.1] * 4, dtype=np.float32)),
+        FeatureVector(values=np.array([0.4] * 4, dtype=np.float32)),
     ]
 
     predictions = await executor.batch_predict(mock_model, features_list)

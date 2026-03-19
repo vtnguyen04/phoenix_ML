@@ -6,7 +6,7 @@
 
 ## Performance Goals
 
-For a real-time credit risk system, performance requirements are strict:
+For a real-time ML inference system serving multiple model types, performance requirements are strict:
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
@@ -19,15 +19,15 @@ For a real-time credit risk system, performance requirements are strict:
 
 We chose ONNX Runtime over native framework inference for three reasons:
 
-1. **Cross-framework**: Train in scikit-learn/XGBoost, serve as ONNX — no framework-specific serving dependencies
+1. **Cross-framework**: Train in scikit-learn, XGBoost, or any framework — serve as ONNX with no framework-specific serving dependencies
 2. **Hardware acceleration**: Automatic CPU/GPU optimization with execution providers
-3. **Model caching**: Models are loaded once and cached in memory
+3. **Model caching**: Models are loaded once and cached in memory using `{model_id}:{version}` key
 
 ```python
 class ONNXInferenceEngine:
-    async def load(self, model: Model) -> None:
-        session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
-        self._sessions[model.unique_key] = session  # cached
+    def load(self, model_id: str, version: str, artifact_uri: str) -> None:
+        session = ort.InferenceSession(artifact_uri, providers=["CPUExecutionProvider"])
+        self._sessions[f"{model_id}:{version}"] = session  # cached
 ```
 
 ## Optimization 2: Dynamic Batching
@@ -47,6 +47,17 @@ class BatchManager:
 4. Results are distributed back to individual request futures
 
 **Impact:** Under concurrent load of 50 clients, batching improves throughput by **3-5x** compared to individual inference.
+
+### Batch Prediction API
+
+For client-side batching, the `/predict/batch` endpoint processes multiple inputs concurrently using `asyncio.gather`:
+
+```python
+class BatchPredictHandler:
+    async def handle(self, command: BatchPredictCommand) -> dict:
+        tasks = [self._predict_handler.execute(cmd) for cmd in commands]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+```
 
 ## Optimization 3: Feature Store Caching
 
@@ -77,11 +88,18 @@ uv run python benchmarks/throughput_benchmark.py --workers 10 --duration 30
 ```
 
 ### 3. Load Testing (Locust)
-Full-stack load testing simulating realistic user patterns:
+Full-stack load testing simulating realistic user patterns with weighted endpoints:
 
 ```bash
-uv run locust -f benchmarks/locustfile.py --host http://localhost:8000
+uv run locust -f benchmarks/load_test.py --host http://localhost:8001
+# Open http://localhost:8089 for the Locust web UI
 ```
+
+Endpoints tested with weights:
+- `POST /predict` (weight: 5) — most frequent
+- `GET /health` (weight: 3)
+- `GET /models/{id}` (weight: 1)
+- `GET /monitoring/drift/{id}` (weight: 1)
 
 ### 4. Memory Profiling
 Tracks peak RSS memory during inference bursts:
@@ -96,6 +114,7 @@ uv run python benchmarks/memory_benchmark.py
 2. **Cache everything possible**: Model loading is expensive (~100ms). Feature retrieval from Redis is ~1ms vs. ~50ms for on-the-fly computation.
 3. **Profile before optimizing**: `tracemalloc` + latency benchmarks reveal actual bottlenecks vs. assumed ones.
 4. **gRPC for service-to-service**: 30-40% lower latency than REST for high-frequency inference calls.
+5. **Client-side batching**: The `/predict/batch` endpoint further reduces overhead by processing multiple inputs in a single request.
 
 ---
 

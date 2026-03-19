@@ -1,11 +1,15 @@
+import os
 import random
 import time
 
 import requests
 
+DEFAULT_MODEL_ID = os.environ.get("DEFAULT_MODEL_ID", "credit-risk")
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
 
-def send_requests(n: int = 50) -> None:
-    url = "http://localhost:8001/predict"
+
+def send_requests(n: int = 50, model_id: str = DEFAULT_MODEL_ID) -> None:
+    url = f"{API_URL}/predict"
 
     # Customer Profiles
     good_customer = "customer-good"
@@ -16,7 +20,7 @@ def send_requests(n: int = 50) -> None:
         entity = good_customer if random.random() > RANDOM_THRESHOLD else bad_customer
 
         payload = {
-            "model_id": "credit-risk",
+            "model_id": model_id,
             # No model_version -> Dynamic Routing
             "entity_id": entity,
         }
@@ -42,7 +46,7 @@ def send_requests(n: int = 50) -> None:
 def check_metrics() -> None:
     HTTP_OK = 200
     try:
-        resp = requests.get("http://localhost:8001/metrics", timeout=1)
+        resp = requests.get(f"{API_URL}/metrics", timeout=1)
         if resp.status_code == HTTP_OK:
             print("\n--- METRICS PREVIEW ---")
             for line in resp.text.split("\n"):

@@ -3,6 +3,7 @@
 ## Prerequisites
 
 - Docker Desktop installed and running
+- Python 3.11+ with `uv` package manager
 - Git
 - ~4 GB free RAM (for all services)
 
@@ -14,12 +15,13 @@ git clone https://github.com/vtnguyen04/phoenix_ML.git
 cd phoenix_ML
 
 # Start all services (first time takes ~5 min to pull images)
-make up-build
-# or: docker compose up -d --build
+docker compose up -d --build
+
+# (Optional) Start Airflow for self-healing pipeline
+docker compose -f docker-compose.airflow.yaml up -d
 
 # Check all services are healthy
-make ps
-# or: docker compose ps
+docker compose ps
 ```
 
 Expected services:
@@ -36,38 +38,60 @@ Expected services:
 | **Grafana** | 3001 | http://localhost:3001 |
 | **Jaeger** | 16686 | http://localhost:16686 |
 | **MinIO** | 9000/9001 | http://localhost:9001 |
+| **Airflow** | 8080 | http://localhost:8080 (admin/admin) |
 
-## Step 2: Train the Model
+## Step 2: Train Models
 
 ```bash
-# Train XGBoost on German Credit → export ONNX + metrics + reference data
-python scripts/train_model.py
+# Install Python deps
+uv sync
 
-# Seed 100 real feature records into data/reference_features.json
-python scripts/seed_features.py
+# Train any / all models:
+uv run python examples/credit_risk/train.py          # Classification (30 features)
+uv run python examples/house_price/train.py           # Regression (8 features)
+uv run python examples/fraud_detection/train.py       # XGBoost (12 features)
+uv run python examples/image_classification/train.py  # MLP (784 features)
+
+# Or: train all via DVC
+uv run dvc repro
+
+# Seed feature store (for entity_id-based predictions)
+uv run python scripts/seed_features.py
 ```
 
 ## Step 3: Test Predictions
 
 ```bash
-# The API auto-loads the trained model on startup.
-# Restart API to pick up new model:
+# Restart API to pick up trained models
 docker compose restart api
 
-# Test a prediction
+# Test a prediction (credit risk, 30 features)
+curl -X POST http://localhost:8001/predict \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "credit-risk", "model_version": "v1", "features": [0.5, 0.3, 0.8, 1.2, -0.4, 0.7, -1.1, 0.3, 0.9, -0.2, 0.6, -0.8, 1.4, 0.1, -0.5, 0.4, 0.3, -0.1, 0.8, -0.6, 0.2, 1.0, -0.3, 0.5, 0.7, -0.4, 0.9, 0.1, -0.7, 0.3]}'
+
+# Test via feature store
 curl -X POST http://localhost:8001/predict \
   -H "Content-Type: application/json" \
   -d '{"model_id": "credit-risk", "entity_id": "customer-0001"}'
+
+# Batch prediction
+curl -X POST http://localhost:8001/predict/batch \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "house-price", "model_version": "v1", "batch": [[3.5, 25, 5.0, 1.0, 1500, 3.0, 37.5, -122.0], [8.0, 10, 6.5, 1.2, 800, 2.5, 34.0, -118.5]]}'
 ```
 
-## Step 4: Full Data Pipeline (with Docker services)
+## Step 4: Simulation Scripts
 
 ```bash
-# Ingest real data into Redis + Postgres (requires docker services running)
-PYTHONPATH=. python scripts/ingest_real_data.py
+# Simulate production traffic
+DEFAULT_MODEL_ID=credit-risk uv run python scripts/simulate_traffic.py
 
-# Simulate traffic for drift detection
-PYTHONPATH=. python scripts/simulate_traffic.py
+# Simulate drifted data (triggers drift detection)
+DEFAULT_MODEL_ID=credit-risk uv run python scripts/simulate_drift.py
+
+# Full production simulation
+uv run python scripts/run_production_simulation.py
 ```
 
 ## Step 5: Open Dashboard
@@ -78,21 +102,36 @@ Visit **http://localhost:5174** to see:
 - 📈 Drift detection reports
 - 🏥 Service health status
 
+## Local Development (without Docker)
+
+```bash
+# Install deps
+uv sync
+
+# Run API on port 8000
+uv run uvicorn src.infrastructure.http.fastapi_server:app --reload
+
+# Or via CLI entry point (after pip install -e .)
+phoenix-serve
+
+# Run frontend
+cd frontend && npm install && npm run dev
+```
+
 ## Useful Commands
 
 ```bash
-make logs           # Follow all logs
-make api-logs       # Follow API logs only
-make db-shell       # Open PostgreSQL shell
-make redis-cli      # Open Redis CLI
-make down           # Stop all services
-make down-clean     # Stop + remove all data volumes
-make lint           # Run ruff + mypy
-make test           # Run pytest
+docker compose ps             # Check service status
+docker compose logs -f api    # Follow API logs
+docker compose restart api    # Restart API
+docker compose down           # Stop all services
+docker compose down -v        # Stop + remove volumes
+uv run ruff check .           # Lint check
+uv run pytest tests/unit/     # Run tests
 ```
 
 ## Troubleshooting
 
-**API unhealthy?** Check logs: `make api-logs`
+**API unhealthy?** Check logs: `docker compose logs api`
 **Model not loading?** Ensure `models/credit_risk/v1/model.onnx` exists (run Step 2)
 **Frontend blank?** API must be healthy first. Check `curl http://localhost:8001/health`

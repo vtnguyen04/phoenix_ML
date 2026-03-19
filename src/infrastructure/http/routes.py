@@ -49,7 +49,7 @@ router = APIRouter()
 
 class FeedbackRequest(BaseModel):
     prediction_id: str
-    ground_truth: int
+    ground_truth: int | float | str
 
 
 async def _log_prediction_background(
@@ -109,6 +109,40 @@ async def predict(
         raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.exception("Inference failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+class BatchPredictRequest(BaseModel):
+    model_id: str
+    batch: list[list[float]]
+    model_version: str | None = None
+    entity_ids: list[str] | None = None
+
+
+@router.post("/predict/batch")
+async def batch_predict(
+    request: BatchPredictRequest,
+    handler: PredictHandler = Depends(get_predict_handler),  # noqa: B008
+) -> dict[str, Any]:
+    """Batch prediction — process multiple inputs in one request."""
+    from src.application.commands.batch_predict_command import (  # noqa: PLC0415
+        BatchPredictCommand,
+    )
+    from src.application.handlers.batch_predict_handler import (  # noqa: PLC0415
+        BatchPredictHandler,
+    )
+
+    try:
+        batch_handler = BatchPredictHandler(handler)
+        command = BatchPredictCommand(
+            model_id=request.model_id,
+            batch=request.batch,
+            model_version=request.model_version,
+            entity_ids=request.entity_ids,
+        )
+        return await batch_handler.handle(command)
+    except Exception as e:
+        logger.exception("Batch inference failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

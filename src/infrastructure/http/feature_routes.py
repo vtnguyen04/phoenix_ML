@@ -47,5 +47,5 @@ async def get_feature_metadata(feature_name: str) -> FeatureMetadata:
         dtype="float",
         description=f"Auto-generated feature metadata for {feature_name}",
         owner="ml-platform-team",
-        data_source="credit-risk-event-stream",
+        data_source=f"{feature_name}-event-stream",
     )

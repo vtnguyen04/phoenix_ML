@@ -19,9 +19,7 @@ def feature_store() -> InMemoryFeatureStore:
 class TestFeatureStoreIntegration:
     """Integration tests for feature store operations."""
 
-    async def test_add_and_retrieve_features(
-        self, feature_store: InMemoryFeatureStore
-    ) -> None:
+    async def test_add_and_retrieve_features(self, feature_store: InMemoryFeatureStore) -> None:
         """Features can be stored and retrieved by entity + names."""
         await feature_store.add_features(
             "customer-001",
@@ -34,21 +32,15 @@ class TestFeatureStoreIntegration:
         assert result is not None
         assert result == [30.0, 50000.0, 720.0]
 
-    async def test_missing_entity_returns_none(
-        self, feature_store: InMemoryFeatureStore
-    ) -> None:
-        result = await feature_store.get_online_features(
-            "nonexistent", ["age"]
-        )
+    async def test_missing_entity_returns_none(self, feature_store: InMemoryFeatureStore) -> None:
+        result = await feature_store.get_online_features("nonexistent", ["age"])
         assert result is None
 
     async def test_missing_feature_defaults_to_zero(
         self, feature_store: InMemoryFeatureStore
     ) -> None:
         """Missing feature names default to 0.0."""
-        await feature_store.add_features(
-            "customer-002", {"age": 25.0}
-        )
+        await feature_store.add_features("customer-002", {"age": 25.0})
 
         result = await feature_store.get_online_features(
             "customer-002", ["age", "nonexistent_feature"]
@@ -56,22 +48,16 @@ class TestFeatureStoreIntegration:
         assert result is not None
         assert result == [25.0, 0.0]
 
-    async def test_overwrite_features(
-        self, feature_store: InMemoryFeatureStore
-    ) -> None:
+    async def test_overwrite_features(self, feature_store: InMemoryFeatureStore) -> None:
         """Adding features for same entity overwrites previous data."""
         await feature_store.add_features("customer-003", {"age": 30.0})
         await feature_store.add_features("customer-003", {"age": 35.0, "score": 700.0})
 
-        result = await feature_store.get_online_features(
-            "customer-003", ["age", "score"]
-        )
+        result = await feature_store.get_online_features("customer-003", ["age", "score"])
         assert result is not None
         assert result == [35.0, 700.0]
 
-    async def test_multiple_entities(
-        self, feature_store: InMemoryFeatureStore
-    ) -> None:
+    async def test_multiple_entities(self, feature_store: InMemoryFeatureStore) -> None:
         """Features for different entities are independent."""
         await feature_store.add_features("a", {"x": 1.0})
         await feature_store.add_features("b", {"x": 2.0})

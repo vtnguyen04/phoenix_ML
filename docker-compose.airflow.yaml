@@ -24,6 +24,9 @@ x-airflow-common:
     - ./data:/app/data
     - ./src:/opt/airflow/src
     - ./scripts:/opt/airflow/scripts
+    - ./examples:/opt/airflow/examples
+    - ./model_configs:/opt/airflow/model_configs
+    - mlflow-artifacts:/mlflow/artifacts
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     airflow-postgres:
@@ -102,6 +105,9 @@ services:
 
 volumes:
   airflow-db-volume:
+  mlflow-artifacts:
+    name: mlops_mlflow-artifacts
+    external: true
 
 networks:
   phoenix-net:

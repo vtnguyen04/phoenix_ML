@@ -25,6 +25,7 @@ services:
       - USE_REDIS=true
       - JAEGER_ENDPOINT=http://jaeger:4317
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - DEFAULT_MODEL_ID=${DEFAULT_MODEL_ID:-credit-risk}
     depends_on:
       redis:
         condition: service_healthy
@@ -44,6 +45,7 @@ services:
       - ./models:/app/models
       - ./src:/app/src
       - ./data:/app/data
+      - ./model_configs:/app/model_configs
       - ./pyproject.toml:/app/pyproject.toml:ro
     restart: unless-stopped
     networks:

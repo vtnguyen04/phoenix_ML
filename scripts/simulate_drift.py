@@ -1,27 +1,27 @@
+import os
 import time
 
 import numpy as np
 import requests
 
+DEFAULT_MODEL_ID = os.environ.get("DEFAULT_MODEL_ID", "credit-risk")
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
+N_FEATURES = int(os.environ.get("N_FEATURES", "30"))
 
-def send_drifted_traffic(n: int = 50) -> None:
-    url = "http://localhost:8001/predict"
 
-    print(f"🌊 Sending {n} DRIFTED requests...")
+def send_drifted_traffic(n: int = 50, model_id: str = DEFAULT_MODEL_ID) -> None:
+    url = f"{API_URL}/predict"
+
+    print(f"🌊 Sending {n} DRIFTED requests for model '{model_id}'...")
 
     for i in range(n):
-        # Generate Drifted Data for Feature 0 (Income)
-        # Normal traffic: mean=0, std=1
-        # Drifted traffic: mean=5, std=2
-        f0 = float(np.random.normal(5, 2))
-        f1 = float(np.random.normal(0, 1))
-        f2 = float(np.random.normal(0, 1))
-        f3 = float(np.random.normal(0, 1))
+        # Generate drifted features (feature 0 is shifted)
+        features = [float(np.random.normal(0, 1)) for _ in range(N_FEATURES)]
+        features[0] = float(np.random.normal(5, 2))  # Drift on feature 0
 
         payload = {
-            "model_id": "credit-risk",
-            # "model_version": "v1", # Let router decide or stick to v1
-            "features": [f0, f1, f2, f3],  # Override feature store
+            "model_id": model_id,
+            "features": features,
         }
 
         try:
@@ -37,7 +37,7 @@ def send_drifted_traffic(n: int = 50) -> None:
 def check_drift_metrics() -> None:
     HTTP_OK = 200
     try:
-        resp = requests.get("http://localhost:8001/metrics", timeout=1)
+        resp = requests.get(f"{API_URL}/metrics", timeout=1)
         if resp.status_code == HTTP_OK:
             print("\n--- DRIFT METRICS STATUS ---")
             found = False

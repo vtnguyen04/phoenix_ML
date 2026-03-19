@@ -79,7 +79,13 @@ async def test_inference_service_with_feature_lookup(
     inference_service: InferenceService, mock_components: dict[str, Any]
 ) -> None:
     # Setup
-    model = Model(id="m1", version="v1", uri="loc://v1", framework="onnx")
+    model = Model(
+        id="m1",
+        version="v1",
+        uri="loc://v1",
+        framework="onnx",
+        metadata={"features": ["f1", "f2", "f3", "f4"]},
+    )
     mock_components["repo"].get_by_id.return_value = model
     mock_components["fs"].get_online_features.return_value = [1.0, 2.0, 3.0, 4.0]
 

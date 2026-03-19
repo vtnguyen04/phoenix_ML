@@ -1,0 +1,1 @@
+"""Domain shared interfaces — MessageProducer."""

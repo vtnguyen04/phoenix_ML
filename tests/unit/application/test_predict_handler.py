@@ -79,7 +79,13 @@ async def test_predict_handler_with_feature_store(
     handler, repo, fs, _ = predict_handler
 
     # Register model & Seed features
-    model = Model(id="m2", version="v1", uri="local://tmp/m2", framework="onnx")
+    model = Model(
+        id="m2",
+        version="v1",
+        uri="local://tmp/m2",
+        framework="onnx",
+        metadata={"features": ["f1", "f2", "f3", "f4"]},
+    )
     await repo.save(model)
     await fs.add_features("user-1", {"f1": 10.0, "f2": 20.0, "f3": 30.0, "f4": 40.0})
 

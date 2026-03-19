@@ -22,7 +22,7 @@
 
 ## 📌 What is Phoenix ML?
 
-Phoenix ML is a **production-grade machine learning inference platform** that goes beyond simple model serving. It combines real-time inference with autonomous monitoring, drift detection, and self-healing capabilities — all built with **Domain-Driven Design (DDD)** and **Clean Architecture** principles.
+Phoenix ML is a **production-grade, model-agnostic ML inference platform** that goes beyond simple model serving. It combines real-time inference with autonomous monitoring, drift detection, and self-healing capabilities — all built with **Domain-Driven Design (DDD)** and **Clean Architecture** principles.
 
 <div align="center">
 
@@ -42,6 +42,38 @@ Phoenix ML is a **production-grade machine learning inference platform** that go
 | 🔬 **Anomaly Detection** | Real-time monitoring for prediction anomalies, latency spikes, error rates |
 | 📦 **DVC Pipelines** | Reproducible model training with versioned data and artifacts |
 | 🌀 **Airflow Orchestration** | 5-task self-healing DAG with max_active_runs=1 deduplication |
+| 📦 **Batch Prediction** | `/predict/batch` endpoint with concurrent processing |
+| 🧩 **Model-Agnostic** | Supports scikit-learn, XGBoost, MLP — any ONNX-exportable framework |
+
+---
+
+## 🧩 Model Examples
+
+The platform ships with **4 production-ready examples** demonstrating model-agnostic capabilities:
+
+| Example | ML Framework | Task | Features | Accuracy |
+|---------|-------------|------|----------|----------|
+| **Credit Risk** | scikit-learn (GBClassifier) | Binary Classification | 30 (tabular) | 78.5% |
+| **House Price** | scikit-learn (Ridge) | Regression | 8 (tabular) | R² 0.61 |
+| **Fraud Detection** | XGBoost | Imbalanced Classification | 12 (tabular) | 98.2% |
+| **Image Classification** | sklearn MLP (256→128) | Multi-class (10 classes) | 784 (28×28 pixels) | 87.0% |
+
+Each example lives in `examples/<problem>/train.py` with a corresponding `model_configs/<name>.yaml`.
+
+Adding your own model:
+```bash
+# 1. Create training script
+examples/my_problem/train.py     # implement train_and_export()
+
+# 2. Create model config
+model_configs/my-model.yaml      # model_id, paths, metadata
+
+# 3. Train
+uv run python examples/my_problem/train.py
+
+# 4. Serve
+uv run uvicorn src.infrastructure.http.fastapi_server:app --reload
+```
 
 ---
 
@@ -78,12 +110,6 @@ graph LR
 
 ### Self-Healing MLOps Loop
 
-<div align="center">
-
-![MLOps Pipeline](docs/assets/mlops-pipeline.png)
-
-</div>
-
 ```mermaid
 graph TD
     Train["🏋️ Model Training<br/>DVC Pipeline"] --> Deploy["📦 Deployment<br/>ONNX + Docker"]
@@ -119,8 +145,6 @@ graph TD
 
 ## 📓 Interactive Notebooks
 
-Explore the platform hands-on with our demo notebooks:
-
 | Notebook | Description |
 |----------|-------------|
 | [01 — Inference Demo](notebooks/01_inference_demo.ipynb) | Real-time predictions, latency benchmarks (p50/p95/p99) |
@@ -132,21 +156,16 @@ Explore the platform hands-on with our demo notebooks:
 
 ## 🛠️ Tech Stack
 
-<div align="center">
-
-![Tech Stack](docs/assets/tech-stack.png)
-
-</div>
-
 | Layer | Technologies |
 |-------|-------------|
 | **Inference** | ONNX Runtime · TensorRT · Triton Inference Server |
-| **Backend** | Python 3.11+ · FastAPI · gRPC · Pydantic v2 · SQLAlchemy Async |
+| **Backend** | Python 3.11+ · FastAPI · gRPC · Pydantic v2 · SQLAlchemy 2.0 Async |
 | **Data** | Redis (features) · PostgreSQL (metadata) · Apache Kafka (events) · MinIO/S3 (artifacts) |
-| **MLOps** | DVC (data versioning) · MLflow (experiment tracking) · Apache Airflow (orchestration) · Scikit-Learn |
+| **ML Frameworks** | Scikit-Learn · XGBoost · ONNX · skl2onnx · onnxmltools |
+| **MLOps** | DVC (data versioning) · MLflow (experiment tracking) · Apache Airflow (orchestration) |
 | **Observability** | Prometheus · Grafana · Jaeger (OpenTelemetry) |
 | **Frontend** | React 18 · TypeScript · Vite · Vanilla CSS · Vitest |
-| **Infrastructure** | Docker · Kubernetes (Helm) · GitHub Actions CI/CD · `uv` package manager |
+| **Infrastructure** | Docker Compose (14+ services) · GitHub Actions CI · `uv` package manager · Alembic migrations |
 
 ---
 
@@ -160,23 +179,28 @@ src/
 │   ├── inference/             #    Model, Prediction, InferenceEngine interface
 │   ├── feature_store/         #    FeatureRegistry, FeatureStore interface
 │   ├── model_registry/        #    ModelRepository, ArtifactStorage interface
-│   └── monitoring/            #    DriftReport, DriftCalculator, AnomalyDetector
+│   ├── monitoring/            #    DriftReport, DriftCalculator, AnomalyDetector
+│   └── training/              #    TrainingJob, TrainerPlugin, DataLoaderPlugin
 │
 ├── application/               # 🎯 Use-case orchestration (CQRS)
-│   ├── commands/              #    PredictCommand, LoadModelCommand, TriggerRetrainCommand
-│   ├── handlers/              #    PredictHandler, QueryHandlers
+│   ├── commands/              #    PredictCommand, BatchPredictCommand, LoadModelCommand
+│   ├── handlers/              #    PredictHandler, BatchPredictHandler, QueryHandlers
 │   └── services/              #    MonitoringService
 │
 ├── infrastructure/            # 🔌 Framework adapters
 │   ├── http/                  #    FastAPI, gRPC, Routes, DI Container
 │   ├── ml_engines/            #    ONNX, TensorRT, Triton implementations
-│   ├── feature_store/         #    Redis, Parquet, InMemory
-│   ├── persistence/           #    Postgres, MLflow, InMemory repos
+│   ├── feature_store/         #    Redis, InMemory
+│   ├── persistence/           #    Postgres, SQLite, InMemory repos
 │   ├── messaging/             #    Kafka Producer/Consumer
 │   ├── monitoring/            #    Prometheus, Jaeger, Alert Notifier
 │   └── artifact_storage/      #    S3 (MinIO), Local
 │
 └── shared/                    # 🔧 Cross-cutting utilities
+    ├── exceptions/            #    PhoenixBaseError hierarchy
+    ├── interfaces/            #    EventPublisher, CacheBackend
+    ├── ingestion/             #    DataCollector, IngestionService
+    └── utils/                 #    ModelGenerator, helpers
 ```
 
 ### Design Patterns Implemented
@@ -195,7 +219,7 @@ src/
 
 ## 🚀 Quick Start
 
-### Docker Compose (Full Stack — 13+ Services)
+### Docker Compose (Full Stack — 14+ Services)
 
 ```bash
 # Clone and start everything
@@ -208,11 +232,14 @@ docker compose up -d --build
 # Start Airflow orchestration services
 docker compose -f docker-compose.airflow.yaml up -d
 
-# Train the model via DVC
-uv run dvc repro
+# Train all models
+uv run python examples/credit_risk/train.py
+uv run python examples/house_price/train.py
+uv run python examples/fraud_detection/train.py
+uv run python examples/image_classification/train.py
 
-# Seed feature store
-uv run python scripts/seed_features.py
+# Or: reproduce the full DVC pipeline
+uv run dvc repro
 ```
 
 | Service | URL | Purpose |
@@ -226,18 +253,23 @@ uv run python scripts/seed_features.py
 | 🌀 **Airflow** | http://localhost:8080 | Pipeline orchestration (admin/admin) |
 | 📈 **MLflow** | http://localhost:5000 | Experiment tracking |
 
-### Make a Prediction
+### Make Predictions
 
 ```bash
-# Via entity ID (features from Redis)
-curl -X POST http://localhost:8001/api/predict \
+# Single prediction (via raw features)
+curl -X POST http://localhost:8001/predict \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "credit-risk", "model_version": "v1", "features": [0.5, 0.3, 0.8, 1.2, -0.4, 0.7, -1.1, 0.3, 0.9, -0.2, 0.6, -0.8, 1.4, 0.1, -0.5, 0.4, 0.3, -0.1, 0.8, -0.6, 0.2, 1.0, -0.3, 0.5, 0.7, -0.4, 0.9, 0.1, -0.7, 0.3]}'
+
+# Single prediction (via feature store)
+curl -X POST http://localhost:8001/predict \
   -H "Content-Type: application/json" \
   -d '{"model_id": "credit-risk", "entity_id": "customer-good"}'
 
-# Via raw features
-curl -X POST http://localhost:8001/api/predict \
+# Batch prediction (multiple inputs)
+curl -X POST http://localhost:8001/predict/batch \
   -H "Content-Type: application/json" \
-  -d '{"model_id": "credit-risk", "features": [0.5, 0.3, 0.8, ...]}'
+  -d '{"model_id": "credit-risk", "model_version": "v1", "batch": [[0.5, 0.3, ...], [1.2, -0.4, ...]]}'
 ```
 
 ### Local Development
@@ -246,8 +278,11 @@ curl -X POST http://localhost:8001/api/predict \
 # Install dependencies
 uv sync
 
-# Run API server
-uv run python -m src.infrastructure.http.fastapi_server
+# Run API server (port 8000)
+uv run uvicorn src.infrastructure.http.fastapi_server:app --reload
+
+# Or via CLI entry point (after pip install)
+phoenix-serve
 
 # Run frontend
 cd frontend && npm install && npm run dev
@@ -257,44 +292,35 @@ cd frontend && npm install && npm run dev
 
 ## 🧪 Quality Assurance
 
-### Test Coverage
-
-| Suite | Tests | Coverage | Framework |
-|-------|-------|----------|-----------|
-| **Backend Unit** | 189 | 89% | Pytest + pytest-cov |
-| **Backend Integration** | 10+ | — | Pytest + httpx |
-| **Backend E2E** | 5+ | — | Pytest |
-| **Frontend** | 96 | — | Vitest + React Testing Library |
-| **Total** | **243+** | — | — |
-
-### CI/CD Pipeline
+### CI Pipeline
 
 ```bash
-# Backend quality gates
-uv run ruff check .                       # Linting
+# All quality gates
+uv run ruff check .                       # Linting (195 files)
 uv run mypy . --explicit-package-bases    # Type checking
 uv run pytest tests/ --cov=src            # Tests + coverage
 
-# Frontend quality gates
-cd frontend && npx vitest run             # Component tests
+# Load testing
+locust -f benchmarks/load_test.py --host http://localhost:8001
 ```
 
 ---
 
-## 📊 Benchmarking
+## 📊 API Endpoints
 
-```bash
-# Latency benchmark — measures p50/p95/p99
-uv run python benchmarks/latency_benchmark.py --requests 500 --concurrency 20
-
-# Throughput benchmark — measures RPS under load
-uv run python benchmarks/throughput_benchmark.py --duration 10 --concurrency 10
-
-# Locust load test — interactive web UI
-pip install locust
-locust -f benchmarks/locustfile.py --host http://localhost:8001
-# Open http://localhost:8089
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| POST | `/predict` | Single prediction |
+| POST | `/predict/batch` | Batch predictions |
+| POST | `/feedback` | Submit ground truth |
+| GET | `/models/{model_id}` | Get model info |
+| POST | `/models/register` | Register new model version |
+| POST | `/models/rollback` | Rollback challengers |
+| GET | `/monitoring/drift/{model_id}` | Trigger drift check |
+| GET | `/monitoring/reports/{model_id}` | Drift reports history |
+| GET | `/monitoring/performance/{model_id}` | Performance metrics |
+| GET | `/metrics` | Prometheus metrics |
 
 ---
 
@@ -302,29 +328,29 @@ locust -f benchmarks/locustfile.py --host http://localhost:8001
 
 ```
 phoenix-ml-platform/
-├── src/                         # Backend (DDD layers)
+├── src/                         # Backend (DDD layers, 131 files, 7k LOC)
+│   ├── domain/                  # Business logic + interfaces
+│   ├── application/             # Commands, handlers, DTOs
+│   ├── infrastructure/          # FastAPI, ONNX, Postgres, Redis, Kafka
+│   └── shared/                  # Exceptions, interfaces, utils
+├── examples/                    # ML training examples
+│   ├── credit_risk/             # GBClassifier (30 features)
+│   ├── house_price/             # Ridge regression (8 features)
+│   ├── fraud_detection/         # XGBoost (12 features)
+│   └── image_classification/    # MLP 256→128 (784 features)
+├── model_configs/               # YAML configs per model
 ├── frontend/                    # React + TypeScript dashboard
 ├── dags/                        # Airflow DAGs (self_healing_pipeline)
 ├── tests/                       # Unit / Integration / E2E
-│   ├── unit/                    # 130+ isolated tests
-│   ├── integration/             # API + DB boundary tests
-│   └── e2e/                     # Full pipeline tests
-├── scripts/                     # Training & seeding pipelines
-├── benchmarks/                  # Latency, throughput, Locust
-├── deploy/helm/                 # Kubernetes Helm charts
+├── scripts/                     # Simulation & seeding scripts
+├── benchmarks/                  # Locust load tests
+├── docs/                        # Architecture, ADRs, API reference, guides
 ├── grafana/                     # Provisioned dashboards
-├── docs/                        # Architecture, ADRs, API reference
-│   ├── architecture/            # System design + DDD overview
-│   ├── adr/                     # 5 Architecture Decision Records
-│   ├── api/                     # REST API reference
-│   ├── deployment/              # Docker stack guide
-│   └── frontend/                # Frontend architecture
 ├── .github/workflows/           # CI/CD pipelines
 ├── dvc.yaml                     # ML pipeline stages
-├── compose.yaml                 # Core services Docker stack
+├── compose.yaml                 # Core services (14+ containers)
 ├── docker-compose.airflow.yaml  # Airflow orchestration stack
-├── Dockerfile.airflow           # Custom Airflow image with ML deps
-└── pyproject.toml               # Python dependencies
+└── pyproject.toml               # Python dependencies + packaging
 ```
 
 ---
@@ -343,8 +369,9 @@ phoenix-ml-platform/
 
 ## 🤝 Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup, code standards, and PR checklist.
+
 ```bash
-# Fork → Branch → Commit → Push → PR
 git checkout -b feature/your-feature
 git commit -m "feat(scope): description"
 git push origin feature/your-feature

@@ -1,22 +1,46 @@
+# ─── DVC Pipeline — Model-Agnostic ──────────────────────────────
+# Each stage references the example training scripts.
+# Adapt paths and commands for your specific ML problem type.
+# ─────────────────────────────────────────────────────────────────
 stages:
-  train-champion:
-    cmd: uv run python scripts/train_model.py
+  train-credit-risk:
+    cmd: uv run python examples/credit_risk/train.py
     deps:
-      - scripts/train_model.py
+      - examples/credit_risk/train.py
     outs:
       - models/credit_risk/v1/model.onnx
     metrics:
       - models/credit_risk/v1/metrics.json:
           cache: false
 
-  train-challenger:
-    cmd: uv run python scripts/train_challenger.py
+  train-house-price:
+    cmd: uv run python examples/house_price/train.py
     deps:
-      - scripts/train_challenger.py
+      - examples/house_price/train.py
     outs:
-      - models/credit_risk/v2/model.onnx
+      - models/house_price/v1/model.onnx
     metrics:
-      - models/credit_risk/v2/metrics.json:
+      - models/house_price/v1/metrics.json:
+          cache: false
+
+  train-fraud-detection:
+    cmd: uv run python examples/fraud_detection/train.py
+    deps:
+      - examples/fraud_detection/train.py
+    outs:
+      - models/fraud_detection/v1/model.onnx
+    metrics:
+      - models/fraud_detection/v1/metrics.json:
+          cache: false
+
+  train-image-classification:
+    cmd: uv run python examples/image_classification/train.py
+    deps:
+      - examples/image_classification/train.py
+    outs:
+      - models/image_class/v1/model.onnx
+    metrics:
+      - models/image_class/v1/metrics.json:
           cache: false
 
   seed-features:

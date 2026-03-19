@@ -168,15 +168,18 @@ class TestRealModelInference:
         )
         handler = PredictHandler(service)
 
-        # Predict for 5 real customers
-        for i in range(5):
-            command = PredictCommand(
-                model_id="credit-risk",
-                entity_id=f"customer-{i:04d}",
-            )
-            prediction = await handler.execute(command)
-            assert prediction.result in (0, 1)
-            assert 0.0 <= prediction.confidence.value <= 1.0
+        try:
+            # Predict for 5 real customers
+            for i in range(5):
+                command = PredictCommand(
+                    model_id="credit-risk",
+                    entity_id=f"customer-{i:04d}",
+                )
+                prediction = await handler.execute(command)
+                assert prediction.result in (0, 1)
+                assert 0.0 <= prediction.confidence.value <= 1.0
+        finally:
+            await batch_manager.stop()
 
     async def test_batch_predict_real_data(
         self,

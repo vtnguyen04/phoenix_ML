@@ -8,7 +8,10 @@ from src.domain.feature_store.repositories.feature_store import FeatureStore
 from src.domain.inference.services.batch_manager import BatchConfig, BatchManager
 from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
-from src.domain.monitoring.services.model_evaluator import ModelEvaluator
+from src.domain.monitoring.services.model_evaluator import (
+    ClassificationEvaluator,
+    IModelEvaluator,
+)
 from src.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
@@ -25,27 +28,32 @@ from src.shared.utils.model_generator import generate_simple_onnx
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-artifact_storage = LocalArtifactStorage(base_dir=Path("/tmp/phoenix/remote_storage"))
+artifact_storage = LocalArtifactStorage(base_dir=Path(settings.ARTIFACT_STORAGE_DIR))
 
 inference_engine: InferenceEngine
 engine_type = getattr(settings, "INFERENCE_ENGINE", "onnx").lower()
 if engine_type == "tensorrt":
-    inference_engine = TensorRTExecutor(cache_dir=Path("/tmp/phoenix/model_cache"))
+    inference_engine = TensorRTExecutor(cache_dir=Path(settings.CACHE_DIR))
 elif engine_type == "triton":
     inference_engine = TritonInferenceClient(triton_url=getattr(settings, "TRITON_URL", "http://localhost:8000"))
 else:
-    inference_engine = ONNXInferenceEngine(cache_dir=Path("/tmp/phoenix/model_cache"))
+    inference_engine = ONNXInferenceEngine(cache_dir=Path(settings.CACHE_DIR))
 batch_config = BatchConfig(max_batch_size=16, max_wait_time_ms=10)
 batch_manager = BatchManager(inference_engine, config=batch_config)
 kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
 drift_calculator = DriftCalculator()
-model_evaluator = ModelEvaluator()
+model_evaluator: IModelEvaluator = ClassificationEvaluator()
 
 feature_store: FeatureStore
 if settings.USE_REDIS:
     feature_store = RedisFeatureStore(redis_url=settings.REDIS_URL)
 else:
     feature_store = InMemoryFeatureStore()
+
+# --- Plugin Registry (model-agnostic plugin resolution) ---
+from src.domain.shared.plugin_registry import PluginRegistry  # noqa: E402
+
+plugin_registry = PluginRegistry()
 
 shutdown_event = asyncio.Event()
 
@@ -59,10 +67,19 @@ def find_project_root() -> Path:
     return Path.cwd()
 
 
-def ensure_model_exists() -> Path:
+def ensure_model_exists(
+    model_id: str | None = None,
+    version: str | None = None,
+) -> Path:
     """Ensures model artifact exists, generating one if in CI/test context."""
+    model_id = model_id or settings.DEFAULT_MODEL_ID
+    version = version or settings.DEFAULT_MODEL_VERSION
+
+    # Normalize model_id for filesystem (e.g. my-model -> my_model)
+    fs_model_id = model_id.replace("-", "_")
+
     root = find_project_root()
-    model_path = root / "models" / "credit_risk" / "v1" / "model.onnx"
+    model_path = root / "models" / fs_model_id / version / "model.onnx"
 
     if model_path.exists():
         return model_path.absolute()
@@ -71,8 +88,25 @@ def ensure_model_exists() -> Path:
     is_test = "test" in str(Path.cwd())
 
     if is_ci or is_test:
-        logger.warning("🧪 CI/Test context. Generating valid ONNX model at %s", model_path)
-        generate_simple_onnx(model_path)
+        # Resolve feature count from model config so the generated
+        # stub model has the correct input dimensions.
+        n_features = 4  # default fallback
+        try:
+            from src.infrastructure.http.model_config_loader import (  # noqa: PLC0415
+                load_all_model_configs,
+            )
+
+            cfgs = load_all_model_configs(root / settings.MODEL_CONFIG_DIR)
+            if model_id in cfgs and cfgs[model_id].feature_names:
+                n_features = len(cfgs[model_id].feature_names)
+        except Exception:
+            pass
+        logger.warning(
+            "🧪 CI/Test context. Generating valid ONNX model at %s (n_features=%d)",
+            model_path,
+            n_features,
+        )
+        generate_simple_onnx(model_path, n_features=n_features)
         return model_path.absolute()
 
     msg = f"Model not found at {model_path} and not in CI environment."
