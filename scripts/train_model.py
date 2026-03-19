@@ -10,6 +10,7 @@ Usage:
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +64,7 @@ ENGINEERED_NAMES = [
 ]
 FINAL_FEATURE_NAMES = ALL_BASE_FEATURES + ENGINEERED_NAMES
 N_FEATURES = len(FINAL_FEATURE_NAMES)  # 30
+MIN_RETRAIN_SAMPLES = 50
 
 
 def _engineer_features(X: np.ndarray) -> np.ndarray:
@@ -99,8 +101,41 @@ def _engineer_features(X: np.ndarray) -> np.ndarray:
 
 
 def load_dataset() -> tuple[np.ndarray, np.ndarray]:
-    """Load German Credit + engineer features."""
+    """Load German Credit dataset — local cache first, OpenML fallback."""
+    # Try local reference data first (works in Docker without internet)
+    local_paths = [
+        Path(__file__).parent.parent / "data" / "reference_features.json",
+        Path("/app/data/reference_features.json"),
+    ]
+    for local_path in local_paths:
+        if local_path.exists():
+            print(f"📥 Loading German Credit dataset from local cache: {local_path}")
+            with open(local_path) as f:
+                records = json.load(f)
+            # Extract feature matrix and labels from seeded records
+            feature_list = []
+            labels = []
+            for rec in records:
+                features = rec.get("features", {})
+                if isinstance(features, dict):
+                    row = [features.get(k, 0.0) for k in FINAL_FEATURE_NAMES]
+                elif isinstance(features, list):
+                    row = features[:N_FEATURES]
+                    row += [0.0] * max(0, N_FEATURES - len(row))
+                else:
+                    continue
+                feature_list.append(row)
+                labels.append(rec.get("label", rec.get("result", 1)))
+            if len(feature_list) >= MIN_RETRAIN_SAMPLES:
+                X = np.array(feature_list, dtype=np.float32)
+                y = np.array(labels, dtype=int)
+                print(f"   Samples: {X.shape[0]}, Features: {X.shape[1]}")
+                print(f"   Class: good={y.sum()}, bad={len(y) - y.sum()}")
+                return X, y
+
+    # Fallback: fetch from OpenML (requires internet + write access)
     print("📥 Fetching German Credit dataset from OpenML...")
+    os.makedirs(os.path.expanduser("~/scikit_learn_data"), exist_ok=True)
     data = fetch_openml(name="credit-g", version=1, as_frame=True, parser="auto")
     df = data.frame
 
