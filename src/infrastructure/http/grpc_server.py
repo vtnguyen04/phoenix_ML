@@ -73,7 +73,7 @@ class HealthCheckResponse:
 # ── Logging Interceptor ──────────────────────────────────────────────
 
 
-class LoggingInterceptor(grpc.aio.ServerInterceptor):
+class LoggingInterceptor(grpc.aio.ServerInterceptor):  # type: ignore[misc]
     """gRPC server interceptor that logs request metadata and latency."""
 
     async def intercept_service(
@@ -119,7 +119,7 @@ class InferenceServicer(inference_pb2_grpc.InferenceServiceServicer):
             )
             prediction = await self._handler.execute(command)
 
-            response = inference_pb2.PredictResponse()
+            response = inference_pb2.PredictResponse()  # type: ignore[attr-defined]
             response.prediction_id = str(uuid.uuid4())
             response.model_id = prediction.model_id
             response.version = prediction.model_version
@@ -135,19 +135,19 @@ class InferenceServicer(inference_pb2_grpc.InferenceServiceServicer):
         except ValueError as e:
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details(str(e))
-            return inference_pb2.PredictResponse()
+            return inference_pb2.PredictResponse()  # type: ignore[attr-defined]
         except Exception as e:
             logger.exception("gRPC Predict failed")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
-            return inference_pb2.PredictResponse()
+            return inference_pb2.PredictResponse()  # type: ignore[attr-defined]
 
     async def HealthCheck(  # noqa: N802
         self, request: Any, context: Any
     ) -> Any:
         """Handle a HealthCheck RPC."""
-        response = inference_pb2.HealthCheckResponse()
-        response.status = inference_pb2.HealthCheckResponse.SERVING
+        response = inference_pb2.HealthCheckResponse()  # type: ignore[attr-defined]
+        response.status = inference_pb2.HealthCheckResponse.SERVING  # type: ignore[attr-defined]
         return response
 
 
@@ -187,7 +187,7 @@ def create_grpc_server(  # noqa: PLR0913
     )
 
     # Register the servicer with the generated proto stubs
-    inference_pb2_grpc.add_InferenceServiceServicer_to_server(servicer, server)
+    inference_pb2_grpc.add_InferenceServiceServicer_to_server(servicer, server)  # type: ignore[no-untyped-call]
     server.add_insecure_port(f"[::]:{port}")
 
     logger.info("gRPC server configured on port %d with logging interceptor", port)
