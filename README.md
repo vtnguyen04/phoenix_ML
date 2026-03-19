@@ -35,12 +35,13 @@ Phoenix ML is a **production-grade machine learning inference platform** that go
 | Capability | Description |
 |-----------|-------------|
 | ⚡ **Real-time Inference** | Sub-50ms p99 latency with ONNX Runtime, TensorRT, and Triton support |
-| 🔄 **Self-Healing** | Automated drift detection (KS, PSI, Chi², Wasserstein) + auto-rollback |
+| 🔄 **Self-Healing** | Drift detection → Airflow pipeline: alert → rollback → retrain → log → deploy |
 | 🎯 **A/B Testing** | Dynamic model routing with Champion/Challenger traffic splitting |
 | 🛡️ **Circuit Breaker** | Fault tolerance with automatic failover and recovery |
 | 📊 **Full Observability** | Prometheus metrics, Grafana dashboards, Jaeger distributed tracing |
 | 🔬 **Anomaly Detection** | Real-time monitoring for prediction anomalies, latency spikes, error rates |
 | 📦 **DVC Pipelines** | Reproducible model training with versioned data and artifacts |
+| 🌀 **Airflow Orchestration** | 5-task self-healing DAG with max_active_runs=1 deduplication |
 
 ---
 
@@ -85,15 +86,20 @@ graph LR
 
 ```mermaid
 graph TD
-    Train[🏋️ Model Training<br/>DVC Pipeline] --> Deploy[📦 Deployment<br/>ONNX + Docker]
-    Deploy --> Serve[⚡ Real-time Inference<br/>FastAPI + Routing]
-    Serve --> Monitor[📊 Monitoring<br/>Drift Detection]
-    Monitor --> Anomaly[🔍 Anomaly Detection<br/>Prediction · Latency · Errors]
-    Anomaly --> Decision{Anomaly<br/>Detected?}
+    Train["🏋️ Model Training<br/>DVC Pipeline"] --> Deploy["📦 Deployment<br/>ONNX + Docker"]
+    Deploy --> Serve["⚡ Real-time Inference<br/>FastAPI + Routing"]
+    Serve --> Monitor["📊 Monitoring<br/>Every 30s"]
+    Monitor --> Anomaly["🔍 Drift Detection<br/>KS · PSI · Chi² · Wasserstein"]
+    Anomaly --> Decision{"Drift<br/>Detected?"}
     Decision -->|No| Serve
-    Decision -->|Yes| Alert[🚨 Alert Manager<br/>Webhook Notify]
-    Alert --> Rollback[⏪ Auto-Rollback<br/>Version Restore]
-    Rollback --> Train
+    Decision -->|"Yes (deduped)"| Airflow["🌀 Airflow self_healing_pipeline<br/>max_active_runs=1"]
+    Airflow --> T1["🚨 1. Send Alert<br/>Webhook Notify"]
+    T1 --> T2["⏪ 2. Rollback<br/>Archive Challengers"]
+    T2 --> T3["🏋️ 3. Train Model<br/>ONNX Export"]
+    T3 --> T4["📈 4. Log MLflow<br/>Metrics + Params"]
+    T4 --> T5["🗄️ 5. Register<br/>Challenger in Postgres"]
+    T5 --> Deploy
+    T2 -.->|champion continues| Serve
 
     style Train fill:#667eea,stroke:#764ba2,color:#fff
     style Deploy fill:#764ba2,stroke:#667eea,color:#fff
@@ -101,8 +107,12 @@ graph TD
     style Monitor fill:#4facfe,stroke:#00f2fe,color:#fff
     style Anomaly fill:#fa709a,stroke:#fee140,color:#fff
     style Decision fill:#ffecd2,stroke:#fcb69f,color:#000
-    style Alert fill:#f5576c,stroke:#ff6b6b,color:#fff
-    style Rollback fill:#ff9a9e,stroke:#fad0c4,color:#000
+    style Airflow fill:#017cee,stroke:#00c7b7,color:#fff
+    style T1 fill:#f5576c,stroke:#ff6b6b,color:#fff
+    style T2 fill:#ff9a9e,stroke:#fad0c4,color:#000
+    style T3 fill:#43e97b,stroke:#38f9d7,color:#000
+    style T4 fill:#43e97b,stroke:#38f9d7,color:#000
+    style T5 fill:#fa709a,stroke:#fee140,color:#fff
 ```
 
 ---
@@ -120,7 +130,7 @@ graph TD
 | **Inference** | ONNX Runtime · TensorRT · Triton Inference Server |
 | **Backend** | Python 3.11+ · FastAPI · gRPC · Pydantic v2 · SQLAlchemy Async |
 | **Data** | Redis (features) · PostgreSQL (metadata) · Apache Kafka (events) · MinIO/S3 (artifacts) |
-| **MLOps** | DVC (data versioning) · MLflow (experiment tracking) · XGBoost · Scikit-Learn |
+| **MLOps** | DVC (data versioning) · MLflow (experiment tracking) · Apache Airflow (orchestration) · Scikit-Learn |
 | **Observability** | Prometheus · Grafana · Jaeger (OpenTelemetry) |
 | **Frontend** | React 18 · TypeScript · Vite · Vanilla CSS · Vitest |
 | **Infrastructure** | Docker · Kubernetes (Helm) · GitHub Actions CI/CD · `uv` package manager |
@@ -172,13 +182,18 @@ src/
 
 ## 🚀 Quick Start
 
-### Docker Compose (Full Stack — 9 Services)
+### Docker Compose (Full Stack — 13+ Services)
 
 ```bash
 # Clone and start everything
 git clone https://github.com/vtnguyen04/phoenix_ML.git
 cd phoenix_ML
+
+# Start core services (API, DB, Redis, Kafka, MLflow, Grafana, etc.)
 docker compose up -d --build
+
+# Start Airflow orchestration services
+docker compose -f docker-compose.airflow.yaml up -d
 
 # Train the model via DVC
 uv run dvc repro
@@ -195,6 +210,8 @@ uv run python scripts/seed_features.py
 | 📈 **Prometheus** | http://localhost:9091 | Metrics collection |
 | 💾 **MinIO** | http://localhost:9001 | Model artifact storage |
 | 🔍 **Jaeger** | http://localhost:16686 | Distributed tracing |
+| 🌀 **Airflow** | http://localhost:8080 | Pipeline orchestration (admin/admin) |
+| 📈 **MLflow** | http://localhost:5000 | Experiment tracking |
 
 ### Make a Prediction
 
@@ -231,7 +248,7 @@ cd frontend && npm install && npm run dev
 
 | Suite | Tests | Coverage | Framework |
 |-------|-------|----------|-----------|
-| **Backend Unit** | 130+ | 85%+ | Pytest + pytest-cov |
+| **Backend Unit** | 189 | 89% | Pytest + pytest-cov |
 | **Backend Integration** | 10+ | — | Pytest + httpx |
 | **Backend E2E** | 5+ | — | Pytest |
 | **Frontend** | 96 | — | Vitest + React Testing Library |
@@ -274,6 +291,7 @@ locust -f benchmarks/locustfile.py --host http://localhost:8001
 phoenix-ml-platform/
 ├── src/                         # Backend (DDD layers)
 ├── frontend/                    # React + TypeScript dashboard
+├── dags/                        # Airflow DAGs (self_healing_pipeline)
 ├── tests/                       # Unit / Integration / E2E
 │   ├── unit/                    # 130+ isolated tests
 │   ├── integration/             # API + DB boundary tests
@@ -290,7 +308,9 @@ phoenix-ml-platform/
 │   └── frontend/                # Frontend architecture
 ├── .github/workflows/           # CI/CD pipelines
 ├── dvc.yaml                     # ML pipeline stages
-├── compose.yaml                 # 9-service Docker stack
+├── compose.yaml                 # Core services Docker stack
+├── docker-compose.airflow.yaml  # Airflow orchestration stack
+├── Dockerfile.airflow           # Custom Airflow image with ML deps
 └── pyproject.toml               # Python dependencies
 ```
 
