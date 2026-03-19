@@ -53,7 +53,7 @@ class TestGRPCInferenceServicer:
         mock_context: MagicMock,
     ) -> None:
         """Predict RPC returns a valid proto response with prediction data."""
-        request = inference_pb2.PredictRequest(
+        request = inference_pb2.PredictRequest(  # type: ignore[attr-defined]
             model_id="credit-risk",
             model_version="v1",
             entity_id="customer-001",
@@ -75,7 +75,7 @@ class TestGRPCInferenceServicer:
         mock_context: MagicMock,
     ) -> None:
         """Predict succeeds with only model_id."""
-        request = inference_pb2.PredictRequest(model_id="credit-risk")
+        request = inference_pb2.PredictRequest(model_id="credit-risk")  # type: ignore[attr-defined]
         response = await servicer.Predict(request, mock_context)
 
         assert response.model_id == "credit-risk"
@@ -96,7 +96,7 @@ class TestGRPCInferenceServicer:
         )
         servicer = InferenceServicer(predict_handler=mock_predict_handler)
 
-        request = inference_pb2.PredictRequest(model_id="nonexistent")
+        request = inference_pb2.PredictRequest(model_id="nonexistent")  # type: ignore[attr-defined]
         await servicer.Predict(request, mock_context)
 
         mock_context.set_code.assert_called_once_with(grpc.StatusCode.NOT_FOUND)
@@ -117,7 +117,7 @@ class TestGRPCInferenceServicer:
         )
         servicer = InferenceServicer(predict_handler=mock_predict_handler)
 
-        request = inference_pb2.PredictRequest(model_id="credit-risk")
+        request = inference_pb2.PredictRequest(model_id="credit-risk")  # type: ignore[attr-defined]
         await servicer.Predict(request, mock_context)
 
         mock_context.set_code.assert_called_once_with(grpc.StatusCode.INTERNAL)
@@ -128,7 +128,7 @@ class TestGRPCInferenceServicer:
         mock_context: MagicMock,
     ) -> None:
         """HealthCheck RPC returns SERVING status."""
-        request = inference_pb2.HealthCheckRequest()
+        request = inference_pb2.HealthCheckRequest()  # type: ignore[attr-defined]
         response = await servicer.HealthCheck(request, mock_context)
 
-        assert response.status == inference_pb2.HealthCheckResponse.SERVING
+        assert response.status == inference_pb2.HealthCheckResponse.SERVING  # type: ignore[attr-defined]

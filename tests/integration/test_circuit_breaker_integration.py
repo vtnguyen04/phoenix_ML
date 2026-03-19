@@ -104,7 +104,7 @@ class TestCircuitBreakerIntegration:
         # Next call should transition to HALF_OPEN and succeed
         result = await breaker.execute(_success, _fallback)
         assert result == "ok"
-        assert breaker.state == CircuitState.HALF_OPEN
+        assert breaker.state == CircuitState.HALF_OPEN  # type: ignore[comparison-overlap]
 
     async def test_half_open_to_closed_on_successes(
         self, breaker: CircuitBreaker
