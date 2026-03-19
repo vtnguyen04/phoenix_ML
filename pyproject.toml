@@ -45,6 +45,7 @@ dev = [
     "isort>=5.13.0",
     "httpx>=0.26.0",
     "asgi-lifespan>=2.1.0",
+    "grpcio-tools>=1.60.0",
 ]
 
 [build-system]

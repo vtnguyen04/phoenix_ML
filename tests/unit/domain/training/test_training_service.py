@@ -195,6 +195,53 @@ class TestTrainingService:
         with pytest.raises(ValueError, match="not found"):
             await training_service.start_job("nonexistent")
 
+    async def test_create_job_empty_dataset_path_raises(
+        self, training_service: TrainingService
+    ) -> None:
+        empty_config = TrainingConfig(dataset_path="")
+        with pytest.raises(ValueError, match="dataset_path"):
+            await training_service.create_job("credit-risk", empty_config)
+
+    async def test_complete_job_not_found_raises(
+        self, training_service: TrainingService, mock_repo: AsyncMock
+    ) -> None:
+        mock_repo.get_by_id.return_value = None
+        with pytest.raises(ValueError, match="not found"):
+            await training_service.complete_job("nope", TrainingMetrics(), "/p")
+
+    async def test_fail_job_not_found_raises(
+        self, training_service: TrainingService, mock_repo: AsyncMock
+    ) -> None:
+        mock_repo.get_by_id.return_value = None
+        with pytest.raises(ValueError, match="not found"):
+            await training_service.fail_job("nope", "err")
+
+    async def test_get_history(
+        self, training_service: TrainingService, config: TrainingConfig, mock_repo: AsyncMock
+    ) -> None:
+        mock_repo.get_by_model_id.return_value = []
+        result = await training_service.get_history("credit-risk")
+        assert result == []
+        mock_repo.get_by_model_id.assert_called_once_with("credit-risk", 10)
+
+
+class TestTrainingJobEdgeCases:
+    """Cover error branches for fail/cancel on terminal jobs."""
+
+    def test_cannot_fail_completed_job(self, config: TrainingConfig) -> None:
+        job = TrainingJob(model_id="m", config=config)
+        job.start()
+        job.complete(TrainingMetrics(), "/p")
+        with pytest.raises(ValueError, match="completed"):
+            job.fail("err")
+
+    def test_cannot_cancel_completed_job(self, config: TrainingConfig) -> None:
+        job = TrainingJob(model_id="m", config=config)
+        job.start()
+        job.complete(TrainingMetrics(), "/p")
+        with pytest.raises(ValueError, match="completed"):
+            job.cancel()
+
 
 # ── HyperparameterOptimizer ──────────────────────────────────────────
 

@@ -2,7 +2,8 @@
 Integration Test: gRPC InferenceServicer.
 
 Tests the gRPC service layer directly (without network transport),
-verifying Predict and HealthCheck RPCs perform correctly.
+verifying Predict and HealthCheck RPCs perform correctly using
+the compiled proto stubs.
 """
 
 from unittest.mock import AsyncMock, MagicMock
@@ -11,11 +12,8 @@ import pytest
 
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.infrastructure.http.grpc_server import (
-    HealthCheckResponse,
-    InferenceServicer,
-    PredictRequest,
-)
+from src.infrastructure.http.grpc_server import InferenceServicer
+from src.infrastructure.http.proto import inference_pb2
 
 
 @pytest.fixture
@@ -47,15 +45,15 @@ def mock_context() -> MagicMock:
 
 
 class TestGRPCInferenceServicer:
-    """Integration tests for the gRPC InferenceServicer."""
+    """Integration tests for the gRPC InferenceServicer with proto stubs."""
 
     async def test_predict_returns_valid_response(
         self,
         servicer: InferenceServicer,
         mock_context: MagicMock,
     ) -> None:
-        """Predict RPC returns a valid response with prediction data."""
-        request = PredictRequest(
+        """Predict RPC returns a valid proto response with prediction data."""
+        request = inference_pb2.PredictRequest(
             model_id="credit-risk",
             model_version="v1",
             entity_id="customer-001",
@@ -66,8 +64,8 @@ class TestGRPCInferenceServicer:
 
         assert response.model_id == "credit-risk"
         assert response.version == "v1"
-        assert response.result == [1.0]
-        assert response.confidence == pytest.approx(0.92)
+        assert list(response.result) == [1.0]
+        assert response.confidence == pytest.approx(0.92, abs=0.01)
         assert response.latency_ms == pytest.approx(12.5)
         assert response.prediction_id != ""
 
@@ -77,7 +75,7 @@ class TestGRPCInferenceServicer:
         mock_context: MagicMock,
     ) -> None:
         """Predict succeeds with only model_id."""
-        request = PredictRequest(model_id="credit-risk")
+        request = inference_pb2.PredictRequest(model_id="credit-risk")
         response = await servicer.Predict(request, mock_context)
 
         assert response.model_id == "credit-risk"
@@ -91,12 +89,14 @@ class TestGRPCInferenceServicer:
         """ValueError from handler maps to NOT_FOUND gRPC status."""
         import grpc  # noqa: PLC0415
 
+        from src.infrastructure.http.grpc_server import InferenceServicer  # noqa: PLC0415
+
         mock_predict_handler.execute = AsyncMock(
             side_effect=ValueError("Model not found")
         )
         servicer = InferenceServicer(predict_handler=mock_predict_handler)
 
-        request = PredictRequest(model_id="nonexistent")
+        request = inference_pb2.PredictRequest(model_id="nonexistent")
         await servicer.Predict(request, mock_context)
 
         mock_context.set_code.assert_called_once_with(grpc.StatusCode.NOT_FOUND)
@@ -110,12 +110,14 @@ class TestGRPCInferenceServicer:
         """Unexpected exception maps to INTERNAL gRPC status."""
         import grpc  # noqa: PLC0415
 
+        from src.infrastructure.http.grpc_server import InferenceServicer  # noqa: PLC0415
+
         mock_predict_handler.execute = AsyncMock(
             side_effect=RuntimeError("ONNX engine crash")
         )
         servicer = InferenceServicer(predict_handler=mock_predict_handler)
 
-        request = PredictRequest(model_id="credit-risk")
+        request = inference_pb2.PredictRequest(model_id="credit-risk")
         await servicer.Predict(request, mock_context)
 
         mock_context.set_code.assert_called_once_with(grpc.StatusCode.INTERNAL)
@@ -126,6 +128,7 @@ class TestGRPCInferenceServicer:
         mock_context: MagicMock,
     ) -> None:
         """HealthCheck RPC returns SERVING status."""
-        response = await servicer.HealthCheck({}, mock_context)
+        request = inference_pb2.HealthCheckRequest()
+        response = await servicer.HealthCheck(request, mock_context)
 
-        assert response.status == HealthCheckResponse.SERVING
+        assert response.status == inference_pb2.HealthCheckResponse.SERVING
