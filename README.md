@@ -117,6 +117,19 @@ graph TD
 
 ---
 
+## 📓 Interactive Notebooks
+
+Explore the platform hands-on with our demo notebooks:
+
+| Notebook | Description |
+|----------|-------------|
+| [01 — Inference Demo](notebooks/01_inference_demo.ipynb) | Real-time predictions, latency benchmarks (p50/p95/p99) |
+| [02 — Drift Detection](notebooks/02_drift_detection_demo.ipynb) | KS test, PSI, Wasserstein distance with visualization |
+| [03 — Self-Healing](notebooks/03_self_healing_demo.ipynb) | Trigger Airflow DAG, monitor tasks, verify new model |
+| [04 — A/B Testing](notebooks/04_ab_testing_demo.ipynb) | Champion/Challenger lifecycle, rollback, traffic simulation |
+
+---
+
 ## 🛠️ Tech Stack
 
 <div align="center">
