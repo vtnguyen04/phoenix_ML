@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any, cast
@@ -10,6 +11,11 @@ from sqlalchemy import select
 
 from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.model import Model
+from src.domain.monitoring.services.alert_manager import (
+    AlertManager,
+    AlertRule,
+    AlertSeverity,
+)
 from src.infrastructure.http.container import (
     artifact_storage,
     batch_manager,
@@ -22,6 +28,7 @@ from src.infrastructure.http.container import (
     shutdown_event,
 )
 from src.infrastructure.http.grpc_server import create_grpc_server
+from src.infrastructure.monitoring.alert_notifier import AlertNotifier
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
 from src.infrastructure.persistence.postgres_drift_repo import (
@@ -35,6 +42,34 @@ from src.infrastructure.persistence.postgres_model_registry import (
 )
 
 logger = logging.getLogger(__name__)
+
+# --- Self-Healing components (initialized once) ---
+alert_manager = AlertManager()
+alert_manager.register_rule(
+    AlertRule(
+        name="high_drift_score",
+        metric="drift_score",
+        threshold=0.3,
+        severity=AlertSeverity.CRITICAL,
+        comparison="gt",
+        cooldown_seconds=300.0,
+        description="Data drift score exceeds critical threshold",
+    )
+)
+alert_manager.register_rule(
+    AlertRule(
+        name="moderate_drift_score",
+        metric="drift_score",
+        threshold=0.1,
+        severity=AlertSeverity.WARNING,
+        comparison="gt",
+        cooldown_seconds=120.0,
+        description="Data drift score exceeds warning threshold",
+    )
+)
+alert_notifier = AlertNotifier(
+    webhook_url=os.environ.get("ALERT_WEBHOOK_URL"),
+)
 
 
 def _load_reference_data() -> list[float]:
@@ -103,7 +138,15 @@ async def run_monitoring_loop() -> None:
             async for db in get_db():
                 log_repo = PostgresPredictionLogRepository(db)
                 drift_repo = PostgresDriftReportRepository(db)
-                ms = MonitoringService(log_repo, drift_calculator, drift_repo)
+                model_repo = PostgresModelRegistry(db)
+                ms = MonitoringService(
+                    log_repo,
+                    drift_calculator,
+                    drift_repo,
+                    alert_manager=alert_manager,
+                    alert_notifier=alert_notifier,
+                    model_repo=model_repo,
+                )
 
                 await ms.check_drift(
                     model_id="credit-risk",
