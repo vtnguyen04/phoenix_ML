@@ -75,13 +75,13 @@ async def step_2_register_mlflow() -> None:
                 print(f"   ✅ Created experiment: credit-risk-production (ID: {exp_id})")
             else:
                 # Experiment may already exist
-                resp = await client.post("/api/2.0/mlflow/experiments/get-by-name",
-                    json={"experiment_name": "credit-risk-production"})
+                resp = await client.get("/api/2.0/mlflow/experiments/get-by-name",
+                    params={"experiment_name": "credit-risk-production"})
                 if resp.status_code == 200:
                     exp_id = resp.json().get("experiment", {}).get("experiment_id")
                     print(f"   ✅ Experiment already exists (ID: {exp_id})")
                 else:
-                    print(f"   ⚠️  Could not create/find experiment: {resp.text}")
+                    print(f"   ⚠️  Could not find experiment: {resp.text}")
                     return
 
             # Create a run with model metrics

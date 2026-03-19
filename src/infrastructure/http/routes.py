@@ -16,7 +16,6 @@ from src.application.handlers.query_handlers import (
     GetModelPerformanceQueryHandler,
     GetModelQueryHandler,
 )
-from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.queries import (
     GetDriftReportQuery,
     GetModelPerformanceQuery,
@@ -134,11 +133,10 @@ async def check_drift(
     try:
         log_repo = PostgresPredictionLogRepository(db)
         drift_repo = PostgresDriftReportRepository(db)
-        model_repo = PostgresModelRegistry(db)
-        root = find_project_root()
-        rh = RetrainHandler(root, model_repo, model_evaluator)
-        ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
+        
+        ms = MonitoringService(log_repo, drift_calculator, drift_repo)
 
+        root = find_project_root()
         reference_data = _load_reference_distributions(root)
         return await ms.check_drift(
             model_id=model_id, reference_data=reference_data, feature_index=0

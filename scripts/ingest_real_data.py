@@ -29,13 +29,16 @@ async def main() -> None:
     service = IngestionService(ingestor)
 
     # Ingest first 50 records as 'real' production features
+    features = ["user_age", "account_balance", "credit_score", "purchase_amount"]
+    df_cols = ["age", "income", "credit_history", "debt"]
+    
     ingest_data = []
     for i in range(50):
         row = real_df.iloc[i]
         ingest_data.append(
             {
                 "entity_id": f"real-cust-{i}",
-                "data": {f"f{j + 1}": float(row[f"f{j + 1}"]) for j in range(4)},
+                "data": {f: float(row[df_cols[idx]]) for idx, f in enumerate(features)},
             }
         )
 

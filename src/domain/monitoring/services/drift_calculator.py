@@ -113,12 +113,29 @@ class DriftCalculator:
         )
 
     def _wasserstein_test(
-        self, feature_name: str, reference: np.ndarray, current: np.ndarray
+        self,
+        feature_name: str,
+        reference: np.ndarray,
+        current: np.ndarray,
+        n_bootstrap: int = 1000,
     ) -> DriftReport:
-        """Earth Mover's Distance"""
+        """Earth Mover's Distance with bootstrap p-value."""
         distance = float(stats.wasserstein_distance(reference, current))
 
         threshold = float(np.std(reference) * WASSERSTEIN_THRESHOLD_FACTOR)
+
+        # Bootstrap permutation test for p-value
+        combined = np.concatenate([reference, current])
+        n_ref = len(reference)
+        rng = np.random.default_rng(seed=42)
+        bootstrap_distances = np.empty(n_bootstrap)
+        for i in range(n_bootstrap):
+            perm = rng.permutation(combined)
+            boot_ref = perm[:n_ref]
+            boot_cur = perm[n_ref:]
+            bootstrap_distances[i] = stats.wasserstein_distance(boot_ref, boot_cur)
+
+        p_value = float(np.mean(bootstrap_distances >= distance))
         drift_detected = bool(distance > threshold)
 
         recommendation = self._generate_recommendation(drift_detected, distance, feature_name)
@@ -126,7 +143,7 @@ class DriftCalculator:
         return DriftReport(
             feature_name=feature_name,
             drift_detected=drift_detected,
-            p_value=0.0,  # Not directly calculated without bootstrap
+            p_value=p_value,
             statistic=distance,
             threshold=threshold,
             method="wasserstein",

@@ -1,0 +1,15 @@
+FROM apache/airflow:2.8.2-python3.11
+
+USER root
+# Install system deps if needed (e.g. gcc)
+
+USER airflow
+RUN pip install --no-cache-dir \
+    scikit-learn \
+    numpy \
+    pandas \
+    skl2onnx \
+    httpx \
+    mlflow \
+    psycopg2-binary \
+    asyncpg
