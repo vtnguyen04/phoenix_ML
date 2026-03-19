@@ -8,19 +8,25 @@ from typing import Any, cast
 from fastapi import FastAPI
 from sqlalchemy import select
 
-from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.model import Model
+from src.domain.monitoring.services.alert_manager import (
+    AlertManager,
+    AlertRule,
+    AlertSeverity,
+)
 from src.infrastructure.http.container import (
+    artifact_storage,
     batch_manager,
     drift_calculator,
     ensure_model_exists,
     feature_store,
     find_project_root,
+    inference_engine,
     kafka_producer,
-    model_evaluator,
     shutdown_event,
 )
+from src.infrastructure.http.grpc_server import create_grpc_server
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
 from src.infrastructure.persistence.postgres_drift_repo import (
@@ -35,6 +41,34 @@ from src.infrastructure.persistence.postgres_model_registry import (
 
 logger = logging.getLogger(__name__)
 
+# --- Self-Healing: Alert rules for Prometheus metrics ---
+alert_manager = AlertManager()
+alert_manager.register_rule(
+    AlertRule(
+        name="high_drift_score",
+        metric="drift_score",
+        threshold=0.3,
+        severity=AlertSeverity.CRITICAL,
+        comparison="gt",
+        cooldown_seconds=300.0,
+        description="Data drift score exceeds critical threshold",
+    )
+)
+alert_manager.register_rule(
+    AlertRule(
+        name="moderate_drift_score",
+        metric="drift_score",
+        threshold=0.1,
+        severity=AlertSeverity.WARNING,
+        comparison="gt",
+        cooldown_seconds=120.0,
+        description="Data drift score exceeds warning threshold",
+    )
+)
+
+# Monitoring interval (seconds) — Production: 30s to avoid false-positive flood
+MONITORING_INTERVAL_SECONDS = 30
+
 
 def _load_reference_data() -> list[float]:
     """Load real reference data from the training pipeline output."""
@@ -48,7 +82,6 @@ def _load_reference_data() -> list[float]:
             with open(ref_path) as f:
                 data = json.load(f)
             distributions = data.get("reference_distributions", {})
-            # Use the first feature (income) distribution
             first_key = next(iter(distributions), None)
             if first_key:
                 logger.info(
@@ -95,7 +128,8 @@ async def run_monitoring_loop() -> None:
 
     while not shutdown_event.is_set():
         try:
-            for _ in range(50):
+            # Production monitoring interval
+            for _ in range(MONITORING_INTERVAL_SECONDS * 10):
                 if shutdown_event.is_set():
                     return
                 await asyncio.sleep(0.1)
@@ -103,9 +137,12 @@ async def run_monitoring_loop() -> None:
             async for db in get_db():
                 log_repo = PostgresPredictionLogRepository(db)
                 drift_repo = PostgresDriftReportRepository(db)
-                model_repo = PostgresModelRegistry(db)
-                rh = RetrainHandler(find_project_root(), model_repo, model_evaluator)
-                ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
+                ms = MonitoringService(
+                    log_repo,
+                    drift_calculator,
+                    drift_repo,
+                    alert_manager=alert_manager,
+                )
 
                 await ms.check_drift(
                     model_id="credit-risk",
@@ -116,7 +153,7 @@ async def run_monitoring_loop() -> None:
         except asyncio.CancelledError:
             return
         except Exception as e:
-            logger.error("⚠️ Monitoring Loop Error: %s", e)
+            logger.error("⚠️ Monitoring Loop Error: %s", e, exc_info=True)
 
 
 @asynccontextmanager
@@ -124,8 +161,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    grpc_server = None
+
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
+        
+        grpc_server = create_grpc_server(
+            model_repo=model_repo,
+            inference_engine=inference_engine,
+            batch_manager=batch_manager,
+            feature_store=feature_store,
+            artifact_storage=artifact_storage,
+            port=50051,
+        )
 
         result = await db.execute(
             select(ModelORM).where(ModelORM.id == "credit-risk", ModelORM.version == "v1")
@@ -185,17 +233,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except Exception as e:
                 logger.error("❌ Failed to seed model: %s", e)
 
-        # Seed REAL feature records from German Credit dataset
         real_features = _load_real_features()
         if real_features:
             for record in real_features:
                 await feature_store.add_features(record["entity_id"], record["features"])
             logger.info("✅ Seeded %d real feature records", len(real_features))
-        else:
-            # Fallback: one record for basic functionality (30 features)
-            await feature_store.add_features(
-                "customer-good",
-                {
+
+        await feature_store.add_features(
+            "customer-good",
+            {
                     "duration": 0.5,
                     "credit_amount": -0.3,
                     "installment_commitment": 0.8,
@@ -231,6 +277,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         break
 
     shutdown_event.clear()
+    
+    if grpc_server:
+        await grpc_server.start()
+        
     await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
@@ -239,6 +289,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("🧹 Lifespan shutdown started...")
     shutdown_event.set()
     monitor_task.cancel()
+    
+    if grpc_server:
+        await grpc_server.stop(grace=2.0)
+        
     await batch_manager.stop()
     await kafka_producer.stop()
     try:

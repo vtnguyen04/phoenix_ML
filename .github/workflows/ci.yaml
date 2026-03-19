@@ -4,7 +4,11 @@ on:
   push:
     branches: [ main, "feature/**", "hotfix/**" ]
   pull_request:
-    branches: [ main, "feature/**" ]
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-qa:
@@ -31,11 +35,14 @@ jobs:
     - name: Type Check with Mypy
       run: uv run mypy . --explicit-package-bases
 
-    - name: Run Tests
-      run: uv run pytest tests/ --cov=src --cov-report=xml
+    - name: Run Tests with Coverage
+      run: uv run pytest tests/ --cov=src --cov-report=xml --cov-fail-under=80
 
     - name: Verify API Docker Build
       run: docker build . -t phoenix-api:test
+
+    - name: Verify Airflow Docker Build
+      run: docker build -f Dockerfile.airflow . -t phoenix-airflow:test
 
   frontend-qa:
     name: Frontend Quality Gate
@@ -61,6 +68,9 @@ jobs:
 
     - name: Lint with ESLint
       run: npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+    - name: Run Tests
+      run: npm run test
 
     - name: Verify Frontend Docker Build
       run: docker build -f ../Dockerfile.frontend . -t phoenix-dashboard:test

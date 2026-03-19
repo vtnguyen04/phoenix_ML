@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.commands.predict_command import PredictCommand
@@ -16,7 +16,6 @@ from src.application.handlers.query_handlers import (
     GetModelPerformanceQueryHandler,
     GetModelQueryHandler,
 )
-from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.queries import (
     GetDriftReportQuery,
     GetModelPerformanceQuery,
@@ -134,12 +133,19 @@ async def check_drift(
     try:
         log_repo = PostgresPredictionLogRepository(db)
         drift_repo = PostgresDriftReportRepository(db)
-        model_repo = PostgresModelRegistry(db)
-        root = find_project_root()
-        rh = RetrainHandler(root, model_repo, model_evaluator)
-        ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
 
-        # Load real reference distributions from training data
+        from src.infrastructure.http.lifespan import (  # noqa: PLC0415
+            alert_manager,
+        )
+
+        ms = MonitoringService(
+            log_repo,
+            drift_calculator,
+            drift_repo,
+            alert_manager=alert_manager,
+        )
+
+        root = find_project_root()
         reference_data = _load_reference_distributions(root)
         return await ms.check_drift(
             model_id=model_id, reference_data=reference_data, feature_index=0
@@ -191,6 +197,77 @@ async def get_model_performance(
     return await handler.execute(GetModelPerformanceQuery(model_id=model_id))
 
 
+class RollbackRequest(BaseModel):
+    model_id: str
+
+
+class RegisterModelRequest(BaseModel):
+    model_id: str
+    version: str
+    uri: str
+    framework: str = "onnx"
+    stage: str = "challenger"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.post("/models/rollback")
+async def rollback_challengers(
+    request: RollbackRequest,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Archive all active challenger models, keep champion serving."""
+    model_repo = PostgresModelRegistry(db)
+    active = await model_repo.get_active_versions(request.model_id)
+
+    champion = None
+    archived: list[str] = []
+    for model in active:
+        role = model.metadata.get("role", "")
+        if role == "champion":
+            champion = model.version
+        elif role == "challenger":
+            await model_repo.update_stage(
+                request.model_id, model.version, "archived"
+            )
+            archived.append(model.version)
+
+    return {
+        "model_id": request.model_id,
+        "champion": champion,
+        "archived_challengers": archived,
+    }
+
+
+@router.post("/models/register")
+async def register_model(
+    request: RegisterModelRequest,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Register a new model version in the model registry."""
+    from src.domain.inference.entities.model import Model  # noqa: PLC0415
+
+    metadata = {**request.metadata, "role": request.stage, "metrics": request.metrics}
+    model = Model(
+        id=request.model_id,
+        version=request.version,
+        uri=request.uri,
+        framework=request.framework,
+        metadata=metadata,
+        is_active=True,
+    )
+
+    model_repo = PostgresModelRegistry(db)
+    await model_repo.save(model)
+
+    return {
+        "model_id": model.id,
+        "version": model.version,
+        "stage": request.stage,
+        "status": "registered",
+    }
+
+
 def _load_reference_distributions(project_root: Path) -> list[float]:
     """Load reference feature distributions from training data.
 
@@ -201,7 +278,6 @@ def _load_reference_distributions(project_root: Path) -> list[float]:
         with open(ref_path) as f:
             data = json.load(f)
             if isinstance(data, list) and len(data) > 0:
-                # Extract first feature values from reference records
                 return [
                     float(record[0]) if isinstance(record, list) else float(record)
                     for record in data

@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.application.commands.predict_command import PredictCommand
-from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.monitoring.entities.drift_report import DriftReport
@@ -32,22 +31,15 @@ def mock_drift_report_repo() -> DriftReportRepository:
 
 
 @pytest.fixture
-def mock_retrain_handler() -> RetrainHandler:
-    return AsyncMock(spec=RetrainHandler)
-
-
-@pytest.fixture
 def monitoring_service(
     mock_log_repo: PredictionLogRepository,
     mock_drift_calculator: DriftCalculator,
     mock_drift_report_repo: DriftReportRepository,
-    mock_retrain_handler: RetrainHandler,
 ) -> MonitoringService:
     return MonitoringService(
         mock_log_repo,
         mock_drift_calculator,
         mock_drift_report_repo,
-        mock_retrain_handler,
     )
 
 

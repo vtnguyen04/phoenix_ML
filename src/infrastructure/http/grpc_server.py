@@ -3,9 +3,12 @@ gRPC Server for Phoenix ML Inference Service.
 
 Provides a high-performance gRPC interface alongside the existing FastAPI
 HTTP server. Both servers share the same domain layer and infrastructure.
+
+Uses compiled proto stubs from inference.proto for proper gRPC registration.
 """
 
 import logging
+import time
 import uuid
 from concurrent import futures
 from typing import Any
@@ -21,13 +24,12 @@ from src.domain.inference.services.inference_service import InferenceService
 from src.domain.inference.services.routing_strategy import SingleModelStrategy
 from src.domain.model_registry.repositories.artifact_storage import ArtifactStorage
 from src.domain.model_registry.repositories.model_repository import ModelRepository
+from src.infrastructure.http.proto import inference_pb2, inference_pb2_grpc
 
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# gRPC message types (lightweight substitutes when proto compilation is skipped)
-# ---------------------------------------------------------------------------
+# ── Fallback classes (used when proto stubs are unavailable, e.g. tests) ──
 
 
 class PredictRequest:
@@ -68,17 +70,37 @@ class HealthCheckResponse:
         self.status: int = self.SERVING
 
 
-# ---------------------------------------------------------------------------
-# Service implementation
-# ---------------------------------------------------------------------------
+# ── Logging Interceptor ──────────────────────────────────────────────
 
 
-class InferenceServicer:
+class LoggingInterceptor(grpc.aio.ServerInterceptor):  # type: ignore[misc]
+    """gRPC server interceptor that logs request metadata and latency."""
+
+    async def intercept_service(
+        self,
+        continuation: Any,
+        handler_call_details: grpc.HandlerCallDetails,
+    ) -> Any:
+        method = handler_call_details.method
+        start = time.perf_counter()
+        logger.info("gRPC request: %s", method)
+
+        handler = await continuation(handler_call_details)
+
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info("gRPC response: %s (%.2fms)", method, elapsed_ms)
+        return handler
+
+
+# ── InferenceServicer ────────────────────────────────────────────────
+
+
+class InferenceServicer(inference_pb2_grpc.InferenceServiceServicer):
     """
     gRPC service implementation for the Phoenix Inference API.
 
-    Wraps the same PredictHandler used by the FastAPI server to ensure
-    consistent behavior across both transport layers.
+    Inherits from the generated InferenceServiceServicer stub and wraps
+    the same PredictHandler used by the FastAPI server for consistency.
     """
 
     def __init__(self, predict_handler: PredictHandler) -> None:
@@ -86,7 +108,7 @@ class InferenceServicer:
 
     async def Predict(  # noqa: N802
         self, request: Any, context: Any
-    ) -> PredictResponse:
+    ) -> Any:
         """Handle a Predict RPC."""
         try:
             command = PredictCommand(
@@ -97,11 +119,15 @@ class InferenceServicer:
             )
             prediction = await self._handler.execute(command)
 
-            response = PredictResponse()
+            response = inference_pb2.PredictResponse()  # type: ignore[attr-defined]
             response.prediction_id = str(uuid.uuid4())
             response.model_id = prediction.model_id
             response.version = prediction.model_version
-            response.result[:] = prediction.result
+            raw = prediction.result
+            if isinstance(raw, list):
+                response.result[:] = [float(v) for v in raw]
+            else:
+                response.result.append(float(raw))
             response.confidence = prediction.confidence.value
             response.latency_ms = round(prediction.latency_ms, 2)
             return response
@@ -109,25 +135,23 @@ class InferenceServicer:
         except ValueError as e:
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details(str(e))
-            return PredictResponse()
+            return inference_pb2.PredictResponse()  # type: ignore[attr-defined]
         except Exception as e:
             logger.exception("gRPC Predict failed")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
-            return PredictResponse()
+            return inference_pb2.PredictResponse()  # type: ignore[attr-defined]
 
     async def HealthCheck(  # noqa: N802
         self, request: Any, context: Any
-    ) -> HealthCheckResponse:
+    ) -> Any:
         """Handle a HealthCheck RPC."""
-        response = HealthCheckResponse()
-        response.status = HealthCheckResponse.SERVING
+        response = inference_pb2.HealthCheckResponse()  # type: ignore[attr-defined]
+        response.status = inference_pb2.HealthCheckResponse.SERVING  # type: ignore[attr-defined]
         return response
 
 
-# ---------------------------------------------------------------------------
-# Server factory
-# ---------------------------------------------------------------------------
+# ── Server Factory ───────────────────────────────────────────────────
 
 
 def create_grpc_server(  # noqa: PLR0913
@@ -154,10 +178,17 @@ def create_grpc_server(  # noqa: PLR0913
     )
 
     handler = PredictHandler(inference_service)
-    _servicer = InferenceServicer(handler)  # registered with compiled proto stubs
+    servicer = InferenceServicer(handler)
 
-    server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=max_workers))
+    interceptors = [LoggingInterceptor()]
+    server = grpc.aio.server(
+        futures.ThreadPoolExecutor(max_workers=max_workers),
+        interceptors=interceptors,
+    )
+
+    # Register the servicer with the generated proto stubs
+    inference_pb2_grpc.add_InferenceServiceServicer_to_server(servicer, server)  # type: ignore[no-untyped-call]
     server.add_insecure_port(f"[::]:{port}")
 
-    logger.info("gRPC server configured on port %d", port)
+    logger.info("gRPC server configured on port %d with logging interceptor", port)
     return server

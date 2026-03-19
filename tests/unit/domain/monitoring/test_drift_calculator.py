@@ -88,3 +88,38 @@ def test_invalid_test_type(calculator: DriftCalculator) -> None:
 def test_empty_data(calculator: DriftCalculator) -> None:
     with pytest.raises(ValueError, match="cannot be empty"):
         calculator.calculate_drift("f", [], [1])
+
+
+def test_chi2_test_no_drift(calculator: DriftCalculator) -> None:
+    rng = np.random.default_rng(42)
+    reference = rng.normal(10, 2, 500).tolist()
+    current = rng.normal(10, 2, 500).tolist()
+
+    report = calculator.calculate_drift(
+        feature_name="feat1",
+        reference_data=reference,
+        current_data=current,
+        test_type="chi2",
+    )
+
+    assert report.method == "chi2"
+    assert report.drift_detected is False
+    assert report.p_value > 0.05
+
+
+def test_chi2_test_with_drift(calculator: DriftCalculator) -> None:
+    rng = np.random.default_rng(42)
+    reference = rng.normal(0, 1, 500).tolist()
+    current = rng.normal(10, 1, 500).tolist()
+
+    report = calculator.calculate_drift(
+        feature_name="feat1",
+        reference_data=reference,
+        current_data=current,
+        test_type="chi2",
+    )
+
+    assert report.method == "chi2"
+    assert report.drift_detected is True
+    assert report.p_value < 0.05
+

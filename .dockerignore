@@ -1,24 +1,48 @@
+# Version control
+.git
+.github
+.gitignore
+
+# Python cache & build
 __pycache__
 *.pyc
 *.pyo
-*.pyd
-.Python
-env
-pip-log.txt
-pip-delete-this-directory.txt
-.tox
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.git
-.mypy_cache
-.pytest_cache
-.hypothesis
-local_models/
+*.egg-info
 .venv/
 .env
+
+# Testing
+.coverage
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.tox
+
+# IDE
+.vscode
+.idea
+*.swp
 .DS_Store
+
+# AI Agent files
+.claude/
+.gemini/
+.gitnexus/
+AGENTS.md
+
+# Frontend (built separately)
+frontend/
+docs/
+
+# Project docs
+*.md
+!README.md
+
+# DVC
+.dvc/cache
+.dvc/tmp
+
+# Docker context not needed
+*.tar
+*.log
+benchmarks/

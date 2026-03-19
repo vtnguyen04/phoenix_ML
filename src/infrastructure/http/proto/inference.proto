@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package phoenix.inference.v1;
 
-option python_generic_services = true;
+
 
 // Health check messages following gRPC health checking protocol.
 message HealthCheckRequest {
