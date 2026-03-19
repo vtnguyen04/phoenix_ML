@@ -9,6 +9,12 @@ service:
   type: ClusterIP
   port: 80
 
+grpc:
+  enabled: true
+  port: 50051
+  service:
+    type: ClusterIP
+
 ingress:
   enabled: true
   className: "nginx"
@@ -35,10 +41,19 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 
-env:
-  - name: DATABASE_URL
-    value: "postgresql+asyncpg://user:pass@phoenix-db:5432/phoenix"
-  - name: REDIS_URL
-    value: "redis://phoenix-redis:6379"
-  - name: KAFKA_URL
-    value: "phoenix-kafka:9092"
+pdb:
+  enabled: true
+  minAvailable: 1
+
+config:
+  appVersion: "0.1.0"
+  logLevel: "INFO"
+  batchMaxSize: "32"
+  batchMaxWaitMs: "10"
+  modelCacheDir: "/tmp/phoenix/model_cache"
+
+secrets:
+  databaseUrl: "postgresql+asyncpg://user:pass@phoenix-db:5432/phoenix"
+  redisUrl: "redis://phoenix-redis:6379"
+  kafkaUrl: "phoenix-kafka:9092"
+  mlflowTrackingUri: "http://phoenix-mlflow:5000"
