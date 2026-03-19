@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.commands.predict_command import PredictCommand
@@ -195,6 +195,77 @@ async def get_model_performance(
     log_repo = PostgresPredictionLogRepository(db)
     handler = GetModelPerformanceQueryHandler(log_repo, model_evaluator)
     return await handler.execute(GetModelPerformanceQuery(model_id=model_id))
+
+
+class RollbackRequest(BaseModel):
+    model_id: str
+
+
+class RegisterModelRequest(BaseModel):
+    model_id: str
+    version: str
+    uri: str
+    framework: str = "onnx"
+    stage: str = "challenger"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.post("/models/rollback")
+async def rollback_challengers(
+    request: RollbackRequest,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Archive all active challenger models, keep champion serving."""
+    model_repo = PostgresModelRegistry(db)
+    active = await model_repo.get_active_versions(request.model_id)
+
+    champion = None
+    archived: list[str] = []
+    for model in active:
+        role = model.metadata.get("role", "")
+        if role == "champion":
+            champion = model.version
+        elif role == "challenger":
+            await model_repo.update_stage(
+                request.model_id, model.version, "archived"
+            )
+            archived.append(model.version)
+
+    return {
+        "model_id": request.model_id,
+        "champion": champion,
+        "archived_challengers": archived,
+    }
+
+
+@router.post("/models/register")
+async def register_model(
+    request: RegisterModelRequest,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> dict[str, Any]:
+    """Register a new model version in the model registry."""
+    from src.domain.inference.entities.model import Model  # noqa: PLC0415
+
+    metadata = {**request.metadata, "role": request.stage, "metrics": request.metrics}
+    model = Model(
+        id=request.model_id,
+        version=request.version,
+        uri=request.uri,
+        framework=request.framework,
+        metadata=metadata,
+        is_active=True,
+    )
+
+    model_repo = PostgresModelRegistry(db)
+    await model_repo.save(model)
+
+    return {
+        "model_id": model.id,
+        "version": model.version,
+        "stage": request.stage,
+        "status": "registered",
+    }
 
 
 def _load_reference_distributions(project_root: Path) -> list[float]:
