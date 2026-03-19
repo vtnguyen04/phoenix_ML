@@ -10,6 +10,11 @@ from sqlalchemy import select
 
 from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.model import Model
+from src.domain.monitoring.services.alert_manager import (
+    AlertManager,
+    AlertRule,
+    AlertSeverity,
+)
 from src.infrastructure.http.container import (
     artifact_storage,
     batch_manager,
@@ -35,6 +40,34 @@ from src.infrastructure.persistence.postgres_model_registry import (
 )
 
 logger = logging.getLogger(__name__)
+
+# --- Self-Healing: Alert rules for Prometheus metrics ---
+alert_manager = AlertManager()
+alert_manager.register_rule(
+    AlertRule(
+        name="high_drift_score",
+        metric="drift_score",
+        threshold=0.3,
+        severity=AlertSeverity.CRITICAL,
+        comparison="gt",
+        cooldown_seconds=300.0,
+        description="Data drift score exceeds critical threshold",
+    )
+)
+alert_manager.register_rule(
+    AlertRule(
+        name="moderate_drift_score",
+        metric="drift_score",
+        threshold=0.1,
+        severity=AlertSeverity.WARNING,
+        comparison="gt",
+        cooldown_seconds=120.0,
+        description="Data drift score exceeds warning threshold",
+    )
+)
+
+# Monitoring interval (seconds) — Production: 30s to avoid false-positive flood
+MONITORING_INTERVAL_SECONDS = 30
 
 
 def _load_reference_data() -> list[float]:
@@ -95,7 +128,8 @@ async def run_monitoring_loop() -> None:
 
     while not shutdown_event.is_set():
         try:
-            for _ in range(50):
+            # Production monitoring interval
+            for _ in range(MONITORING_INTERVAL_SECONDS * 10):
                 if shutdown_event.is_set():
                     return
                 await asyncio.sleep(0.1)
@@ -103,7 +137,12 @@ async def run_monitoring_loop() -> None:
             async for db in get_db():
                 log_repo = PostgresPredictionLogRepository(db)
                 drift_repo = PostgresDriftReportRepository(db)
-                ms = MonitoringService(log_repo, drift_calculator, drift_repo)
+                ms = MonitoringService(
+                    log_repo,
+                    drift_calculator,
+                    drift_repo,
+                    alert_manager=alert_manager,
+                )
 
                 await ms.check_drift(
                     model_id="credit-risk",

@@ -1,4 +1,5 @@
 import logging
+import os
 
 from src.domain.monitoring.entities.drift_report import DriftReport
 from src.domain.monitoring.repositories.drift_report_repository import (
@@ -16,11 +17,16 @@ from src.infrastructure.monitoring.prometheus_metrics import (
 
 logger = logging.getLogger(__name__)
 
+# DAG name must match the Airflow DAG id
+_AIRFLOW_DAG_ID = "self_healing_pipeline"
+
 
 class MonitoringService:
     """
-    Application Service for Monitoring and Self-Healing.
-    Responsible for Drift Detection, Alerting, and Retraining Triggers.
+    Application Service for Monitoring — Detection Only.
+
+    Detects drift and triggers the Airflow Self-Healing Pipeline.
+    All remediation (alert, rollback, retrain, register) is handled by Airflow.
     """
 
     MIN_DATA_POINTS = 5
@@ -46,6 +52,8 @@ class MonitoringService:
     ) -> DriftReport:
         """
         Check for drift on a specific feature index against reference data.
+        If drift is detected, trigger the Airflow self-healing pipeline
+        (with deduplication — skips if a run is already active).
         """
         logs = await self._log_repo.get_recent_logs(model_id, limit=1000)
 
@@ -61,7 +69,9 @@ class MonitoringService:
                     continue
 
         if len(current_data) < self.MIN_DATA_POINTS:
-            raise ValueError(f"Not enough data points ({len(current_data)}) to calculate drift")
+            raise ValueError(
+                f"Not enough data points ({len(current_data)}) to calculate drift"
+            )
 
         feature_name = f"feature_{feature_index}"
         report = self._drift_calculator.calculate_drift(
@@ -73,15 +83,18 @@ class MonitoringService:
 
         await self._drift_report_repo.save(model_id, report)
 
-        DRIFT_SCORE.labels(model_id=model_id, feature_name=feature_name, method=report.method).set(
-            report.statistic
-        )
+        DRIFT_SCORE.labels(
+            model_id=model_id, feature_name=feature_name, method=report.method
+        ).set(report.statistic)
 
         if report.drift_detected:
-            DRIFT_DETECTED_COUNT.labels(model_id=model_id, feature_name=feature_name).inc()
+            DRIFT_DETECTED_COUNT.labels(
+                model_id=model_id, feature_name=feature_name
+            ).inc()
 
             logger.warning("🚨 DRIFT DETECTED: %s", report.recommendation)
 
+            # Evaluate alert rules locally (for Prometheus metrics)
             if self._alert_manager:
                 self._alert_manager.evaluate(
                     metric_name="drift_score",
@@ -89,32 +102,65 @@ class MonitoringService:
                     model_id=model_id,
                 )
 
-            await self._trigger_retrain(model_id, report)
+            # Trigger Airflow self-healing pipeline (with dedup)
+            await self._trigger_self_healing(model_id, report)
 
         return report
 
-    async def _trigger_retrain(self, model_id: str, report: DriftReport) -> None:
+    async def _trigger_self_healing(
+        self, model_id: str, report: DriftReport
+    ) -> None:
         """
-        Trigger the auto-retraining pipeline via Airflow REST API.
+        Trigger the Airflow Self-Healing Pipeline with deduplication.
+        Checks if a run is already active before triggering a new one.
         """
-        import os  # noqa: PLC0415
-
         import httpx  # noqa: PLC0415
-        
-        logger.info("🔄 Triggering Airflow Retrain DAG for model %s...", model_id)
-        
-        airflow_url = os.environ.get("AIRFLOW_API_URL", "http://airflow-webserver:8080")
-        
+
+        airflow_url = os.environ.get(
+            "AIRFLOW_API_URL", "http://airflow-webserver:8080"
+        )
+        auth = ("admin", "admin")
+
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
+                # --- Deduplication: check for active runs ---
+                check_resp = await client.get(
+                    f"{airflow_url}/api/v1/dags/{_AIRFLOW_DAG_ID}/dagRuns",
+                    params={"state": "running,queued", "limit": 1},
+                    auth=auth,
+                )
+                if check_resp.status_code == 200:  # noqa: PLR2004
+                    active_runs = check_resp.json().get("dag_runs", [])
+                    if active_runs:
+                        logger.info(
+                            "⏭️ Self-healing already running (run=%s) — skipping",
+                            active_runs[0].get("dag_run_id"),
+                        )
+                        return
+
+                # --- Trigger new run ---
                 resp = await client.post(
-                    f"{airflow_url}/api/v1/dags/retrain_pipeline/dagRuns",
-                    json={"conf": {"model_id": model_id, "reason": report.recommendation}},
-                    auth=("admin", "admin")
+                    f"{airflow_url}/api/v1/dags/{_AIRFLOW_DAG_ID}/dagRuns",
+                    json={
+                        "conf": {
+                            "model_id": model_id,
+                            "reason": report.recommendation,
+                            "drift_score": report.statistic,
+                        }
+                    },
+                    auth=auth,
                 )
                 if resp.status_code == 200:  # noqa: PLR2004
-                    logger.info("✅ Airflow DAG triggered successfully: %s", resp.json().get("dag_run_id"))  # noqa: E501
+                    dag_run_id = resp.json().get("dag_run_id")
+                    logger.info(
+                        "🌀 Self-healing pipeline triggered: %s",
+                        dag_run_id,
+                    )
                 else:
-                    logger.error("❌ Failed to trigger Airflow DAG: %s - %s", resp.status_code, resp.text)  # noqa: E501
+                    logger.error(
+                        "❌ Airflow trigger failed: %s - %s",
+                        resp.status_code,
+                        resp.text,
+                    )
         except Exception as e:
             logger.error("❌ Airflow connection error: %s", e)
