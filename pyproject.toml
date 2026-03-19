@@ -32,6 +32,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-grpc>=1.20.0",
     "httpx>=0.26.0",
     "dvc[s3]>=3.50.0",
+    "opentelemetry-instrumentation-fastapi>=0.41b0",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +46,7 @@ dev = [
     "isort>=5.13.0",
     "httpx>=0.26.0",
     "asgi-lifespan>=2.1.0",
+    "grpcio-tools>=1.60.0",
 ]
 
 [build-system]
@@ -54,6 +56,10 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+exclude = [
+    "src/infrastructure/http/proto/inference_pb2.py",
+    "src/infrastructure/http/proto/inference_pb2_grpc.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP", "PL"]
