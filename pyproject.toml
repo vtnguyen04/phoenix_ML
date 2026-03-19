@@ -59,6 +59,7 @@ target-version = "py311"
 exclude = [
     "src/infrastructure/http/proto/inference_pb2.py",
     "src/infrastructure/http/proto/inference_pb2_grpc.py",
+    "notebooks/",
 ]
 
 [tool.ruff.lint]
