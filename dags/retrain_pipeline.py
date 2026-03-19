@@ -13,7 +13,6 @@ Executes the full remediation lifecycle:
 Safety: max_active_runs=1 prevents concurrent pipeline executions.
 """
 
-import asyncio
 import json
 import logging
 import os
@@ -27,9 +26,16 @@ from airflow.operators.python import PythonOperator
 
 logger = logging.getLogger(__name__)
 
+# Postgres connection config (sync — uses psycopg2)
+_DB_CONN = os.environ.get(
+    "PHOENIX_DB_DSN",
+    "host=postgres port=5432 dbname=phoenix_ml user=phoenix password=phoenix_secret",
+)
+
 # ---------------------------------------------------------------------------
 # Task 1: Send Alert
 # ---------------------------------------------------------------------------
+
 
 def _send_alert(**kwargs: Any) -> None:
     """Dispatch drift alert via webhook (Slack-compatible payload)."""
@@ -65,62 +71,77 @@ def _send_alert(**kwargs: Any) -> None:
         except Exception as e:
             logger.warning("⚠️ Webhook failed (non-blocking): %s", e)
     else:
-        logger.info("📢 Alert (no webhook configured): %s — %s", model_id, reason)
+        logger.info(
+            "📢 Alert (no webhook configured): model=%s drift=%.4f reason=%s",
+            model_id,
+            drift_score,
+            reason,
+        )
 
 
 # ---------------------------------------------------------------------------
-# Task 2: Rollback Challenger
+# Task 2: Rollback Challenger (sync psycopg2)
 # ---------------------------------------------------------------------------
+
 
 def _rollback_challenger(**kwargs: Any) -> None:
     """Archive any active challenger models so champion keeps serving."""
-    from src.infrastructure.persistence.database import get_db
-    from src.infrastructure.persistence.postgres_model_registry import (
-        PostgresModelRegistry,
-    )
+    import psycopg2
 
     conf = kwargs.get("dag_run", {}).conf or {}
     model_id = conf.get("model_id", "credit-risk")
 
-    async def _async_rollback() -> None:
-        async for db in get_db():
-            repo = PostgresModelRegistry(db)
-            models = await repo.get_active_versions(model_id)
+    conn = psycopg2.connect(_DB_CONN)
+    try:
+        cur = conn.cursor()
 
-            champion = None
-            challengers = []
-            for m in models:
-                role = m.metadata.get("role", "")
-                if role == "champion":
-                    champion = m
-                elif role == "challenger":
-                    challengers.append(m)
+        # Find active models and their roles
+        cur.execute(
+            "SELECT version, metadata_json FROM models WHERE id = %s AND is_active = true",
+            (model_id,),
+        )
+        rows = cur.fetchall()
 
-            if not champion:
-                logger.warning("⚠️ No champion for %s — skip rollback", model_id)
-                return
+        champion = None
+        challengers = []
+        for version, metadata in rows:
+            meta = metadata if isinstance(metadata, dict) else json.loads(metadata or "{}")
+            role = meta.get("role", "")
+            if role == "champion":
+                champion = version
+            elif role == "challenger":
+                challengers.append(version)
 
-            if not challengers:
-                logger.info("ℹ️ No challengers to rollback for %s", model_id)
-                return
+        if not champion:
+            logger.warning("⚠️ No champion for %s — skip rollback", model_id)
+            return
 
-            for c in challengers:
-                await repo.update_stage(model_id, c.version, "archived")
-                logger.info(
-                    "⏪ ROLLBACK: %s challenger %s → archived, champion %s active",
-                    model_id,
-                    c.version,
-                    champion.version,
-                )
-            await db.commit()
-            break
+        if not challengers:
+            logger.info("ℹ️ No challengers to rollback for %s", model_id)
+            return
 
-    asyncio.run(_async_rollback())
+        for c_version in challengers:
+            cur.execute(
+                "UPDATE models SET is_active = false, stage = 'archived'"
+                " WHERE id = %s AND version = %s",
+                (model_id, c_version),
+            )
+            logger.info(
+                "⏪ ROLLBACK: %s challenger %s → archived, champion %s active",
+                model_id,
+                c_version,
+                champion,
+            )
+
+        conn.commit()
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
 # Task 3: Train New Model
 # ---------------------------------------------------------------------------
+
 
 def _train_model(**kwargs: Any) -> None:
     """Train a new ML model version and export as ONNX."""
@@ -149,6 +170,7 @@ def _train_model(**kwargs: Any) -> None:
 # ---------------------------------------------------------------------------
 # Task 4: Log to MLflow
 # ---------------------------------------------------------------------------
+
 
 def _log_mlflow(**kwargs: Any) -> None:
     """Send training metrics to MLflow Tracking Server."""
@@ -180,16 +202,13 @@ def _log_mlflow(**kwargs: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Task 5: Register Challenger in Postgres
+# Task 5: Register Challenger in Postgres (sync psycopg2)
 # ---------------------------------------------------------------------------
+
 
 def _register_model(**kwargs: Any) -> None:
     """Register the newly trained model as a challenger in Postgres."""
-    from src.domain.inference.entities.model import Model
-    from src.infrastructure.persistence.database import get_db
-    from src.infrastructure.persistence.postgres_model_registry import (
-        PostgresModelRegistry,
-    )
+    import psycopg2
 
     ti = kwargs["ti"]
     version = ti.xcom_pull(task_ids="train_model", key="version")
@@ -199,26 +218,39 @@ def _register_model(**kwargs: Any) -> None:
     with open(metrics_path) as f:
         metrics = json.load(f)
 
-    async def _async_register() -> None:
-        async for db in get_db():
-            repo = PostgresModelRegistry(db)
-            new_model = Model(
-                id="credit-risk",
-                version=version,
-                uri=f"local:///{output_path}",
-                framework="onnx",
-                metadata={"metrics": metrics, "role": "challenger"},
-                created_at=datetime.now(UTC),
-                is_active=True,
+    conn = psycopg2.connect(_DB_CONN)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO models (
+                id, version, uri, framework, stage,
+                metadata_json, metrics_json, created_at, is_active
             )
-            await repo.save(new_model)
-            await db.commit()
-            logger.info(
-                "🗄️ Registered %s as challenger in Postgres", version
-            )
-            break
-
-    asyncio.run(_async_register())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id, version) DO UPDATE
+            SET uri = EXCLUDED.uri,
+                stage = EXCLUDED.stage,
+                metadata_json = EXCLUDED.metadata_json,
+                metrics_json = EXCLUDED.metrics_json,
+                is_active = EXCLUDED.is_active
+            """,
+            (
+                "credit-risk",
+                version,
+                f"local:///{output_path}",
+                "onnx",
+                "challenger",
+                json.dumps({"role": "challenger"}),
+                json.dumps(metrics),
+                datetime.now(UTC),
+                True,
+            ),
+        )
+        conn.commit()
+        logger.info("🗄️ Registered %s as challenger in Postgres", version)
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------

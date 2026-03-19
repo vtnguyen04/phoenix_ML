@@ -15,7 +15,8 @@ x-airflow-common:
     # Project specific env vars
     API_URL: http://api:8000
     MLFLOW_TRACKING_URI: http://mlflow:5000
-    DATABASE_URL: postgresql+asyncpg://user:pass@db:5432/phoenix
+    DATABASE_URL: postgresql+asyncpg://user:pass@phoenix-postgres:5432/phoenix
+    PHOENIX_DB_DSN: "host=phoenix-postgres port=5432 dbname=phoenix user=user password=pass"
     PYTHONPATH: /opt/airflow
   volumes:
     - ./dags:/opt/airflow/dags
