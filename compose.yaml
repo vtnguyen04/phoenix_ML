@@ -129,18 +129,17 @@ services:
 
   # ─── MLflow (Model Registry + Experiment Tracking) ─────────────
   mlflow:
-    build:
-      context: .
-      dockerfile: Dockerfile.mlflow
+    image: ghcr.io/mlflow/mlflow:v2.21.3
     container_name: phoenix-mlflow
     ports:
       - "5000:5000"
     command: >
+      bash -c "pip install --quiet psycopg2-binary &&
       mlflow server
       --host 0.0.0.0
       --port 5000
       --backend-store-uri postgresql://user:pass@db:5432/phoenix
-      --default-artifact-root /mlflow/artifacts
+      --default-artifact-root /mlflow/artifacts"
     depends_on:
       db:
         condition: service_healthy
