@@ -29,6 +29,7 @@ MANIFEST
 # ========================================
 .venv/
 .env
+.env.docker
 env/
 venv/
 
@@ -59,6 +60,7 @@ nosetests.xml
 # Project Data & Models (tracked by DVC)
 # ========================================
 data/
+!data/*.json
 models/
 *.db
 *.sqlite3
