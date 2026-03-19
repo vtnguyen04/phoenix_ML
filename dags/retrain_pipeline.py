@@ -5,12 +5,14 @@ Self-Healing Pipeline DAG — Production Grade.
 Triggered by FastAPI MonitoringService when drift is detected.
 Executes the full remediation lifecycle:
   1. send_alert      — Notify via webhook
-  2. rollback        — Archive active challengers
+  2. rollback        — Archive challengers via API
   3. train_model     — Train a new model version
-  4. log_mlflow      — Log metrics/params to MLflow
-  5. register_model  — Register new challenger in Postgres
+  4. log_mlflow      — Log metrics to MLflow
+  5. register_model  — Register challenger via API
 
-Safety: max_active_runs=1 prevents concurrent pipeline executions.
+All persistence operations go through the FastAPI REST API,
+which uses the repository pattern internally. The DAG only
+orchestrates HTTP calls — no direct database access.
 """
 
 import json
@@ -26,7 +28,7 @@ from airflow.operators.python import PythonOperator
 
 logger = logging.getLogger(__name__)
 
-_DB_CONN = os.environ.get("PHOENIX_DB_DSN", "")
+_API_URL = os.environ.get("API_URL", "http://api:8000")
 
 
 def _send_alert(**kwargs: Any) -> None:
@@ -38,14 +40,14 @@ def _send_alert(**kwargs: Any) -> None:
 
     webhook_url = os.environ.get("ALERT_WEBHOOK_URL", "")
     payload = {
-        "text": f"🚨 *DRIFT ALERT* — model `{model_id}`",
+        "text": f"*DRIFT ALERT* — model `{model_id}`",
         "blocks": [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
                     "text": (
-                        f"🚨 *Self-Healing Pipeline Triggered*\n"
+                        f"*Self-Healing Pipeline Triggered*\n"
                         f"Model: `{model_id}`\n"
                         f"Drift Score: `{drift_score:.4f}`\n"
                         f"Reason: {reason}\n"
@@ -72,59 +74,22 @@ def _send_alert(**kwargs: Any) -> None:
 
 
 def _rollback_challenger(**kwargs: Any) -> None:
-    """Archive any active challenger models so champion keeps serving."""
-    import psycopg2
-
+    """Archive challengers via FastAPI — delegates to PostgresModelRegistry."""
     conf = kwargs.get("dag_run", {}).conf or {}
     model_id = conf.get("model_id", "credit-risk")
 
-    conn = psycopg2.connect(_DB_CONN)
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT version, metadata_json FROM models "
-            "WHERE id = %s AND is_active = true",
-            (model_id,),
-        )
-        rows = cur.fetchall()
-
-        champion = None
-        challengers = []
-        for version, metadata in rows:
-            meta = (
-                metadata
-                if isinstance(metadata, dict)
-                else json.loads(metadata or "{}")
-            )
-            role = meta.get("role", "")
-            if role == "champion":
-                champion = version
-            elif role == "challenger":
-                challengers.append(version)
-
-        if not champion:
-            logger.warning("No champion for %s — skip rollback", model_id)
-            return
-
-        if not challengers:
-            logger.info("No challengers to rollback for %s", model_id)
-            return
-
-        for c_version in challengers:
-            cur.execute(
-                "UPDATE models SET is_active = false, stage = 'archived' "
-                "WHERE id = %s AND version = %s",
-                (model_id, c_version),
-            )
-            logger.info(
-                "ROLLBACK: %s challenger %s archived, champion %s active",
-                model_id,
-                c_version,
-                champion,
-            )
-        conn.commit()
-    finally:
-        conn.close()
+    resp = httpx.post(
+        f"{_API_URL}/models/rollback",
+        json={"model_id": model_id},
+        timeout=10.0,
+    )
+    resp.raise_for_status()
+    result = resp.json()
+    logger.info(
+        "Rollback complete: champion=%s archived=%s",
+        result.get("champion"),
+        result.get("archived_challengers"),
+    )
 
 
 def _train_model(**kwargs: Any) -> None:
@@ -181,9 +146,7 @@ def _log_mlflow(**kwargs: Any) -> None:
 
 
 def _register_model(**kwargs: Any) -> None:
-    """Register the newly trained model as a challenger in Postgres."""
-    import psycopg2
-
+    """Register new challenger via FastAPI — delegates to PostgresModelRegistry."""
     ti = kwargs["ti"]
     version = ti.xcom_pull(task_ids="train_model", key="version")
     output_path = ti.xcom_pull(task_ids="train_model", key="output_path")
@@ -192,39 +155,21 @@ def _register_model(**kwargs: Any) -> None:
     with open(metrics_path) as f:
         metrics = json.load(f)
 
-    conn = psycopg2.connect(_DB_CONN)
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO models (
-                id, version, uri, framework, stage,
-                metadata_json, metrics_json, created_at, is_active
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id, version) DO UPDATE
-            SET uri = EXCLUDED.uri,
-                stage = EXCLUDED.stage,
-                metadata_json = EXCLUDED.metadata_json,
-                metrics_json = EXCLUDED.metrics_json,
-                is_active = EXCLUDED.is_active
-            """,
-            (
-                "credit-risk",
-                version,
-                f"local:///{output_path}",
-                "onnx",
-                "challenger",
-                json.dumps({"role": "challenger"}),
-                json.dumps(metrics),
-                datetime.now(UTC),
-                True,
-            ),
-        )
-        conn.commit()
-        logger.info("Registered %s as challenger in Postgres", version)
-    finally:
-        conn.close()
+    resp = httpx.post(
+        f"{_API_URL}/models/register",
+        json={
+            "model_id": "credit-risk",
+            "version": version,
+            "uri": f"local:///{output_path}",
+            "framework": "onnx",
+            "stage": "challenger",
+            "metrics": metrics,
+        },
+        timeout=10.0,
+    )
+    resp.raise_for_status()
+    result = resp.json()
+    logger.info("Registered %s as %s", result["version"], result["stage"])
 
 
 with DAG(

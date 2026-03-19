@@ -16,7 +16,6 @@ x-airflow-common:
     API_URL: http://api:8000
     MLFLOW_TRACKING_URI: http://mlflow:5000
     DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@phoenix-postgres:5432/${POSTGRES_DB}
-    PHOENIX_DB_DSN: "host=phoenix-postgres port=5432 dbname=${POSTGRES_DB} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD}"
     ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
     PYTHONPATH: /opt/airflow
   volumes:
