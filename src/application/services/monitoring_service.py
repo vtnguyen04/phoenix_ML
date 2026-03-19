@@ -1,7 +1,5 @@
 import logging
 
-from src.application.commands.trigger_retrain_command import TriggerRetrainCommand
-from src.application.handlers.retrain_handler import RetrainHandler
 from src.domain.monitoring.entities.drift_report import DriftReport
 from src.domain.monitoring.repositories.drift_report_repository import (
     DriftReportRepository,
@@ -32,13 +30,11 @@ class MonitoringService:
         log_repo: PredictionLogRepository,
         drift_calculator: DriftCalculator,
         drift_report_repo: DriftReportRepository,
-        retrain_handler: RetrainHandler,
         alert_manager: AlertManager | None = None,
     ) -> None:
         self._log_repo = log_repo
         self._drift_calculator = drift_calculator
         self._drift_report_repo = drift_report_repo
-        self._retrain_handler = retrain_handler
         self._alert_manager = alert_manager
 
     async def check_drift(
@@ -99,8 +95,26 @@ class MonitoringService:
 
     async def _trigger_retrain(self, model_id: str, report: DriftReport) -> None:
         """
-        Trigger the auto-retraining pipeline via RetrainHandler.
+        Trigger the auto-retraining pipeline via Airflow REST API.
         """
-        logger.info("🔄 Triggering Retrain Handler for model %s...", model_id)
-        command = TriggerRetrainCommand(model_id=model_id, reason=report.recommendation)
-        await self._retrain_handler.execute(command)
+        import os  # noqa: PLC0415
+
+        import httpx  # noqa: PLC0415
+        
+        logger.info("🔄 Triggering Airflow Retrain DAG for model %s...", model_id)
+        
+        airflow_url = os.environ.get("AIRFLOW_API_URL", "http://airflow-webserver:8080")
+        
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(
+                    f"{airflow_url}/api/v1/dags/retrain_pipeline/dagRuns",
+                    json={"conf": {"model_id": model_id, "reason": report.recommendation}},
+                    auth=("admin", "admin")
+                )
+                if resp.status_code == 200:  # noqa: PLR2004
+                    logger.info("✅ Airflow DAG triggered successfully: %s", resp.json().get("dag_run_id"))  # noqa: E501
+                else:
+                    logger.error("❌ Failed to trigger Airflow DAG: %s - %s", resp.status_code, resp.text)  # noqa: E501
+        except Exception as e:
+            logger.error("❌ Airflow connection error: %s", e)

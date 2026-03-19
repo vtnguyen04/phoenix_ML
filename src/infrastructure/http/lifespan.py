@@ -8,7 +8,6 @@ from typing import Any, cast
 from fastapi import FastAPI
 from sqlalchemy import select
 
-from src.application.handlers.retrain_handler import RetrainHandler
 from src.application.services.monitoring_service import MonitoringService
 from src.domain.inference.entities.model import Model
 from src.infrastructure.http.container import (
@@ -20,7 +19,6 @@ from src.infrastructure.http.container import (
     find_project_root,
     inference_engine,
     kafka_producer,
-    model_evaluator,
     shutdown_event,
 )
 from src.infrastructure.http.grpc_server import create_grpc_server
@@ -105,9 +103,7 @@ async def run_monitoring_loop() -> None:
             async for db in get_db():
                 log_repo = PostgresPredictionLogRepository(db)
                 drift_repo = PostgresDriftReportRepository(db)
-                model_repo = PostgresModelRegistry(db)
-                rh = RetrainHandler(find_project_root(), model_repo, model_evaluator)
-                ms = MonitoringService(log_repo, drift_calculator, drift_repo, rh)
+                ms = MonitoringService(log_repo, drift_calculator, drift_repo)
 
                 await ms.check_drift(
                     model_id="credit-risk",
