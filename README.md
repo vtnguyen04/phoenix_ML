@@ -89,18 +89,25 @@ graph TD
     Train["🏋️ Model Training<br/>DVC Pipeline"] --> Deploy["📦 Deployment<br/>ONNX + Docker"]
     Deploy --> Serve["⚡ Real-time Inference<br/>FastAPI + Routing"]
     Serve --> Monitor["📊 Monitoring<br/>Drift Detection"]
-    Monitor --> Decision{"Drift<br/>Detected?"}
+    Monitor --> Anomaly["🔍 Anomaly Detection<br/>Prediction · Latency · Errors"]
+    Anomaly --> Decision{"Drift<br/>Detected?"}
     Decision -->|No| Serve
-    Decision -->|Yes| Airflow["🌀 Apache Airflow<br/>Retrain Pipeline DAG"]
+    Decision -->|Yes| Alert["🚨 Alert Manager<br/>Webhook Notify"]
+    Alert --> Airflow["🌀 Apache Airflow<br/>Retrain Pipeline DAG"]
+    Alert --> Rollback["⏪ Auto-Rollback<br/>Champion Restore"]
+    Rollback --> Serve
     Airflow --> MLflow["📈 MLflow<br/>Log Metrics + Artifacts"]
-    MLflow --> Registry["🗄️ Model Registry<br/>PostgreSQL"]
+    MLflow --> Registry["🗄️ Model Registry<br/>PostgreSQL Challenger"]
     Registry --> Deploy
 
     style Train fill:#667eea,stroke:#764ba2,color:#fff
     style Deploy fill:#764ba2,stroke:#667eea,color:#fff
     style Serve fill:#f093fb,stroke:#f5576c,color:#fff
     style Monitor fill:#4facfe,stroke:#00f2fe,color:#fff
+    style Anomaly fill:#fa709a,stroke:#fee140,color:#fff
     style Decision fill:#ffecd2,stroke:#fcb69f,color:#000
+    style Alert fill:#f5576c,stroke:#ff6b6b,color:#fff
+    style Rollback fill:#ff9a9e,stroke:#fad0c4,color:#000
     style Airflow fill:#017cee,stroke:#00c7b7,color:#fff
     style MLflow fill:#43e97b,stroke:#38f9d7,color:#000
     style Registry fill:#fa709a,stroke:#fee140,color:#fff
