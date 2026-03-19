@@ -39,6 +39,9 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy source code
 COPY src /app/src
 
+# Create writable models directory for auto-retrain
+RUN mkdir -p /app/models && chown -R phoenix:phoenix /app/models
+
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

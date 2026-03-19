@@ -129,7 +129,9 @@ services:
 
   # ─── MLflow (Model Registry + Experiment Tracking) ─────────────
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.21.3
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
     container_name: phoenix-mlflow
     ports:
       - "5000:5000"
