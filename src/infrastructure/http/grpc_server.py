@@ -93,7 +93,8 @@ class InferenceServicer:
             response.prediction_id = str(uuid.uuid4())
             response.model_id = prediction.model_id
             response.version = prediction.model_version
-            response.result[:] = prediction.result
+            raw = prediction.result
+            response.result = [float(raw)] if not isinstance(raw, list) else [float(v) for v in raw]
             response.confidence = prediction.confidence.value
             response.latency_ms = round(prediction.latency_ms, 2)
             return response
