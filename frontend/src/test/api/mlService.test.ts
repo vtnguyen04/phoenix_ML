@@ -89,4 +89,20 @@ describe('mlService', () => {
       expect(result.total_predictions).toBe(100);
     });
   });
+
+  describe('getModels', () => {
+    it('fetches from /api/models', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([
+          { model_id: 'credit-risk', version: 'v1' },
+          { model_id: 'fraud-detection', version: 'v1' },
+        ]),
+      });
+      const result = await mlService.getModels();
+      expect(mockFetch).toHaveBeenCalledWith('/api/models');
+      expect(result).toHaveLength(2);
+      expect(result[0].model_id).toBe('credit-risk');
+    });
+  });
 });

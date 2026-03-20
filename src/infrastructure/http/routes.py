@@ -188,6 +188,24 @@ async def check_drift(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+@router.get("/models")
+async def list_models(
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> list[dict[str, Any]]:
+    """List all registered models."""
+    model_repo = PostgresModelRegistry(db)
+    models = await model_repo.list_all()
+    return [
+        {
+            "model_id": m.id,
+            "version": m.version,
+            "status": m.stage.value,
+            "metadata": m.metadata,
+        }
+        for m in models
+    ]
+
+
 @router.get("/models/{model_id}")
 async def get_model(
     model_id: str,

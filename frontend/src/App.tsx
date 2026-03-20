@@ -11,16 +11,11 @@ import { DriftPanel } from './components/dashboard/DriftPanel';
 import { ServicesStatus } from './components/dashboard/ServicesStatus';
 import './index.css';
 
-const AVAILABLE_MODELS = [
-  { id: 'credit-risk', label: 'Credit Risk (Classification)' },
-  { id: 'fraud-detection', label: 'Fraud Detection (Anomaly)' },
-  { id: 'house-price', label: 'House Price (Regression)' },
-];
-
 const REFRESH_INTERVAL = 15_000;
 
 export default function App() {
-  const [selectedModelId, setSelectedModelId] = useState<string>(AVAILABLE_MODELS[0].id);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>('');
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [model, setModel] = useState<ModelInfo | null>(null);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
@@ -31,8 +26,21 @@ export default function App() {
   const [driftError, setDriftError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch available models on mount
+  useEffect(() => {
+    mlService.getModels().then((models) => {
+      setAvailableModels(models);
+      if (models.length > 0 && !selectedModelId) {
+        setSelectedModelId(models[0].model_id);
+      }
+    }).catch(() => {
+      setError('Cannot fetch model list');
+    });
+  }, []);
+
   // Clear state when switching models
   useEffect(() => {
+    if (!selectedModelId) return;
     setModel(null);
     setPrediction(null);
     setDrift(null);
@@ -117,8 +125,8 @@ export default function App() {
               onChange={(e) => setSelectedModelId(e.target.value)}
               style={{ padding: '8px', borderRadius: '4px', background: '#1a1f36', color: '#fff', border: '1px solid #2a2f4c' }}
             >
-              {AVAILABLE_MODELS.map(m => (
-                <option key={m.id} value={m.id}>{m.label}</option>
+              {availableModels.map(m => (
+                <option key={m.model_id} value={m.model_id}>{m.model_id}</option>
               ))}
             </select>
           </div>

@@ -35,3 +35,6 @@ class InMemoryModelRepository(ModelRepository):
         key = f"{model_id}:{version}"
         if key in self._models:
             self._models[key].metadata["role"] = stage
+
+    async def list_all(self) -> list[Model]:
+        return list(self._models.values())
