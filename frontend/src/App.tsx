@@ -11,10 +11,16 @@ import { DriftPanel } from './components/dashboard/DriftPanel';
 import { ServicesStatus } from './components/dashboard/ServicesStatus';
 import './index.css';
 
-const MODEL_ID = 'credit-risk';
+const AVAILABLE_MODELS = [
+  { id: 'credit-risk', label: 'Credit Risk (Classification)' },
+  { id: 'fraud-detection', label: 'Fraud Detection (Anomaly)' },
+  { id: 'house-price', label: 'House Price (Regression)' },
+];
+
 const REFRESH_INTERVAL = 15_000;
 
 export default function App() {
+  const [selectedModelId, setSelectedModelId] = useState<string>(AVAILABLE_MODELS[0].id);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [model, setModel] = useState<ModelInfo | null>(null);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
@@ -25,22 +31,32 @@ export default function App() {
   const [driftError, setDriftError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Clear state when switching models
+  useEffect(() => {
+    setModel(null);
+    setPrediction(null);
+    setDrift(null);
+    setDriftReports([]);
+    setError(null);
+    setDriftError(null);
+  }, [selectedModelId]);
+
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         const [h, m] = await Promise.all([
           mlService.getHealth(),
-          mlService.getModel(MODEL_ID),
+          mlService.getModel(selectedModelId),
         ]);
         setHealth(h);
         setModel(m);
         setError(null);
       } catch {
-        setError('Cannot connect to API');
+        setError(`Cannot fetch data for ${selectedModelId}`);
       }
 
       try {
-        const reports = await mlService.getDriftReports(MODEL_ID);
+        const reports = await mlService.getDriftReports(selectedModelId);
         setDriftReports(reports);
         if (reports.length > 0) {
           setDrift(reports[0]);
@@ -53,26 +69,26 @@ export default function App() {
     fetchInitialData();
     const interval = setInterval(fetchInitialData, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedModelId]);
 
   const handlePredict = useCallback(async (entityId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await mlService.predict(MODEL_ID, entityId);
+      const res = await mlService.predict(selectedModelId, entityId);
       setPrediction(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Prediction failed');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedModelId]);
 
   const handleScanDrift = useCallback(async () => {
     setDriftLoading(true);
     setDriftError(null);
     try {
-      const res = await mlService.getDrift(MODEL_ID);
+      const res = await mlService.getDrift(selectedModelId);
       setDrift(res);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Drift scan failed';
@@ -84,7 +100,7 @@ export default function App() {
     } finally {
       setDriftLoading(false);
     }
-  }, []);
+  }, [selectedModelId]);
 
   const metrics = model?.metadata.metrics;
 
@@ -94,7 +110,18 @@ export default function App() {
 
       <main className="main-content">
         <header className="main-header">
-          <h1>Production Dashboard</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <h1>Production Dashboard</h1>
+            <select 
+              value={selectedModelId} 
+              onChange={(e) => setSelectedModelId(e.target.value)}
+              style={{ padding: '8px', borderRadius: '4px', background: '#1a1f36', color: '#fff', border: '1px solid #2a2f4c' }}
+            >
+              {AVAILABLE_MODELS.map(m => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+          </div>
           <div className="header-badges">
             {error && <span className="badge badge-danger">{error}</span>}
             <span className="badge badge-info">Auto-refresh: {REFRESH_INTERVAL / 1000}s</span>
