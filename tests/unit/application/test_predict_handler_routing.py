@@ -7,6 +7,7 @@ from src.application.handlers.predict_handler import PredictHandler
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.inference.services.inference_service import InferenceService
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
+from src.domain.shared.event_bus import DomainEventBus
 
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def mock_inference_service() -> AsyncMock:
 
 @pytest.mark.asyncio
 async def test_predict_handler_routing_logic(mock_inference_service: AsyncMock) -> None:
-    handler = PredictHandler(mock_inference_service)
+    handler = PredictHandler(mock_inference_service, DomainEventBus())
 
     # Mock Inference Service result
     mock_inference_service.predict.return_value = Prediction(
@@ -42,7 +43,7 @@ async def test_predict_handler_routing_logic(mock_inference_service: AsyncMock) 
 async def test_predict_handler_routing_no_candidates(
     mock_inference_service: AsyncMock,
 ) -> None:
-    handler = PredictHandler(mock_inference_service)
+    handler = PredictHandler(mock_inference_service, DomainEventBus())
 
     # Mock Inference Service raising error
     mock_inference_service.predict.side_effect = ValueError("No active versions found")

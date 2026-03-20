@@ -32,7 +32,7 @@ get_settings.cache_clear()
 @pytest.fixture(autouse=True)
 def disable_grpc_for_tests() -> Generator[None, None, None]:
     """Prevent gRPC from spawning ThreadPoolExecutors that hang pytest teardown."""
-    with patch("src.infrastructure.http.lifespan.create_grpc_server", return_value=None):
+    with patch("src.infrastructure.bootstrap.lifespan.create_grpc_server", return_value=None):
         yield
 
 

@@ -35,6 +35,8 @@ class _MlflowClient(Protocol):
 
     def search_model_versions(self, filter_string: str) -> list[_ModelVersion]: ...
 
+    def search_registered_models(self) -> list[Any]: ...
+
     def transition_model_version_stage(self, *, name: str, version: str, stage: str) -> None: ...
 
 
@@ -127,6 +129,15 @@ class MlflowModelRegistry(ModelRepository):
             mv_version = mv.version
 
         client.transition_model_version_stage(name=model_id, version=mv_version, stage=mapped)
+
+    async def list_all(self) -> list[Model]:
+        client = self._client()
+        models: list[Model] = []
+        for rm in client.search_registered_models():
+            for mv in client.search_model_versions(f"name='{rm.name}'"):
+                if mv.current_stage.lower() != "archived":
+                    models.append(self._to_entity(client, mv))
+        return models
 
     @staticmethod
     def _require_local_path(uri: str) -> Path:

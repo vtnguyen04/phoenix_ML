@@ -6,21 +6,26 @@ from src.domain.inference.services.inference_service import (
     InferenceService,
     PredictionRequest,
 )
-from src.infrastructure.monitoring.prometheus_metrics import (
-    INFERENCE_LATENCY,
-    MODEL_CONFIDENCE,
-    PREDICTION_COUNT,
-)
+from src.domain.shared.domain_events import PredictionCompleted
+from src.domain.shared.event_bus import DomainEventBus
 
 
 class PredictHandler:
     """
     Application Service that handles prediction commands.
     Delegates orchestration to InferenceService.
+
+    Uses Observer Pattern: emits PredictionCompleted event.
+    Subscribers (MetricsPublisher, KafkaProducer, etc.) react independently.
     """
 
-    def __init__(self, inference_service: InferenceService) -> None:
+    def __init__(
+        self,
+        inference_service: InferenceService,
+        event_bus: DomainEventBus,
+    ) -> None:
         self._inference_service = inference_service
+        self._event_bus = event_bus
 
     async def execute(self, command: PredictCommand) -> Prediction:
         start_time = time.time()
@@ -34,28 +39,23 @@ class PredictHandler:
             )
             prediction = await self._inference_service.predict(request)
 
-            # Record Metrics
-            latency = time.time() - start_time
-            INFERENCE_LATENCY.labels(
-                model_id=prediction.model_id, version=prediction.model_version
-            ).observe(latency)
-
-            PREDICTION_COUNT.labels(
+            # Emit domain event — subscribers handle metrics, logging, Kafka, etc.
+            self._event_bus.publish(PredictionCompleted(
                 model_id=prediction.model_id,
                 version=prediction.model_version,
+                latency=time.time() - start_time,
+                confidence=prediction.confidence.value,
                 status="success",
-            ).inc()
-
-            MODEL_CONFIDENCE.labels(
-                model_id=prediction.model_id, version=prediction.model_version
-            ).observe(prediction.confidence.value)
+            ))
 
             return prediction
 
         except Exception as e:
-            PREDICTION_COUNT.labels(
+            self._event_bus.publish(PredictionCompleted(
                 model_id=command.model_id,
                 version=command.model_version or "unknown",
+                latency=time.time() - start_time,
+                confidence=0.0,
                 status="error",
-            ).inc()
+            ))
             raise e

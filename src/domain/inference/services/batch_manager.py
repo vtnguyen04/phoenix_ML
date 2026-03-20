@@ -91,7 +91,7 @@ class BatchManager:
 
                     try:
                         predictions = await self._engine.batch_predict(model, padded_features_list)
-                        
+
                         predictions = predictions[:len(features_list)]
 
                         for i, prediction in enumerate(predictions):
@@ -138,15 +138,15 @@ class BatchManager:
         current_size = len(features_list)
         if current_size == 0:
             return features_list
-            
+
         # Find next power of 2
         power = 1
         while power < current_size:
             power *= 2
-            
+
         if power == current_size:
             return features_list
-            
+
         # Pad with copies of the last element
         padding_size = power - current_size
         padding = [features_list[-1]] * padding_size

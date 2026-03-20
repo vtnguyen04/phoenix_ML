@@ -37,3 +37,17 @@ MODEL_F1_SCORE = Gauge("model_f1_score", "F1 Score of the model", ["model_id", "
 MODEL_PRECISION = Gauge("model_precision", "Precision of the model", ["model_id", "version"])
 
 MODEL_RECALL = Gauge("model_recall", "Recall of the model", ["model_id", "version"])
+
+# ── Regression metrics ─────────────────────────────────────────────
+MODEL_RMSE = Gauge("model_rmse", "Root-mean-square error (regression)", ["model_id", "version"])
+
+MODEL_MAE = Gauge("model_mae", "Mean absolute error (regression)", ["model_id", "version"])
+
+MODEL_R2 = Gauge("model_r2_score", "R-squared score (regression)", ["model_id", "version"])
+
+# ── Task-agnostic primary metric ───────────────────────────────────
+MODEL_PRIMARY_METRIC = Gauge(
+    "model_primary_metric",
+    "Primary evaluation metric value (metric_name label indicates the actual metric)",
+    ["model_id", "version", "metric_name"],
+)

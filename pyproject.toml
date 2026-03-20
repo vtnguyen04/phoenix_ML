@@ -91,8 +91,8 @@ src = ["py.typed"]
 line-length = 100
 target-version = "py311"
 exclude = [
-    "src/infrastructure/http/proto/inference_pb2.py",
-    "src/infrastructure/http/proto/inference_pb2_grpc.py",
+    "src/infrastructure/grpc/proto/inference_pb2.py",
+    "src/infrastructure/grpc/proto/inference_pb2_grpc.py",
     "notebooks/",
 ]
 
@@ -103,6 +103,7 @@ ignore = []
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "PLC0415"]
 "scripts/*" = ["PLR2004", "PLC0415"]
+"src/infrastructure/bootstrap/lifespan.py" = ["PLR0912"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -121,7 +122,7 @@ ignore_missing_imports = true
 explicit_package_bases = true
 disallow_untyped_defs = true
 exclude = [
-    "src/infrastructure/http/proto/.*",
+    "src/infrastructure/grpc/proto/.*",
     "benchmarks/.*",
 ]
 

@@ -27,3 +27,7 @@ feature_names:
 metadata:
   role: champion
   dataset: synthetic-fraud
+
+monitoring:
+  drift_test: psi               # PSI: population stability for transaction features
+  primary_metric: accuracy      # Classification primary metric

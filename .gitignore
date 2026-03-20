@@ -98,3 +98,5 @@ pytest_final.log
 # Docker
 # ========================================
 *.tar
+.env.backup
+.env.local

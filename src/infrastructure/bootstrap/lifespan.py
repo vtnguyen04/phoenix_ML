@@ -16,11 +16,12 @@ from src.domain.monitoring.services.alert_manager import (
     AlertRule,
     AlertSeverity,
 )
-from src.infrastructure.http.container import (
+from src.infrastructure.bootstrap.container import (
     artifact_storage,
     batch_manager,
     drift_calculator,
     ensure_model_exists,
+    event_bus,
     feature_store,
     find_project_root,
     inference_engine,
@@ -28,11 +29,11 @@ from src.infrastructure.http.container import (
     plugin_registry,
     shutdown_event,
 )
-from src.infrastructure.http.grpc_server import create_grpc_server
-from src.infrastructure.http.model_config_loader import (
+from src.infrastructure.bootstrap.model_config_loader import (
     load_all_model_configs,
     load_features_from_metrics,
 )
+from src.infrastructure.grpc.grpc_server import create_grpc_server
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
 from src.infrastructure.persistence.postgres_drift_repo import (
@@ -72,14 +73,23 @@ alert_manager.register_rule(
     )
 )
 
+settings = get_settings()
+
 # Monitoring interval (seconds) — Production: 30s to avoid false-positive flood
-MONITORING_INTERVAL_SECONDS = 30
+MONITORING_INTERVAL_SECONDS = settings.MONITORING_INTERVAL_SECONDS
 
 
-def _load_reference_data() -> list[float]:
-    """Load real reference data from the training pipeline output."""
+def _load_reference_data_for_model(model_id: str) -> list[float]:
+    """Load per-model reference data for drift detection.
+
+    Resolution order:
+    1. models/<model_id>/v1/reference_data.json
+    2. Global data/reference_data.json (fallback)
+    """
     root = find_project_root()
+    fs_id = model_id.replace("-", "_")
     ref_paths = [
+        root / "models" / fs_id / "v1" / "reference_data.json",
         root / "data" / "reference_data.json",
         root / "models" / "data" / "reference_data.json",
     ]
@@ -91,13 +101,14 @@ def _load_reference_data() -> list[float]:
             first_key = next(iter(distributions), None)
             if first_key:
                 logger.info(
-                    "✅ Loaded %d real reference points from %s",
+                    "✅ Loaded %d reference points for %s from %s",
                     len(distributions[first_key]),
+                    model_id,
                     ref_path,
                 )
                 return cast(list[float], distributions[first_key])
 
-    logger.warning("⚠️ No reference data found, using empty reference")
+    logger.warning("⚠️ No reference data for %s — drift monitoring disabled", model_id)
     return []
 
 
@@ -162,15 +173,42 @@ def _resolve_feature_names(model_id: str, version: str) -> list[str]:
     )
     return []
 
-
 async def run_monitoring_loop() -> None:
-    """Background task that periodically checks for data drift."""
-    logger.info("🚀 Starting Drift Monitoring Loop...")
-    reference_data = _load_reference_data()
+    """Background task that periodically checks for data drift on ALL models.
 
-    if not reference_data:
-        logger.warning("⚠️ No reference data — drift monitoring disabled")
+    Each model uses its own:
+    - Reference data (per-model reference_data.json)
+    - Drift test type (from model_configs/*.yaml → monitoring.drift_test)
+    - Feature index (defaults to 0 for tabular, could be extended)
+    """
+    logger.info("🚀 Starting Multi-Model Drift Monitoring Loop...")
+
+    # Build per-model monitoring config from YAML
+    root = find_project_root()
+    _settings = get_settings()
+    config_dir = root / _settings.MODEL_CONFIG_DIR
+    model_configs = load_all_model_configs(config_dir)
+
+    if not model_configs:
+        logger.warning("⚠️ No model configs found — drift monitoring disabled")
         return
+
+    # Load per-model reference data
+    model_refs: dict[str, list[float]] = {}
+    for mid in model_configs:
+        ref = _load_reference_data_for_model(mid)
+        if ref:
+            model_refs[mid] = ref
+
+    if not model_refs:
+        logger.warning("⚠️ No reference data for any model — drift monitoring disabled")
+        return
+
+    logger.info(
+        "📋 Monitoring %d models: %s",
+        len(model_refs),
+        list(model_refs.keys()),
+    )
 
     while not shutdown_event.is_set():
         try:
@@ -188,27 +226,27 @@ async def run_monitoring_loop() -> None:
                     drift_calculator,
                     drift_repo,
                     alert_manager=alert_manager,
+                    event_bus=event_bus,
                 )
 
-                # Monitor first available model from config
-                monitor_id = get_settings().DEFAULT_MODEL_ID
-                if not monitor_id:
-                    # Auto-select from model_configs/
-                    root = find_project_root()
-                    cfgs = load_all_model_configs(
-                        root / get_settings().MODEL_CONFIG_DIR
-                    )
-                    monitor_id = next(iter(cfgs), "") if cfgs else ""
-                if not monitor_id:
-                    logger.warning("⚠️ No model configured for monitoring")
-                    await asyncio.sleep(MONITORING_INTERVAL_SECONDS)
-                    continue
-
-                await ms.check_drift(
-                    model_id=monitor_id,
-                    reference_data=reference_data,
-                    feature_index=0,
-                )
+                # Check drift for EVERY configured model
+                for mid, ref_data in model_refs.items():
+                    cfg = model_configs.get(mid)
+                    test_type = cfg.monitoring_drift_test if cfg else "ks"
+                    try:
+                        await ms.check_drift(
+                            model_id=mid,
+                            reference_data=ref_data,
+                            feature_index=0,
+                            test_type=test_type,
+                        )
+                    except ValueError:
+                        # Not enough prediction data yet — skip silently
+                        pass
+                    except Exception as e:
+                        logger.warning(
+                            "⚠️ Drift check failed for %s: %s", mid, e
+                        )
                 break
         except asyncio.CancelledError:
             return
@@ -263,6 +301,16 @@ async def _seed_model_if_needed(
         await model_repo.update_stage(model_id, model_version, "champion")
         await db.commit()
         logger.info("✅ Registered model with real metrics: %s", real_metrics)
+
+        # Publish metrics via event bus (Observer Pattern — no direct Prometheus dep)
+        from src.domain.shared.domain_events import ModelRetrained  # noqa: PLC0415
+
+        event_bus.publish(ModelRetrained(
+            model_id=model_id,
+            version=model_version,
+            metrics=real_metrics,
+            promoted=True,
+        ))
     except Exception as e:
         logger.error("❌ Failed to seed model: %s", e)
 
@@ -276,7 +324,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
-        
+
         try:
             grpc_server = create_grpc_server(
                 model_repo=model_repo,
@@ -329,10 +377,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("🔌 Plugins registered: %s", plugin_registry.summary())
 
     shutdown_event.clear()
-    
+
     if grpc_server:
         await grpc_server.start()
-        
+
     await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
@@ -341,10 +389,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("🧹 Lifespan shutdown started...")
     shutdown_event.set()
     monitor_task.cancel()
-    
+
     if grpc_server:
         await grpc_server.stop(grace=2.0)
-        
+
     await batch_manager.stop()
     await kafka_producer.stop()
     try:

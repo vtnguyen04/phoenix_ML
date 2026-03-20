@@ -13,8 +13,8 @@ import pytest
 from src.config import get_settings
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.infrastructure.http.grpc_server import InferenceServicer
-from src.infrastructure.http.proto import inference_pb2
+from src.infrastructure.grpc.grpc_server import InferenceServicer
+from src.infrastructure.grpc.proto import inference_pb2
 
 _settings = get_settings()
 
@@ -92,7 +92,7 @@ class TestGRPCInferenceServicer:
         """ValueError from handler maps to NOT_FOUND gRPC status."""
         import grpc  # noqa: PLC0415
 
-        from src.infrastructure.http.grpc_server import InferenceServicer  # noqa: PLC0415
+        from src.infrastructure.grpc.grpc_server import InferenceServicer  # noqa: PLC0415
 
         mock_predict_handler.execute = AsyncMock(side_effect=ValueError("Model not found"))
         servicer = InferenceServicer(predict_handler=mock_predict_handler)
@@ -111,7 +111,7 @@ class TestGRPCInferenceServicer:
         """Unexpected exception maps to INTERNAL gRPC status."""
         import grpc  # noqa: PLC0415
 
-        from src.infrastructure.http.grpc_server import InferenceServicer  # noqa: PLC0415
+        from src.infrastructure.grpc.grpc_server import InferenceServicer  # noqa: PLC0415
 
         mock_predict_handler.execute = AsyncMock(side_effect=RuntimeError("ONNX engine crash"))
         servicer = InferenceServicer(predict_handler=mock_predict_handler)

@@ -25,8 +25,9 @@ from src.application.services.monitoring_service import MonitoringService
 from src.config import get_settings
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.monitoring.entities.drift_report import DriftReport
-from src.infrastructure.http.container import (
+from src.infrastructure.bootstrap.container import (
     drift_calculator,
+    event_bus,
     find_project_root,
     kafka_producer,
     model_evaluator,
@@ -168,7 +169,7 @@ async def check_drift(
         log_repo = PostgresPredictionLogRepository(db)
         drift_repo = PostgresDriftReportRepository(db)
 
-        from src.infrastructure.http.lifespan import (  # noqa: PLC0415
+        from src.infrastructure.bootstrap.lifespan import (  # noqa: PLC0415
             alert_manager,
         )
 
@@ -177,6 +178,7 @@ async def check_drift(
             drift_calculator,
             drift_repo,
             alert_manager=alert_manager,
+            event_bus=event_bus,
         )
 
         root = find_project_root()
@@ -186,6 +188,24 @@ async def check_drift(
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/models")
+async def list_models(
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+) -> list[dict[str, Any]]:
+    """List all registered models."""
+    model_repo = PostgresModelRegistry(db)
+    models = await model_repo.list_all()
+    return [
+        {
+            "model_id": m.id,
+            "version": m.version,
+            "status": m.stage.value,
+            "metadata": m.metadata,
+        }
+        for m in models
+    ]
 
 
 @router.get("/models/{model_id}")

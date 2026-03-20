@@ -44,7 +44,7 @@ def _resolve_test_features() -> list[float]:
                 return list(features.values())
 
     # 2. Try model config → feature count
-    from src.infrastructure.http.model_config_loader import load_all_model_configs
+    from src.infrastructure.bootstrap.model_config_loader import load_all_model_configs
 
     configs = load_all_model_configs(root / settings.MODEL_CONFIG_DIR)
     model_id = settings.DEFAULT_MODEL_ID

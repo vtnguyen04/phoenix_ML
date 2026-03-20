@@ -24,3 +24,7 @@ train_script: examples/house_price/train.py
 metadata:
   primary_metric: rmse
   task_description: "Predict median house value from housing features"
+
+monitoring:
+  drift_test: wasserstein       # Earth Mover's distance: ideal for continuous targets
+  primary_metric: rmse          # Regression primary metric (lower = better)
