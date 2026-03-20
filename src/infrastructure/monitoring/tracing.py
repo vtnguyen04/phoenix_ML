@@ -36,26 +36,18 @@ def init_tracing(
         )
 
         if otlp_endpoint:
-            otlp_exporter = OTLPSpanExporter(
-                endpoint=otlp_endpoint, insecure=True
-            )
+            otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
             provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
             logger.info("✅ OTLP tracing exporter configured → %s", otlp_endpoint)
         else:
             logger.info("⏭️ OTLP tracing skipped: endpoint is empty")
     except ImportError:
-        logger.info(
-            "OTLP exporter not installed, tracing export disabled"
-        )
+        logger.info("OTLP exporter not installed, tracing export disabled")
     except Exception as e:
-        logger.warning(
-            "⚠️ Failed to configure OTLP exporter: %s", e
-        )
+        logger.warning("⚠️ Failed to configure OTLP exporter: %s", e)
 
     if enable_console:
-        provider.add_span_processor(
-            BatchSpanProcessor(ConsoleSpanExporter())
-        )
+        provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
     trace.set_tracer_provider(provider)
     _tracer_provider = provider

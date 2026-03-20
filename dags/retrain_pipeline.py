@@ -36,10 +36,12 @@ logger = logging.getLogger(__name__)
 _API_URL = os.environ.get("API_URL", "http://api:8000")
 
 # Resolve project root — works in Docker, Airflow, and local dev
-_PROJECT_ROOT = Path(os.environ.get(
-    "PROJECT_ROOT",
-    str(Path(__file__).resolve().parent.parent),
-))
+_PROJECT_ROOT = Path(
+    os.environ.get(
+        "PROJECT_ROOT",
+        str(Path(__file__).resolve().parent.parent),
+    )
+)
 
 
 def _resolve_train_function(model_id: str) -> Any:
@@ -82,9 +84,7 @@ def _resolve_train_function(model_id: str) -> Any:
                 for fn_name in ["train", "train_model", "main"]:
                     if hasattr(module, fn_name):
                         return getattr(module, fn_name)
-                raise ImportError(
-                    f"No train_and_export/train/main function in {module_path}"
-                )
+                raise ImportError(f"No train_and_export/train/main function in {module_path}")
         except Exception as e:
             logger.warning(
                 "Failed to load training from config %s: %s. "
@@ -95,6 +95,7 @@ def _resolve_train_function(model_id: str) -> Any:
 
     # Fallback: examples/credit_risk/train.py (backward compatibility)
     from examples.credit_risk.train import train_and_export
+
     return train_and_export
 
 
@@ -166,8 +167,9 @@ def _train_model(**kwargs: Any) -> None:
     """
     Train a new ML model version — model-agnostic.
 
-    Resolves the correct training function from model_configs/{model_id}.yaml.
-    Falls back to scripts/train_model.py for backward compatibility.
+    Resolves training function AND data_path from model_configs/{model_id}.yaml.
+    The framework auto-detects the user's config to find the correct
+    training script and dataset location.
     """
     conf = kwargs.get("dag_run", {}).conf or {}
     model_id = conf.get("model_id", os.environ.get("DEFAULT_MODEL_ID", "credit-risk"))
@@ -182,24 +184,45 @@ def _train_model(**kwargs: Any) -> None:
         _PROJECT_ROOT / "models" / fs_model_id / version / "reference_features.json"
     )
 
+    # Resolve data_path from model config via ModelConfigLoader
+    data_path: str | None = None
+    config_path = _PROJECT_ROOT / "model_configs" / f"{model_id}.yaml"
+    if config_path.exists():
+        try:
+            from src.infrastructure.bootstrap.model_config_loader import (
+                load_model_config,
+            )
+
+            model_config = load_model_config(config_path)
+            if model_config.data_path:
+                resolved = _PROJECT_ROOT / model_config.data_path
+                data_path = str(resolved)
+                logger.info("Resolved data_path: %s", data_path)
+        except Exception as e:
+            logger.warning("Failed to read config for %s: %s", model_id, e)
+
     # Dynamically resolve training function
     train_fn = _resolve_train_function(model_id)
 
     logger.info(
-        "Training model %s version %s using %s",
+        "Training model %s version %s using %s (data=%s)",
         model_id,
         version,
         train_fn.__module__,
+        data_path or "default",
     )
 
     # Call with supported kwargs (different scripts accept different args)
     import inspect
+
     sig = inspect.signature(train_fn)
     call_kwargs: dict[str, str] = {}
     if "metrics_path" in sig.parameters:
         call_kwargs["metrics_path"] = metrics_path
     if "reference_path" in sig.parameters:
         call_kwargs["reference_path"] = reference_path
+    if "data_path" in sig.parameters and data_path:
+        call_kwargs["data_path"] = data_path
 
     train_fn(output_path, **call_kwargs)
 
@@ -234,15 +257,8 @@ def _log_mlflow(**kwargs: Any) -> None:
         all_metrics = json.load(f)
 
     # Split into numeric metrics and string params (model-agnostic)
-    numeric_metrics = {
-        k: v for k, v in all_metrics.items()
-        if isinstance(v, (int, float))
-    }
-    string_params = {
-        k: str(v)
-        for k, v in all_metrics.items()
-        if isinstance(v, str)
-    }
+    numeric_metrics = {k: v for k, v in all_metrics.items() if isinstance(v, (int, float))}
+    string_params = {k: str(v) for k, v in all_metrics.items() if isinstance(v, str)}
     # Add task metadata
     string_params["model_id"] = model_id
     string_params["version"] = version

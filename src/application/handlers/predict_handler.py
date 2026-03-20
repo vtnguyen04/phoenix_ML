@@ -40,22 +40,26 @@ class PredictHandler:
             prediction = await self._inference_service.predict(request)
 
             # Emit domain event — subscribers handle metrics, logging, Kafka, etc.
-            self._event_bus.publish(PredictionCompleted(
-                model_id=prediction.model_id,
-                version=prediction.model_version,
-                latency=time.time() - start_time,
-                confidence=prediction.confidence.value,
-                status="success",
-            ))
+            self._event_bus.publish(
+                PredictionCompleted(
+                    model_id=prediction.model_id,
+                    version=prediction.model_version,
+                    latency=time.time() - start_time,
+                    confidence=prediction.confidence.value,
+                    status="success",
+                )
+            )
 
             return prediction
 
         except Exception as e:
-            self._event_bus.publish(PredictionCompleted(
-                model_id=command.model_id,
-                version=command.model_version or "unknown",
-                latency=time.time() - start_time,
-                confidence=0.0,
-                status="error",
-            ))
+            self._event_bus.publish(
+                PredictionCompleted(
+                    model_id=command.model_id,
+                    version=command.model_version or "unknown",
+                    latency=time.time() - start_time,
+                    confidence=0.0,
+                    status="error",
+                )
+            )
             raise e

@@ -17,7 +17,9 @@ feature_names:
   - Latitude
   - Longitude
 
+model_path: models/house_price/v1/model.onnx
 dataset_name: california-housing
+data_path: data/house_price/dataset.csv
 train_script: examples/house_price/train.py
 
 # Primary metric for comparison (lower = better for regression)

@@ -5,7 +5,7 @@ import { ServiceCard } from '../../components/ui/ServiceCard';
 describe('ServiceCard', () => {
   it('renders service name', () => {
     render(<ServiceCard name="PostgreSQL" port={5432} icon="🐘" />);
-    expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
+    expect(screen.getByText(/PostgreSQL/)).toBeInTheDocument();
   });
 
   it('renders port with colon prefix', () => {

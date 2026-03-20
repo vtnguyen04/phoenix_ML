@@ -69,9 +69,7 @@ class RetrainHandler:
 
         if champion and "metrics" in champion.metadata:
             champion_metrics = champion.metadata["metrics"]
-            should_promote = self._evaluator.is_better(
-                champion_metrics, challenger_metrics
-            )
+            should_promote = self._evaluator.is_better(champion_metrics, challenger_metrics)
             primary = self._evaluator.primary_metric()
             logger.info(
                 "📊 Comparison: Challenger %s=%s vs Champion %s=%s",
@@ -100,12 +98,14 @@ class RetrainHandler:
             logger.info("👑 Model %s:%s promoted to CHAMPION", command.model_id, version)
 
         # 6. Emit domain event (Observer Pattern)
-        self._event_bus.publish(ModelRetrained(
-            model_id=command.model_id,
-            version=version,
-            metrics=challenger_metrics,
-            promoted=should_promote,
-        ))
+        self._event_bus.publish(
+            ModelRetrained(
+                model_id=command.model_id,
+                version=version,
+                metrics=challenger_metrics,
+                promoted=should_promote,
+            )
+        )
 
         return True
 

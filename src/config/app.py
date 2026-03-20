@@ -6,9 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AppSettings(BaseSettings):
     """Core application identity and behaviour."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", case_sensitive=True, extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     APP_NAME: str = "Phoenix ML Platform"
     APP_VERSION: str = "0.1.0"

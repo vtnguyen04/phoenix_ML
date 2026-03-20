@@ -100,11 +100,7 @@ class ClassificationEvaluator(IModelEvaluator):
 
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = (
-            2 * (precision * recall) / (precision + recall)
-            if (precision + recall) > 0
-            else 0.0
-        )
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
         return {
             "accuracy": accuracy,
@@ -150,11 +146,7 @@ class RegressionEvaluator(IModelEvaluator):
 
         # MAPE (avoid division by zero)
         mask = y_t != 0
-        mape = (
-            float(np.mean(np.abs(errors[mask] / y_t[mask])) * 100)
-            if np.any(mask)
-            else 0.0
-        )
+        mape = float(np.mean(np.abs(errors[mask] / y_t[mask])) * 100) if np.any(mask) else 0.0
 
         return {
             "rmse": rmse,
@@ -203,7 +195,5 @@ def get_evaluator(task_type: str) -> IModelEvaluator:
 
     Falls back to ClassificationEvaluator for unknown types.
     """
-    evaluator_cls = _EVALUATOR_MAP.get(
-        task_type, ClassificationEvaluator
-    )
+    evaluator_cls = _EVALUATOR_MAP.get(task_type, ClassificationEvaluator)
     return evaluator_cls()

@@ -50,4 +50,3 @@ if __name__ == "__main__":
     path = sys.argv[1] if len(sys.argv) > 1 else "/tmp/phoenix/test_model.onnx"
     features = int(sys.argv[2]) if len(sys.argv) >= _MIN_ARGS_WITH_FEATURES else 4
     generate_simple_onnx(Path(path), n_features=features)
-

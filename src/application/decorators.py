@@ -35,13 +35,17 @@ def timed(operation_name: str | None = None) -> Callable[[F], F]:
                 result = await func(*args, **kwargs)
                 elapsed = time.time() - start
                 logger.info(
-                    "⏱️ %s completed in %.3fs", label, elapsed,
+                    "⏱️ %s completed in %.3fs",
+                    label,
+                    elapsed,
                 )
                 return result
             except Exception:
                 elapsed = time.time() - start
                 logger.error(
-                    "⏱️ %s failed after %.3fs", label, elapsed,
+                    "⏱️ %s failed after %.3fs",
+                    label,
+                    elapsed,
                 )
                 raise
 

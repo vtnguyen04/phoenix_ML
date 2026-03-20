@@ -12,4 +12,7 @@ RUN pip install --no-cache-dir \
     httpx \
     mlflow \
     psycopg2-binary \
-    asyncpg
+    asyncpg \
+    xgboost \
+    onnxmltools \
+    pyyaml

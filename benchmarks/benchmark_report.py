@@ -99,16 +99,18 @@ def _generate_report(
             f"{min(lats):.2f} | {max(lats):.2f} |"
         )
 
-    lines.extend([
-        "",
-        "## Throughput",
-        "",
-        f"- **Total Requests**: {throughput.get('total_requests', 0)}",
-        f"- **Errors**: {throughput.get('errors', 0)}",
-        f"- **Duration**: {throughput.get('duration_seconds', 0):.1f}s",
-        f"- **RPS**: {throughput.get('rps', 0):.1f}",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Throughput",
+            "",
+            f"- **Total Requests**: {throughput.get('total_requests', 0)}",
+            f"- **Errors**: {throughput.get('errors', 0)}",
+            f"- **Duration**: {throughput.get('duration_seconds', 0):.1f}s",
+            f"- **RPS**: {throughput.get('rps', 0):.1f}",
+            "",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -125,9 +127,7 @@ async def run_benchmark(
         # Latency at varying concurrency (sequential per level)
         latency_results: dict[int, list[float]] = {}
         for conc in (1, 5, 10):
-            lats = await _measure_latency(
-                client, "/predict", payload, n_requests=50
-            )
+            lats = await _measure_latency(client, "/predict", payload, n_requests=50)
             latency_results[conc] = lats
 
         # Throughput

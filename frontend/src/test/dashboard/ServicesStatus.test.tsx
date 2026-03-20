@@ -8,23 +8,24 @@ describe('ServicesStatus', () => {
     expect(screen.getByText('Infrastructure')).toBeInTheDocument();
   });
 
-  it('renders all 10 services', () => {
+  it('renders all 11 services', () => {
     render(<ServicesStatus />);
-    expect(screen.getByText('API Server')).toBeInTheDocument();
-    expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
-    expect(screen.getByText('Redis')).toBeInTheDocument();
-    expect(screen.getByText('Kafka')).toBeInTheDocument();
-    expect(screen.getByText('Airflow')).toBeInTheDocument();
-    expect(screen.getByText('MLflow')).toBeInTheDocument();
-    expect(screen.getByText('Prometheus')).toBeInTheDocument();
-    expect(screen.getByText('Grafana')).toBeInTheDocument();
-    expect(screen.getByText('Jaeger')).toBeInTheDocument();
-    expect(screen.getByText('MinIO')).toBeInTheDocument();
+    expect(screen.getByText(/API Server/)).toBeInTheDocument();
+    expect(screen.getByText(/PostgreSQL/)).toBeInTheDocument();
+    expect(screen.getByText(/Redis/)).toBeInTheDocument();
+    expect(screen.getByText(/^Kafka(?! UI)/)).toBeInTheDocument();
+    expect(screen.getByText(/Kafka UI/)).toBeInTheDocument();
+    expect(screen.getByText(/Airflow/)).toBeInTheDocument();
+    expect(screen.getByText(/MLflow/)).toBeInTheDocument();
+    expect(screen.getByText(/Prometheus/)).toBeInTheDocument();
+    expect(screen.getByText(/Grafana/)).toBeInTheDocument();
+    expect(screen.getByText(/Jaeger/)).toBeInTheDocument();
+    expect(screen.getByText(/MinIO/)).toBeInTheDocument();
   });
 
   it('shows service count badge', () => {
     render(<ServicesStatus />);
-    expect(screen.getByText('10 SERVICES')).toBeInTheDocument();
+    expect(screen.getByText('11 SERVICES')).toBeInTheDocument();
   });
 
   it('renders port numbers', () => {

@@ -61,6 +61,15 @@ batch_config = BatchConfig(
 )
 batch_manager = BatchManager(inference_engine, config=batch_config)
 kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
+
+# ── Kafka Consumer (consumes inference-events for downstream processing) ──
+from src.infrastructure.messaging.kafka_consumer import KafkaConsumer  # noqa: E402
+
+kafka_consumer = KafkaConsumer(
+    bootstrap_servers=settings.KAFKA_URL,
+    group_id="phoenix-ml-consumers",
+)
+
 drift_calculator = DriftCalculator()
 
 # ── Evaluator Factory (uses existing get_evaluator from model_evaluator) ──
@@ -76,24 +85,32 @@ metrics_publisher: MetricsPublisher = PrometheusMetricsPublisher()
 event_bus = DomainEventBus()
 
 # Subscribe MetricsPublisher to domain events
-event_bus.subscribe(PredictionCompleted, lambda e: (
-    metrics_publisher.record_prediction(e.model_id, e.version, e.status),
-    metrics_publisher.record_latency(e.model_id, e.version, e.latency),
-    metrics_publisher.record_confidence(e.model_id, e.version, e.confidence)
-    if e.status == "success" else None,
-))
+event_bus.subscribe(
+    PredictionCompleted,
+    lambda e: (
+        metrics_publisher.record_prediction(e.model_id, e.version, e.status),
+        metrics_publisher.record_latency(e.model_id, e.version, e.latency),
+        metrics_publisher.record_confidence(e.model_id, e.version, e.confidence)
+        if e.status == "success"
+        else None,
+    ),
+)
 
-event_bus.subscribe(DriftScorePublished, lambda e: (
-    metrics_publisher.publish_drift_score(e.model_id, e.feature_name, e.method, e.score)
-))
+event_bus.subscribe(
+    DriftScorePublished,
+    lambda e: (
+        metrics_publisher.publish_drift_score(e.model_id, e.feature_name, e.method, e.score)
+    ),
+)
 
-event_bus.subscribe(DriftDetected, lambda e: (
-    metrics_publisher.record_drift_detected(e.model_id, e.feature_name)
-))
+event_bus.subscribe(
+    DriftDetected, lambda e: (metrics_publisher.record_drift_detected(e.model_id, e.feature_name))
+)
 
-event_bus.subscribe(ModelRetrained, lambda e: (
-    metrics_publisher.publish_model_metrics(e.model_id, e.version, e.metrics)
-))
+event_bus.subscribe(
+    ModelRetrained,
+    lambda e: (metrics_publisher.publish_model_metrics(e.model_id, e.version, e.metrics)),
+)
 
 # ── Feature Store Factory Registry (OCP) ──────────────────────────
 _FEATURE_STORE_FACTORIES: dict[str, Callable[[], FeatureStore]] = {

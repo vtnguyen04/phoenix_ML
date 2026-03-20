@@ -42,8 +42,10 @@ async def run_memory_benchmark(n_predictions: int = 100) -> dict[str, str]:
 
     engine = ONNXInferenceEngine(cache_dir=cache_dir)
     model = Model(
-        id="bench", version="v1",
-        uri="local:///tmp/bench_model_cache", framework="onnx",
+        id="bench",
+        version="v1",
+        uri="local:///tmp/bench_model_cache",
+        framework="onnx",
     )
 
     # Start profiling

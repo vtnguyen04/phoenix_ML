@@ -67,9 +67,7 @@ class MonitoringService:
                     continue
 
         if len(current_data) < self.MIN_DATA_POINTS:
-            raise ValueError(
-                f"Not enough data points ({len(current_data)}) to calculate drift"
-            )
+            raise ValueError(f"Not enough data points ({len(current_data)}) to calculate drift")
 
         feature_name = f"feature_{feature_index}"
         report = self._drift_calculator.calculate_drift(
@@ -83,20 +81,24 @@ class MonitoringService:
 
         # Emit domain events (Observer Pattern)
         if self._event_bus:
-            self._event_bus.publish(DriftScorePublished(
-                model_id=model_id,
-                feature_name=feature_name,
-                method=report.method,
-                score=report.statistic,
-            ))
-
-            if report.drift_detected:
-                self._event_bus.publish(DriftDetected(
+            self._event_bus.publish(
+                DriftScorePublished(
                     model_id=model_id,
                     feature_name=feature_name,
-                    score=report.statistic,
                     method=report.method,
-                ))
+                    score=report.statistic,
+                )
+            )
+
+            if report.drift_detected:
+                self._event_bus.publish(
+                    DriftDetected(
+                        model_id=model_id,
+                        feature_name=feature_name,
+                        score=report.statistic,
+                        method=report.method,
+                    )
+                )
 
         if report.drift_detected:
             logger.warning("🚨 DRIFT DETECTED: %s", report.recommendation)
@@ -112,9 +114,7 @@ class MonitoringService:
 
         return report
 
-    async def _trigger_self_healing(
-        self, model_id: str, report: DriftReport
-    ) -> None:
+    async def _trigger_self_healing(self, model_id: str, report: DriftReport) -> None:
         """
         Trigger Airflow self-healing pipeline via REST API.
         Checks if a run is already active before triggering a new one.
@@ -160,9 +160,7 @@ class MonitoringService:
                 )
 
                 if trigger_resp.status_code in (200, 409):
-                    logger.info(
-                        "✅ Self-healing pipeline triggered for %s", model_id
-                    )
+                    logger.info("✅ Self-healing pipeline triggered for %s", model_id)
                 else:
                     logger.error(
                         "❌ Failed to trigger self-healing: %s %s",

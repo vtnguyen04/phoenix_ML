@@ -9,9 +9,10 @@
 model_id: image-class
 version: v1
 framework: onnx
-task_type: classification
+task_type: image_classification
 model_path: models/image_class/v1/model.onnx
 train_script: examples/image_classification/train.py
+data_path: data/image_class/dataset.npz
 dataset_name: fashion-mnist
 
 # For image models, feature_names can be omitted (raw pixel input).
