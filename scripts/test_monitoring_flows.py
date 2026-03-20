@@ -156,7 +156,10 @@ def test_alert_manager() -> None:
     # Test 10: Alert.to_dict() serialization
     if total:
         d = total[0].to_dict()
-        required_keys = {"rule_name", "severity", "status", "metric_value", "threshold", "message", "model_id", "timestamp"}
+        required_keys = {
+            "rule_name", "severity", "status", "metric_value",
+            "threshold", "message", "model_id", "timestamp",
+        }
         report(
             "Alert.to_dict() has all required keys",
             required_keys.issubset(d.keys()),

@@ -1,17 +1,17 @@
-from __future__ import annotations
 """
 Real E2E simulation that hits the LIVE API and verifies all monitoring flows.
 Unlike unit tests, this exercises the actual running system.
 
 Flow:
-1. Send bulk predictions → build up data for drift/performance analysis  
-2. Trigger drift scan → verify drift detection works  
-3. Check Airflow → verify self-healing pipeline trigger  
-4. Test rollback → verify challenger gets archived  
-5. Check alerts → verify alert rules fire from drift  
+1. Send bulk predictions → build up data for drift/performance analysis
+2. Trigger drift scan → verify drift detection works
+3. Check Airflow → verify self-healing pipeline trigger
+4. Test rollback → verify challenger gets archived
+5. Check alerts → verify alert rules fire from drift
 """
 
-import json
+from __future__ import annotations
+
 import random
 import sys
 import time
@@ -53,11 +53,13 @@ def step1_bulk_predictions() -> None:
     for model_id, n_features in models_features.items():
         ok_count = 0
         err_count = 0
-        latencies = []
+        latencies: list[float] = []
         n = 50
 
-        for i in range(n):
-            features = [round(random.gauss(0, 1), 3) for _ in range(n_features)]
+        for _i in range(n):
+            features = [
+                round(random.gauss(0, 1), 3) for _ in range(n_features)
+            ]
             try:
                 resp = requests.post(
                     f"{API}/predict",
@@ -89,7 +91,9 @@ def step2_drift_detection() -> None:
 
     for model_id in ["credit-risk", "fraud-detection", "house-price"]:
         try:
-            resp = requests.get(f"{API}/monitoring/drift/{model_id}", timeout=10)
+            resp = requests.get(
+                f"{API}/monitoring/drift/{model_id}", timeout=10
+            )
             if resp.status_code == 200:
                 data = resp.json()
                 drifted = data.get("drift_detected", False)
@@ -101,8 +105,12 @@ def step2_drift_detection() -> None:
                     f"drifted={drifted}, p={p_val}, stat={stat}",
                 )
             else:
-                # 400 = not enough data, which is valid for recently started models
-                body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else resp.text
+                ct = resp.headers.get("content-type", "")
+                body = (
+                    resp.json()
+                    if ct.startswith("application/json")
+                    else resp.text
+                )
                 check(
                     f"{model_id} drift scan",
                     resp.status_code in (200, 400),
@@ -120,7 +128,9 @@ def step3_performance() -> None:
 
     for model_id in ["credit-risk", "fraud-detection", "house-price"]:
         try:
-            resp = requests.get(f"{API}/monitoring/performance/{model_id}", timeout=5)
+            resp = requests.get(
+                f"{API}/monitoring/performance/{model_id}", timeout=5
+            )
             data = resp.json()
             total = data.get("total_predictions", 0)
             latency = data.get("metrics", {}).get("avg_latency_ms", 0)
@@ -128,7 +138,8 @@ def step3_performance() -> None:
             check(
                 f"{model_id} performance",
                 total > 0 and latency < 100,
-                f"predictions={total}, latency={latency:.1f}ms, confidence={conf:.2f}",
+                f"predictions={total}, latency={latency:.1f}ms, "
+                f"confidence={conf:.2f}",
             )
         except Exception as e:
             check(f"{model_id} performance", False, str(e))
@@ -140,7 +151,6 @@ def step3_performance() -> None:
 def step4_airflow() -> None:
     section("STEP 4: Airflow Self-Healing Pipeline")
 
-    # Check if the DAG exists
     try:
         resp = requests.get(
             f"{AIRFLOW}/dags/self_healing_pipeline",
@@ -155,11 +165,14 @@ def step4_airflow() -> None:
                 f"is_paused={dag.get('is_paused', '?')}",
             )
         else:
-            check("self_healing_pipeline DAG exists", False, f"status={resp.status_code}")
+            check(
+                "self_healing_pipeline DAG exists",
+                False,
+                f"status={resp.status_code}",
+            )
     except Exception as e:
         check("self_healing_pipeline DAG exists", False, str(e))
 
-    # Check recent DAG runs
     try:
         resp = requests.get(
             f"{AIRFLOW}/dags/self_healing_pipeline/dagRuns",
@@ -171,21 +184,32 @@ def step4_airflow() -> None:
             runs = resp.json().get("dag_runs", [])
             if runs:
                 latest = runs[0]
+                triggered = latest.get("execution_date", "?")[:19]
                 check(
                     "recent DAG runs exist",
                     True,
-                    f"state={latest.get('state')}, triggered={latest.get('execution_date', '?')[:19]}",
+                    f"state={latest.get('state')}, "
+                    f"triggered={triggered}",
                 )
             else:
-                check("recent DAG runs exist", True, "no runs yet — DAG ready to trigger")
+                check(
+                    "recent DAG runs exist",
+                    True,
+                    "no runs yet — DAG ready to trigger",
+                )
         else:
-            check("recent DAG runs exist", False, f"status={resp.status_code}")
+            check(
+                "recent DAG runs exist",
+                False,
+                f"status={resp.status_code}",
+            )
     except Exception as e:
         check("recent DAG runs exist", False, str(e))
 
-    # List all available DAGs
     try:
-        resp = requests.get(f"{AIRFLOW}/dags", auth=AIRFLOW_AUTH, timeout=10)
+        resp = requests.get(
+            f"{AIRFLOW}/dags", auth=AIRFLOW_AUTH, timeout=10
+        )
         if resp.status_code == 200:
             dags = resp.json().get("dags", [])
             dag_ids = [d["dag_id"] for d in dags]
@@ -204,19 +228,23 @@ def step4_airflow() -> None:
 def step5_rollback() -> None:
     section("STEP 5: Rollback (real API)")
 
-    # First check which models have challengers
     try:
         resp = requests.get(f"{API}/models", timeout=5)
         models = resp.json()
-        challengers = [m for m in models if m.get("metadata", {}).get("role") == "challenger"]
+        challengers = [
+            m for m in models
+            if m.get("metadata", {}).get("role") == "challenger"
+        ]
+        tags = [
+            c["model_id"] + "@" + c["version"] for c in challengers
+        ]
         check(
             "challengers registered",
             len(challengers) > 0,
-            f"count={len(challengers)}, models={[c['model_id'] + '@' + c['version'] for c in challengers]}",
+            f"count={len(challengers)}, models={tags}",
         )
 
         if challengers:
-            # Try rollback on a model with challenger
             target = challengers[0]
             model_id = target["model_id"]
             print(f"\n  → Testing rollback on {model_id}...")
@@ -229,16 +257,17 @@ def step5_rollback() -> None:
             check(
                 f"POST /models/rollback {model_id}",
                 resp.status_code == 200,
-                f"status={resp.status_code}, body={resp.text[:200]}",
+                f"status={resp.status_code}, "
+                f"body={resp.text[:200]}",
             )
 
-            # Verify challenger is now archived
             time.sleep(0.5)
             resp2 = requests.get(f"{API}/models", timeout=5)
             after = resp2.json()
             remaining = [
                 m for m in after
-                if m["model_id"] == model_id and m.get("metadata", {}).get("role") == "challenger"
+                if m["model_id"] == model_id
+                and m.get("metadata", {}).get("role") == "challenger"
             ]
             check(
                 f"{model_id} challenger archived after rollback",
@@ -257,12 +286,15 @@ def step6_batch() -> None:
     section("STEP 6: Batch Prediction")
 
     try:
-        features = [round(random.gauss(0, 1), 3) for _ in range(30)]
+        features = [
+            round(random.gauss(0, 1), 3) for _ in range(30)
+        ]
         resp = requests.post(
             f"{API}/predict/batch",
-            json={"model_id": "credit-risk", "requests": [
-                {"features": features} for _ in range(5)
-            ]},
+            json={
+                "model_id": "credit-risk",
+                "requests": [{"features": features} for _ in range(5)],
+            },
             timeout=10,
         )
         if resp.status_code == 200:
@@ -273,7 +305,12 @@ def step6_batch() -> None:
                 f"returned={len(data)} results",
             )
         else:
-            check("POST /predict/batch works", False, f"status={resp.status_code}, body={resp.text[:200]}")
+            check(
+                "POST /predict/batch works",
+                False,
+                f"status={resp.status_code}, "
+                f"body={resp.text[:200]}",
+            )
     except Exception as e:
         check("POST /predict/batch works", False, str(e))
 
@@ -284,11 +321,13 @@ def step6_batch() -> None:
 def step7_feedback() -> None:
     section("STEP 7: Feedback Loop")
 
-    # Send a prediction then submit feedback
     try:
+        feats = [
+            round(random.gauss(0, 1), 3) for _ in range(30)
+        ]
         pred = requests.post(
             f"{API}/predict",
-            json={"model_id": "credit-risk", "features": [round(random.gauss(0, 1), 3) for _ in range(30)]},
+            json={"model_id": "credit-risk", "features": feats},
             timeout=5,
         ).json()
 
@@ -325,7 +364,6 @@ if __name__ == "__main__":
     step6_batch()
     step7_feedback()
 
-    # Summary
     passed = sum(1 for _, ok in results if ok)
     total = len(results)
     failed = total - passed
