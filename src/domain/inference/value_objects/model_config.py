@@ -37,6 +37,10 @@ class ModelConfig:
         metadata: Additional model-specific metadata (metrics, dataset, etc.).
         dataset_name: Human-readable dataset identifier for lineage.
         train_script: Path to training script for self-healing retrain.
+        monitoring_drift_test: Statistical test for drift detection.
+            Supported: "ks", "psi", "wasserstein", "chi2".
+        monitoring_primary_metric: Primary evaluation metric name.
+            E.g. "accuracy" for classification, "rmse" for regression.
     """
 
     model_id: str
@@ -48,6 +52,8 @@ class ModelConfig:
     metadata: tuple[tuple[str, Any], ...] = ()
     dataset_name: str = ""
     train_script: str = ""
+    monitoring_drift_test: str = "ks"
+    monitoring_primary_metric: str = "accuracy"
 
     def get_metadata(self) -> dict[str, Any]:
         """Return metadata as a mutable dict for serialization."""
@@ -65,6 +71,8 @@ class ModelConfig:
             metadata=self.metadata,
             dataset_name=self.dataset_name,
             train_script=self.train_script,
+            monitoring_drift_test=self.monitoring_drift_test,
+            monitoring_primary_metric=self.monitoring_primary_metric,
         )
 
     @property

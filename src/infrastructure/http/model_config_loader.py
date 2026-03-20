@@ -64,16 +64,34 @@ def _dict_to_model_config(data: dict[str, Any]) -> ModelConfig:
     else:
         metadata_tuple = ()
 
+    # Parse monitoring section (per-model drift & metric config)
+    monitoring = data.get("monitoring", {})
+    if not isinstance(monitoring, dict):
+        monitoring = {}
+
+    # Task-type defaults mapping (OCP: add new task types via dict entry)
+    _TASK_DEFAULTS: dict[str, tuple[str, str]] = {
+        "classification": ("ks", "accuracy"),
+        "regression": ("wasserstein", "rmse"),
+        "image": ("chi2", "accuracy"),
+    }
+    task_type = data.get("task_type", "classification")
+    default_drift_test, default_primary_metric = _TASK_DEFAULTS.get(
+        task_type, ("ks", "accuracy"),
+    )
+
     return ModelConfig(
         model_id=data.get("model_id", ""),
         version=data.get("version", "v1"),
         framework=data.get("framework", "onnx"),
         model_path=data.get("model_path", ""),
-        task_type=data.get("task_type", "classification"),
+        task_type=task_type,
         feature_names=feature_names,
         metadata=metadata_tuple,
         dataset_name=data.get("dataset_name", ""),
         train_script=data.get("train_script", ""),
+        monitoring_drift_test=monitoring.get("drift_test", default_drift_test),
+        monitoring_primary_metric=monitoring.get("primary_metric", default_primary_metric),
     )
 
 

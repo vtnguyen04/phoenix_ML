@@ -27,6 +27,7 @@ from src.domain.inference.entities.prediction import Prediction
 from src.domain.monitoring.entities.drift_report import DriftReport
 from src.infrastructure.http.container import (
     drift_calculator,
+    event_bus,
     find_project_root,
     kafka_producer,
     model_evaluator,
@@ -177,6 +178,7 @@ async def check_drift(
             drift_calculator,
             drift_repo,
             alert_manager=alert_manager,
+            event_bus=event_bus,
         )
 
         root = find_project_root()

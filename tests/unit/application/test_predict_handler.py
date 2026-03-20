@@ -10,6 +10,7 @@ from src.domain.inference.entities.model import Model
 from src.domain.inference.services.batch_manager import BatchManager
 from src.domain.inference.services.inference_service import InferenceService
 from src.domain.inference.services.routing_strategy import ABTestStrategy
+from src.domain.shared.event_bus import DomainEventBus
 from src.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
@@ -51,7 +52,7 @@ async def predict_handler() -> AsyncGenerator[PredictHandlerFixture, None]:
         cache_dir=Path("/tmp/test_cache"),
     )
 
-    handler = PredictHandler(inference_service)
+    handler = PredictHandler(inference_service, DomainEventBus())
     yield handler, repo, fs, batch_manager
     await batch_manager.stop()
 

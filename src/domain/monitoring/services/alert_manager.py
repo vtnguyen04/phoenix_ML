@@ -120,12 +120,13 @@ class AlertManager:
 
     @staticmethod
     def _check_threshold(value: float, threshold: float, comparison: str) -> bool:
-        if comparison == "gt":
-            return value > threshold
-        if comparison == "lt":
-            return value < threshold
-        if comparison == "gte":
-            return value >= threshold
-        if comparison == "lte":
-            return value <= threshold
-        return False
+        import operator
+
+        _COMPARATORS: dict[str, Any] = {
+            "gt": operator.gt,
+            "lt": operator.lt,
+            "gte": operator.ge,
+            "lte": operator.le,
+        }
+        comparator = _COMPARATORS.get(comparison, operator.gt)
+        return bool(comparator(value, threshold))

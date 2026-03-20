@@ -7,13 +7,11 @@ rolls back to the champion model when error rate exceeds thresholds.
 import logging
 from dataclasses import dataclass
 
+from src.config import get_settings
 from src.domain.model_registry.repositories.model_repository import ModelRepository
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_ERROR_RATE_THRESHOLD = 0.10
-DEFAULT_LATENCY_THRESHOLD_MS = 500.0
-DEFAULT_MIN_REQUESTS = 50
+_settings = get_settings()
 
 
 @dataclass
@@ -46,9 +44,9 @@ class RollbackManager:
     def __init__(
         self,
         model_repo: ModelRepository,
-        error_rate_threshold: float = DEFAULT_ERROR_RATE_THRESHOLD,
-        latency_threshold_ms: float = DEFAULT_LATENCY_THRESHOLD_MS,
-        min_requests: int = DEFAULT_MIN_REQUESTS,
+        error_rate_threshold: float = _settings.ROLLBACK_ERROR_RATE_THRESHOLD,
+        latency_threshold_ms: float = _settings.ROLLBACK_LATENCY_THRESHOLD_MS,
+        min_requests: int = _settings.ROLLBACK_MIN_REQUESTS,
     ) -> None:
         self._model_repo = model_repo
         self._error_rate_threshold = error_rate_threshold
