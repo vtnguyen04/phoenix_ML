@@ -62,6 +62,9 @@ nav:
     - 005 - DVC Data Versioning: adr/005-dvc-data-versioning.md
   - Deployment:
     - Docker Stack: deployment/docker-stack.md
+  - Guides:
+    - Library API: guides/library-api.md
+    - Contributing: ../CONTRIBUTING.md
   - Blog:
     - System Design Overview: blog/system-design-overview.md
     - Self-Healing ML: blog/self-healing-ml.md

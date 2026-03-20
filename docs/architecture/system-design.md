@@ -57,8 +57,10 @@ graph TD
     end
 
     subgraph "MLOps Pipeline - DVC"
-        DVC[DVC Pipeline] --> TrainChampion[Train Champion - GradientBoosting]
-        DVC --> TrainChallenger[Train Challenger - LogisticRegression]
+        DVC[DVC Pipeline] --> TrainCredit[Train Credit Risk - GradientBoosting]
+        DVC --> TrainHouse[Train House Price - Ridge]
+        DVC --> TrainFraud[Train Fraud Detection - XGBoost]
+        DVC --> TrainImage[Train Image Classification - MLP]
         DVC --> SeedFeatures[Seed Reference Features]
         DVC -->|Push| MinIO
     end
@@ -87,8 +89,8 @@ src/
 │       └── repositories/     # ModelRepository, ArtifactStorage
 │
 ├── application/               # Use-case orchestration (CQRS)
-│   ├── commands/              # PredictCommand, LoadModelCommand, TriggerRetrainCommand
-│   ├── handlers/              # PredictHandler, RetrainHandler, QueryHandlers
+│   ├── commands/              # PredictCommand, BatchPredictCommand, LoadModelCommand
+│   ├── handlers/              # PredictHandler, BatchPredictHandler, RetrainHandler, QueryHandlers
 │   ├── services/              # MonitoringService
 │   └── dto/                   # PredictionRequest, PredictionResponse
 │
@@ -156,7 +158,7 @@ sequenceDiagram
 
 ## 7. Test Coverage
 
-- **Backend**: 160+ unit/integration/e2e tests, 85%+ coverage
+- **Backend**: 195+ source files, 50+ test files, all CI checks pass (Ruff, mypy, pytest)
 - **Frontend**: 96 tests (Vitest + React Testing Library)
 - **CI**: GitHub Actions with Ruff, Mypy, pytest, vitest
 
