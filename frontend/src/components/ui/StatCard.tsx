@@ -2,7 +2,7 @@ interface StatCardProps {
   label: string;
   value: string;
   sub: string;
-  color: 'blue' | 'orange' | 'green' | 'red';
+  color: 'blue' | 'orange' | 'green' | 'red' | 'purple';
 }
 
 /**

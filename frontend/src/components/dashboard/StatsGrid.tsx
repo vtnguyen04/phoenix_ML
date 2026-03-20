@@ -1,43 +1,37 @@
 import { StatCard } from '../ui/StatCard';
+import type { MetricDef } from '../../config';
+import { getMetricsForTask, detectTaskType } from '../../config';
+import type { TaskType } from '../../config';
 
 interface StatsGridProps {
-  accuracy: number | null;
-  f1Score: number | null;
-  precision: number | null;
-  recall: number | null;
+  metrics: Record<string, number> | undefined;
+  taskType?: TaskType;
 }
 
-function fmt(v: number | null): string {
-  return v !== null ? `${(v * 100).toFixed(1)}%` : '—';
-}
+/**
+ * StatsGrid — Model-agnostic metric cards.
+ * Automatically selects classification or regression metrics
+ * based on the task type detected from available metrics.
+ */
+export function StatsGrid({ metrics, taskType }: StatsGridProps) {
+  const resolvedType = taskType ?? detectTaskType(metrics);
+  const defs: MetricDef[] = getMetricsForTask(resolvedType);
 
-export function StatsGrid({ accuracy, f1Score, precision, recall }: StatsGridProps) {
   return (
     <div className="stats-grid">
-      <StatCard
-        label="Accuracy"
-        value={fmt(accuracy)}
-        sub="Test set evaluation"
-        color="blue"
-      />
-      <StatCard
-        label="F1 Score"
-        value={fmt(f1Score)}
-        sub="Harmonic mean P/R"
-        color="orange"
-      />
-      <StatCard
-        label="Precision"
-        value={fmt(precision)}
-        sub="True positive rate"
-        color="green"
-      />
-      <StatCard
-        label="Recall"
-        value={fmt(recall)}
-        sub="Sensitivity"
-        color="red"
-      />
+      {defs.map((def) => {
+        const raw = metrics?.[def.key];
+        const value = raw !== undefined ? def.format(raw) : '—';
+        return (
+          <StatCard
+            key={def.key}
+            label={def.label}
+            value={value}
+            sub={def.sub}
+            color={def.color}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -13,16 +13,14 @@ export function DriftPanel({ drift, onScan, loading, error }: DriftPanelProps) {
   return (
     <div className="card">
       <div className="card-header">
-        <h2 className="card-title">🛡️ Drift Monitor</h2>
+        <h2 className="card-title">Drift Monitor</h2>
         <button className="btn btn-sm" onClick={onScan} disabled={loading}>
           {loading ? <Spinner /> : '🔄'} Scan Now
         </button>
       </div>
 
       {error ? (
-        <div className="drift-recommendation" style={{ color: 'var(--text-muted)' }}>
-          ⚠️ {error}
-        </div>
+        <div className="drift-recommendation drift-error">⚠️ {error}</div>
       ) : drift ? (
         <DriftDetails drift={drift} />
       ) : (
@@ -36,19 +34,13 @@ function DriftDetails({ drift }: { drift: DriftReport }) {
   return (
     <>
       <div className="drift-status-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className="drift-status-info">
           <div className={`drift-indicator ${drift.drift_detected ? 'drifted' : 'stable'}`}>
             {drift.drift_detected ? '⚠️' : '✅'}
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>
-              Feature: {drift.feature_name}
-            </div>
-            <div style={{
-              fontSize: 12,
-              color: 'var(--text-muted)',
-              fontFamily: 'var(--font-mono)',
-            }}>
+            <div className="drift-feature-name">Feature: {drift.feature_name}</div>
+            <div className="drift-detail-mono">
               {drift.method.toUpperCase()}={drift.statistic.toFixed(4)} · p={drift.p_value.toFixed(4)} · n={drift.sample_size}
             </div>
           </div>
@@ -57,9 +49,7 @@ function DriftDetails({ drift }: { drift: DriftReport }) {
           {drift.drift_detected ? 'DRIFTED' : 'STABLE'}
         </StatusBadge>
       </div>
-      <div className="drift-recommendation">
-        {drift.recommendation}
-      </div>
+      <div className="drift-recommendation">{drift.recommendation}</div>
     </>
   );
 }
