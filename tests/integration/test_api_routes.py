@@ -8,9 +8,12 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
+from src.config import get_settings
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
 from src.infrastructure.http.fastapi_server import app
+
+_settings = get_settings()
 
 
 @pytest.fixture()
@@ -39,8 +42,8 @@ class TestPredictEndpoint:
         from src.infrastructure.persistence.database import get_db  # noqa: PLC0415
 
         mock_prediction = Prediction(
-            model_id="credit-risk",
-            model_version="v1",
+            model_id=_settings.DEFAULT_MODEL_ID,
+            model_version=_settings.DEFAULT_MODEL_VERSION,
             result=1,
             confidence=ConfidenceScore(value=0.85),
             latency_ms=0.42,
@@ -61,14 +64,14 @@ class TestPredictEndpoint:
             response = client.post(
                 "/predict",
                 json={
-                    "model_id": "credit-risk",
+                    "model_id": _settings.DEFAULT_MODEL_ID,
                     "entity_id": "customer-0001",
                 },
             )
             assert response.status_code == 200
             data = response.json()
-            assert data["model_id"] == "credit-risk"
-            assert data["version"] == "v1"
+            assert data["model_id"] == _settings.DEFAULT_MODEL_ID
+            assert data["version"] == _settings.DEFAULT_MODEL_VERSION
             assert data["result"] == 1
             assert data["confidence"]["value"] == 0.85
             assert "prediction_id" in data

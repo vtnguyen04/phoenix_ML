@@ -116,13 +116,18 @@ class BatchManager:
 
     async def stop(self) -> None:
         """Cancel all worker tasks and cleanup"""
-        async with self._lock:
-            for task in self._running_tasks.values():
-                task.cancel()
+        try:
+            async with self._lock:
+                for task in self._running_tasks.values():
+                    task.cancel()
 
-            if self._running_tasks:
-                await asyncio.gather(*self._running_tasks.values(), return_exceptions=True)
-
+                if self._running_tasks:
+                    await asyncio.gather(*self._running_tasks.values(), return_exceptions=True)
+        except RuntimeError:
+            # Event loop may already be closed when a module-level
+            # singleton is reused across tests with different loops.
+            pass
+        finally:
             self._running_tasks.clear()
             self._queues.clear()
 

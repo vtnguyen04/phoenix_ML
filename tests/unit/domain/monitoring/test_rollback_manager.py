@@ -58,9 +58,7 @@ async def test_rollback_on_high_error_rate(
     decision = await rollback_manager.evaluate_challenger(metrics)
     assert decision.should_rollback is True
     assert "Error rate" in decision.reason
-    mock_model_repo.update_stage.assert_awaited_once_with(
-        "m1", "v2", "archived"
-    )
+    mock_model_repo.update_stage.assert_awaited_once_with("m1", "v2", "archived")
 
 
 @pytest.mark.asyncio

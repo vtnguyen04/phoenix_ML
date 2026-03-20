@@ -167,9 +167,7 @@ class TestTrainingService:
         mock_repo.get_by_id.return_value = job
 
         metrics = TrainingMetrics(accuracy=0.95, f1_score=0.93)
-        result = await training_service.complete_job(
-            job.job_id, metrics, "/models/v2/model.onnx"
-        )
+        result = await training_service.complete_job(job.job_id, metrics, "/models/v2/model.onnx")
 
         assert result.status == TrainingStatus.COMPLETED
         assert len(training_service.events) == 1
@@ -247,9 +245,7 @@ class TestTrainingJobEdgeCases:
 
 
 class TestHyperparameterOptimizer:
-    def test_grid_search_generates_all_combinations(
-        self, config: TrainingConfig
-    ) -> None:
+    def test_grid_search_generates_all_combinations(self, config: TrainingConfig) -> None:
         space = SearchSpace(
             learning_rates=[0.01, 0.1],
             batch_sizes=[16, 32],
@@ -263,9 +259,7 @@ class TestHyperparameterOptimizer:
         learning_rates = {c.learning_rate for c in configs}
         assert learning_rates == {0.01, 0.1}
 
-    def test_grid_search_respects_max_trials(
-        self, config: TrainingConfig
-    ) -> None:
+    def test_grid_search_respects_max_trials(self, config: TrainingConfig) -> None:
         space = SearchSpace(
             learning_rates=[0.01, 0.1],
             batch_sizes=[16, 32],
@@ -277,9 +271,7 @@ class TestHyperparameterOptimizer:
 
         assert len(configs) == 3
 
-    def test_random_search_generates_requested_count(
-        self, config: TrainingConfig
-    ) -> None:
+    def test_random_search_generates_requested_count(self, config: TrainingConfig) -> None:
         space = SearchSpace(
             learning_rates=[0.001, 0.01, 0.1],
             batch_sizes=[8, 16, 32, 64],
@@ -291,9 +283,7 @@ class TestHyperparameterOptimizer:
 
         assert len(configs) == 5
 
-    def test_random_search_is_reproducible(
-        self, config: TrainingConfig
-    ) -> None:
+    def test_random_search_is_reproducible(self, config: TrainingConfig) -> None:
         space = SearchSpace(
             learning_rates=[0.001, 0.01, 0.1],
             batch_sizes=[8, 16, 32],
@@ -311,9 +301,7 @@ class TestHyperparameterOptimizer:
             assert a.batch_size == b.batch_size
 
     def test_invalid_max_trials_raises(self, config: TrainingConfig) -> None:
-        space = SearchSpace(
-            learning_rates=[0.01], batch_sizes=[16], epochs_options=[50], extra={}
-        )
+        space = SearchSpace(learning_rates=[0.01], batch_sizes=[16], epochs_options=[50], extra={})
         optimizer = HyperparameterOptimizer()
         with pytest.raises(ValueError, match="max_trials"):
             optimizer.generate_trials(config, space, max_trials=0)

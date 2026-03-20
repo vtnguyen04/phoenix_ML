@@ -214,6 +214,8 @@ async def run_monitoring_loop() -> None:
             return
         except Exception as e:
             logger.error("⚠️ Monitoring Loop Error: %s", e, exc_info=True)
+            # Sleep before retrying to prevent tight error loops
+            await asyncio.sleep(MONITORING_INTERVAL_SECONDS)
 
 
 async def _seed_model_if_needed(

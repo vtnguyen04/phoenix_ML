@@ -122,4 +122,3 @@ def test_chi2_test_with_drift(calculator: DriftCalculator) -> None:
     assert report.method == "chi2"
     assert report.drift_detected is True
     assert report.p_value < 0.05
-

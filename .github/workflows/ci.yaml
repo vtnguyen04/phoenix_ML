@@ -36,7 +36,8 @@ jobs:
       run: uv run mypy . --explicit-package-bases
 
     - name: Run Tests with Coverage
-      run: uv run pytest tests/ --cov=src --cov-report=xml --cov-fail-under=80
+      timeout-minutes: 5
+      run: timeout 240 uv run pytest tests/ --cov=src --cov-report=xml --cov-fail-under=80 --timeout=120 -p no:cacheprovider
 
     - name: Verify API Docker Build
       run: docker build . -t phoenix-api:test

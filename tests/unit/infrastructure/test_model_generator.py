@@ -31,8 +31,8 @@ class TestModelGenerator:
         inputs = model.graph.input
         assert len(inputs) == 1
         shape = inputs[0].type.tensor_type.shape
-        # Second dim should be 30 (our feature count)
-        assert shape.dim[1].dim_value == 30
+        # Second dim should be 4 (default n_features)
+        assert shape.dim[1].dim_value == 4
 
     def test_onnx_has_correct_output_shape(self, tmp_path: Path) -> None:
         output = tmp_path / "model.onnx"
@@ -47,3 +47,10 @@ class TestModelGenerator:
         output = tmp_path / "nested" / "dirs" / "model.onnx"
         generate_simple_onnx(output)
         assert output.exists()
+
+    def test_custom_n_features(self, tmp_path: Path) -> None:
+        output = tmp_path / "model.onnx"
+        generate_simple_onnx(output, n_features=30)
+        model = onnx.load(str(output))
+        shape = model.graph.input[0].type.tensor_type.shape
+        assert shape.dim[1].dim_value == 30

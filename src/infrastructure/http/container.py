@@ -88,8 +88,25 @@ def ensure_model_exists(
     is_test = "test" in str(Path.cwd())
 
     if is_ci or is_test:
-        logger.warning("🧪 CI/Test context. Generating valid ONNX model at %s", model_path)
-        generate_simple_onnx(model_path)
+        # Resolve feature count from model config so the generated
+        # stub model has the correct input dimensions.
+        n_features = 4  # default fallback
+        try:
+            from src.infrastructure.http.model_config_loader import (  # noqa: PLC0415
+                load_all_model_configs,
+            )
+
+            cfgs = load_all_model_configs(root / settings.MODEL_CONFIG_DIR)
+            if model_id in cfgs and cfgs[model_id].feature_names:
+                n_features = len(cfgs[model_id].feature_names)
+        except Exception:
+            pass
+        logger.warning(
+            "🧪 CI/Test context. Generating valid ONNX model at %s (n_features=%d)",
+            model_path,
+            n_features,
+        )
+        generate_simple_onnx(model_path, n_features=n_features)
         return model_path.absolute()
 
     msg = f"Model not found at {model_path} and not in CI environment."

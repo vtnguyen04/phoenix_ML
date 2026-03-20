@@ -10,10 +10,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.config import get_settings
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.inference.value_objects.confidence_score import ConfidenceScore
 from src.infrastructure.http.grpc_server import InferenceServicer
 from src.infrastructure.http.proto import inference_pb2
+
+_settings = get_settings()
 
 
 @pytest.fixture
@@ -21,8 +24,8 @@ def mock_predict_handler() -> AsyncMock:
     handler = AsyncMock()
     handler.execute = AsyncMock(
         return_value=Prediction(
-            model_id="credit-risk",
-            model_version="v1",
+            model_id=_settings.DEFAULT_MODEL_ID,
+            model_version=_settings.DEFAULT_MODEL_VERSION,
             result=1,
             confidence=ConfidenceScore(value=0.92),
             latency_ms=12.5,
@@ -54,16 +57,16 @@ class TestGRPCInferenceServicer:
     ) -> None:
         """Predict RPC returns a valid proto response with prediction data."""
         request = inference_pb2.PredictRequest(  # type: ignore[attr-defined]
-            model_id="credit-risk",
-            model_version="v1",
+            model_id=_settings.DEFAULT_MODEL_ID,
+            model_version=_settings.DEFAULT_MODEL_VERSION,
             entity_id="customer-001",
             features=[0.5] * 30,
         )
 
         response = await servicer.Predict(request, mock_context)
 
-        assert response.model_id == "credit-risk"
-        assert response.version == "v1"
+        assert response.model_id == _settings.DEFAULT_MODEL_ID
+        assert response.version == _settings.DEFAULT_MODEL_VERSION
         assert list(response.result) == [1.0]
         assert response.confidence == pytest.approx(0.92, abs=0.01)
         assert response.latency_ms == pytest.approx(12.5)
@@ -75,10 +78,10 @@ class TestGRPCInferenceServicer:
         mock_context: MagicMock,
     ) -> None:
         """Predict succeeds with only model_id."""
-        request = inference_pb2.PredictRequest(model_id="credit-risk")  # type: ignore[attr-defined]
+        request = inference_pb2.PredictRequest(model_id=_settings.DEFAULT_MODEL_ID)  # type: ignore[attr-defined]
         response = await servicer.Predict(request, mock_context)
 
-        assert response.model_id == "credit-risk"
+        assert response.model_id == _settings.DEFAULT_MODEL_ID
         mock_context.set_code.assert_not_called()
 
     async def test_predict_handles_value_error(
@@ -91,9 +94,7 @@ class TestGRPCInferenceServicer:
 
         from src.infrastructure.http.grpc_server import InferenceServicer  # noqa: PLC0415
 
-        mock_predict_handler.execute = AsyncMock(
-            side_effect=ValueError("Model not found")
-        )
+        mock_predict_handler.execute = AsyncMock(side_effect=ValueError("Model not found"))
         servicer = InferenceServicer(predict_handler=mock_predict_handler)
 
         request = inference_pb2.PredictRequest(model_id="nonexistent")  # type: ignore[attr-defined]
@@ -112,12 +113,10 @@ class TestGRPCInferenceServicer:
 
         from src.infrastructure.http.grpc_server import InferenceServicer  # noqa: PLC0415
 
-        mock_predict_handler.execute = AsyncMock(
-            side_effect=RuntimeError("ONNX engine crash")
-        )
+        mock_predict_handler.execute = AsyncMock(side_effect=RuntimeError("ONNX engine crash"))
         servicer = InferenceServicer(predict_handler=mock_predict_handler)
 
-        request = inference_pb2.PredictRequest(model_id="credit-risk")  # type: ignore[attr-defined]
+        request = inference_pb2.PredictRequest(model_id=_settings.DEFAULT_MODEL_ID)  # type: ignore[attr-defined]
         await servicer.Predict(request, mock_context)
 
         mock_context.set_code.assert_called_once_with(grpc.StatusCode.INTERNAL)

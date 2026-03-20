@@ -9,7 +9,7 @@ from src.domain.inference.entities.model import Model
 from src.infrastructure.persistence.postgres_model_registry import (
     PostgresModelRegistry,
 )
-from src.shared.ingestion.data_collector import ExampleCreditDataCollector
+from src.shared.ingestion.data_collector import CreditDataCollector
 from src.shared.ingestion.redis_ingestor import RedisDataIngestor
 from src.shared.ingestion.service import IngestionService
 
@@ -22,7 +22,7 @@ async def main() -> None:
     print("🚀 Starting REAL-WORLD data pipeline...")
 
     # 1. Collect Real Data (The 'Crawl' phase)
-    collector = ExampleCreditDataCollector()
+    collector = CreditDataCollector()
     real_df = await collector.collect()
     print(f"📊 Collected {len(real_df)} real-world records.")
 
