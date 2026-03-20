@@ -5,6 +5,7 @@ notifications when thresholds are breached.
 """
 
 import logging
+import operator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -120,8 +121,6 @@ class AlertManager:
 
     @staticmethod
     def _check_threshold(value: float, threshold: float, comparison: str) -> bool:
-        import operator
-
         _COMPARATORS: dict[str, Any] = {
             "gt": operator.gt,
             "lt": operator.lt,

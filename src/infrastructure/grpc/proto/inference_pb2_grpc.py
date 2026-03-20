@@ -25,7 +25,7 @@ if _version_not_supported:
     )
 
 
-class InferenceServiceStub(object):
+class InferenceServiceStub:
     """Service definitions.
     """
 
@@ -47,7 +47,7 @@ class InferenceServiceStub(object):
                 _registered_method=True)
 
 
-class InferenceServiceServicer(object):
+class InferenceServiceServicer:
     """Service definitions.
     """
 
@@ -84,7 +84,7 @@ def add_InferenceServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class InferenceService(object):
+class InferenceService:
     """Service definitions.
     """
 

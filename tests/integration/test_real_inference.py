@@ -29,7 +29,6 @@ from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
 from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
 
-
 def _find_root() -> Path:
     current = Path(__file__).resolve().parent
     for parent in [current, *current.parents]:

@@ -29,11 +29,11 @@ from src.infrastructure.bootstrap.container import (
     plugin_registry,
     shutdown_event,
 )
-from src.infrastructure.grpc.grpc_server import create_grpc_server
 from src.infrastructure.bootstrap.model_config_loader import (
     load_all_model_configs,
     load_features_from_metrics,
 )
+from src.infrastructure.grpc.grpc_server import create_grpc_server
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
 from src.infrastructure.persistence.postgres_drift_repo import (

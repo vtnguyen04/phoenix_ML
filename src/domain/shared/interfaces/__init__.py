@@ -7,10 +7,10 @@ ABCs:
   - CacheBackend     (cache operations)
 """
 
-from src.domain.shared.interfaces.message_producer import MessageProducer
-
 from abc import ABC, abstractmethod
 from typing import Any
+
+from src.domain.shared.interfaces.message_producer import MessageProducer
 
 
 class EventPublisher(ABC):

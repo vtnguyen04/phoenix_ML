@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
 from src.config import get_settings
-from src.infrastructure.http.feature_routes import feature_router
 from src.infrastructure.bootstrap.lifespan import lifespan
+from src.infrastructure.http.feature_routes import feature_router
 from src.infrastructure.http.routes import router
 from src.infrastructure.monitoring.tracing import init_tracing
 

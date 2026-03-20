@@ -2,8 +2,8 @@
 
 import pytest
 
-from src.domain.shared.interfaces.message_producer import MessageProducer
 from src.domain.shared.interfaces import CacheBackend, EventPublisher
+from src.domain.shared.interfaces.message_producer import MessageProducer
 
 
 class TestEventPublisherInterface:
