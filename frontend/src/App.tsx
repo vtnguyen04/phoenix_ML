@@ -36,7 +36,7 @@ export default function App() {
     }).catch(() => {
       setError('Cannot fetch model list');
     });
-  }, []);
+  }, [selectedModelId]);
 
   // Clear state when switching models
   useEffect(() => {
