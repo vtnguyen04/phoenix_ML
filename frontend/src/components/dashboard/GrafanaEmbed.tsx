@@ -14,7 +14,7 @@ export function GrafanaEmbed({
   return (
     <div className="card grafana-card">
       <div className="card-header">
-        <h2 className="card-title">📈 Live Metrics — Grafana</h2>
+        <h2 className="card-title">Live Metrics — Grafana</h2>
         <a
           href={`${grafanaUrl}/d/${dashboardUid}`}
           target="_blank"

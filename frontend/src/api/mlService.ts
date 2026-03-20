@@ -26,10 +26,18 @@ export interface DriftReport {
 }
 
 export interface ModelMetrics {
-  accuracy: number;
-  f1_score: number;
-  precision: number;
-  recall: number;
+  // Classification
+  accuracy?: number;
+  f1_score?: number;
+  precision?: number;
+  recall?: number;
+  roc_auc?: number;
+  // Regression
+  rmse?: number;
+  mae?: number;
+  r2?: number;
+  mse?: number;
+  // Shared
   cv_accuracy_mean?: number;
   cv_accuracy_std?: number;
   cv_f1_mean?: number;
@@ -38,6 +46,9 @@ export interface ModelMetrics {
   n_features?: number;
   dataset?: string;
   model_type?: string;
+  task_type?: string;
+  all_features?: string[];
+  [key: string]: unknown;
 }
 
 export interface ModelInfo {
@@ -53,10 +64,13 @@ export interface ModelInfo {
 }
 
 export interface PerformanceReport {
+  model_id: string;
+  version: string | null;
   total_predictions: number;
-  accuracy: number;
-  f1_score: number;
-  avg_latency_ms: number;
+  metrics: {
+    avg_latency_ms: number;
+    avg_confidence: number;
+  };
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -78,6 +92,15 @@ export const mlService = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model_id: modelId, entity_id: entityId }),
+    });
+    return handleResponse<PredictionResponse>(res);
+  },
+
+  predictWithFeatures: async (modelId: string, features: number[]): Promise<PredictionResponse> => {
+    const res = await fetch(`${API_BASE}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model_id: modelId, features }),
     });
     return handleResponse<PredictionResponse>(res);
   },

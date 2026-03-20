@@ -9,7 +9,7 @@ export function ModelInfoCard({ model }: ModelInfoCardProps) {
     return (
       <div className="card model-info-card">
         <div className="card-header">
-          <h2 className="card-title">🤖 Champion Model</h2>
+          <h2 className="card-title">Champion Model</h2>
         </div>
         <div className="empty-state">
           <div className="empty-state-icon">⏳</div>
@@ -25,7 +25,7 @@ export function ModelInfoCard({ model }: ModelInfoCardProps) {
   return (
     <div className="card model-info-card">
       <div className="card-header">
-        <h2 className="card-title">🤖 Champion Model</h2>
+        <h2 className="card-title">Champion Model</h2>
         <span className="badge badge-success">{model.metadata.role?.toUpperCase() ?? 'ACTIVE'}</span>
       </div>
 

@@ -5,24 +5,26 @@ import { ServicesStatus } from '../../components/dashboard/ServicesStatus';
 describe('ServicesStatus', () => {
   it('renders Infrastructure title', () => {
     render(<ServicesStatus />);
-    expect(screen.getByText('🏗️ Infrastructure')).toBeInTheDocument();
+    expect(screen.getByText('Infrastructure')).toBeInTheDocument();
   });
 
-  it('renders all 8 services', () => {
+  it('renders all 10 services', () => {
     render(<ServicesStatus />);
     expect(screen.getByText('API Server')).toBeInTheDocument();
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
     expect(screen.getByText('Redis')).toBeInTheDocument();
     expect(screen.getByText('Kafka')).toBeInTheDocument();
+    expect(screen.getByText('Airflow')).toBeInTheDocument();
+    expect(screen.getByText('MLflow')).toBeInTheDocument();
     expect(screen.getByText('Prometheus')).toBeInTheDocument();
     expect(screen.getByText('Grafana')).toBeInTheDocument();
     expect(screen.getByText('Jaeger')).toBeInTheDocument();
     expect(screen.getByText('MinIO')).toBeInTheDocument();
   });
 
-  it('shows ALL ONLINE badge', () => {
+  it('shows service count badge', () => {
     render(<ServicesStatus />);
-    expect(screen.getByText('ALL ONLINE')).toBeInTheDocument();
+    expect(screen.getByText('10 SERVICES')).toBeInTheDocument();
   });
 
   it('renders port numbers', () => {
