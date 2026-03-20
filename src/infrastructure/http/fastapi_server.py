@@ -41,7 +41,17 @@ app.mount("/metrics", metrics_app)
 app.include_router(router)
 app.include_router(feature_router)
 
-if __name__ == "__main__":
-    import uvicorn
+def run() -> None:
+    """CLI entry point: `phoenix-serve` command."""
+    import uvicorn  # noqa: PLC0415
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "src.infrastructure.http.fastapi_server:app",
+        host=settings.HOST if hasattr(settings, "HOST") else "0.0.0.0",
+        port=settings.PORT if hasattr(settings, "PORT") else 8000,
+        reload=settings.DEBUG,
+    )
+
+
+if __name__ == "__main__":
+    run()

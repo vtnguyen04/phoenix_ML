@@ -1,0 +1,26 @@
+# ─── House Price Regression Model Config ──────────────────────
+# Example config for a regression task to test framework robustness
+
+model_id: house-price
+version: v1
+framework: onnx
+task_type: regression
+
+# Features for the California Housing dataset
+feature_names:
+  - MedInc        # Median income in block group
+  - HouseAge      # Median house age
+  - AveRooms      # Average rooms per household
+  - AveBedrms     # Average bedrooms per household
+  - Population    # Block group population
+  - AveOccup      # Average occupancy
+  - Latitude
+  - Longitude
+
+dataset_name: california-housing
+train_script: examples/house_price/train.py
+
+# Primary metric for comparison (lower = better for regression)
+metadata:
+  primary_metric: rmse
+  task_description: "Predict median house value from housing features"

@@ -2,19 +2,21 @@
 Production Simulation — Full End-to-End Pipeline.
 
 Simulates a realistic production workflow:
-1. Seed 1000 customer features from German Credit dataset
+1. Seed customer features from reference data
 2. Register model in MLflow with experiment tracking
-3. Generate production traffic (500 predictions)
-4. Inject drifted data (200 predictions with shifted distributions)
+3. Generate production traffic (predictions)
+4. Inject drifted data (predictions with shifted distributions)
 5. Trigger drift detection and monitor results
 6. Show metrics summary
 
 Usage:
     PYTHONPATH=. python scripts/run_production_simulation.py
+    DEFAULT_MODEL_ID=my-model python scripts/run_production_simulation.py
 """
 
 import asyncio
 import json
+import os
 import random
 import time
 from pathlib import Path
@@ -22,11 +24,12 @@ from pathlib import Path
 import httpx
 import numpy as np
 
-API_URL = "http://localhost:8001"
-MLFLOW_URL = "http://localhost:5000"
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
+MLFLOW_URL = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
 N_CUSTOMERS = 1000
 N_NORMAL_TRAFFIC = 500
 N_DRIFTED_TRAFFIC = 200
+DEFAULT_MODEL_ID = os.environ.get("DEFAULT_MODEL_ID", "credit-risk")
 
 
 async def step_1_seed_features() -> None:
@@ -69,14 +72,14 @@ async def step_2_register_mlflow() -> None:
 
             # Create experiment
             resp = await client.post("/api/2.0/mlflow/experiments/create",
-                json={"name": "credit-risk-production"})
+                json={"name": f"{DEFAULT_MODEL_ID}-production"})
             if resp.status_code == 200:
                 exp_id = resp.json().get("experiment_id")
-                print(f"   ✅ Created experiment: credit-risk-production (ID: {exp_id})")
+                print(f"   ✅ Created experiment: {DEFAULT_MODEL_ID}-production (ID: {exp_id})")
             else:
                 # Experiment may already exist
                 resp = await client.get("/api/2.0/mlflow/experiments/get-by-name",
-                    params={"experiment_name": "credit-risk-production"})
+                    params={"experiment_name": f"{DEFAULT_MODEL_ID}-production"})
                 if resp.status_code == 200:
                     exp_id = resp.json().get("experiment", {}).get("experiment_id")
                     print(f"   ✅ Experiment already exists (ID: {exp_id})")
@@ -85,7 +88,8 @@ async def step_2_register_mlflow() -> None:
                     return
 
             # Create a run with model metrics
-            metrics_path = Path("models/credit_risk/v1/metrics.json")
+            _fs_model_id = DEFAULT_MODEL_ID.replace("-", "_")
+            metrics_path = Path(f"models/{_fs_model_id}/v1/metrics.json")
             if metrics_path.exists():
                 with open(metrics_path) as f:
                     metrics = json.load(f)
@@ -138,7 +142,7 @@ async def step_3_normal_traffic(n: int = N_NORMAL_TRAFFIC) -> dict[str, object]:
             entity_id = f"customer-{random.randint(0, min(N_CUSTOMERS - 1, 99)):04d}"
             try:
                 resp = await client.post("/predict", json={
-                    "model_id": "credit-risk",
+                    "model_id": DEFAULT_MODEL_ID,
                     "entity_id": entity_id,
                 })
                 if resp.status_code == 200:
@@ -186,7 +190,7 @@ async def step_4_drifted_traffic(n: int = N_DRIFTED_TRAFFIC) -> None:
 
             try:
                 await client.post("/predict", json={
-                    "model_id": "credit-risk",
+                    "model_id": DEFAULT_MODEL_ID,
                     "features": features,
                 })
             except Exception:
@@ -209,7 +213,7 @@ async def step_5_check_drift() -> None:
 
     async with httpx.AsyncClient(base_url=API_URL, timeout=10.0) as client:
         try:
-            resp = await client.get("/monitoring/drift/credit-risk")
+            resp = await client.get(f"/monitoring/drift/{DEFAULT_MODEL_ID}")
             if resp.status_code == 200:
                 report = resp.json()
                 print("   ✅ Drift Report:")
@@ -254,7 +258,7 @@ async def step_6_summary() -> None:
 
     async with httpx.AsyncClient(base_url=API_URL, timeout=10.0) as client:
         health = await client.get("/health")
-        model = await client.get("/models/credit-risk")
+        model = await client.get(f"/models/{DEFAULT_MODEL_ID}")
 
         print(f"   API: {health.json()['status']}")
         if model.status_code == 200:

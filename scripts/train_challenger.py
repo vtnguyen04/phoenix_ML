@@ -1,5 +1,8 @@
 """
-Train Challenger Model — LogisticRegression on 30 Features.
+[EXAMPLE] Train Challenger Model — LogisticRegression on 30 Features.
+
+This is a REFERENCE IMPLEMENTATION for the German Credit dataset.
+Adapt this script for your own ML problem type and dataset.
 
 Uses same feature engineering as champion but LogisticRegression
 for A/B comparison.

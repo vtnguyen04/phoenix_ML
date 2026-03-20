@@ -11,7 +11,7 @@ class RedisFeatureStore(FeatureStore):
     """
 
     def __init__(self, redis_url: str = "redis://localhost:6379") -> None:
-        self.redis = redis.from_url(redis_url, decode_responses=True)  # type: ignore
+        self.redis = redis.from_url(redis_url, decode_responses=True)
 
     async def get_online_features(
         self, entity_id: str, feature_names: list[str]
@@ -22,7 +22,7 @@ class RedisFeatureStore(FeatureStore):
 
         # Strategy: Use HMGET for Hash storage
         try:
-            values = await self.redis.hmget(key, feature_names)
+            values = await self.redis.hmget(key, feature_names)  # type: ignore[misc]
 
             # Check if key exists (Redis returns list of Nones if key doesn't exist)
             if all(v is None for v in values):
@@ -39,4 +39,4 @@ class RedisFeatureStore(FeatureStore):
     async def add_features(self, entity_id: str, data: dict[str, float]) -> None:
         key = f"features:{entity_id}"
         # Convert all values to string/float as needed by Redis mapping
-        await self.redis.hset(key, mapping=data)
+        await self.redis.hset(key, mapping=data)  # type: ignore[misc]

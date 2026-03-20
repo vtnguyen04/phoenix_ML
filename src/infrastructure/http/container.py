@@ -8,7 +8,10 @@ from src.domain.feature_store.repositories.feature_store import FeatureStore
 from src.domain.inference.services.batch_manager import BatchConfig, BatchManager
 from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
-from src.domain.monitoring.services.model_evaluator import ModelEvaluator
+from src.domain.monitoring.services.model_evaluator import (
+    ClassificationEvaluator,
+    IModelEvaluator,
+)
 from src.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
@@ -25,27 +28,32 @@ from src.shared.utils.model_generator import generate_simple_onnx
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-artifact_storage = LocalArtifactStorage(base_dir=Path("/tmp/phoenix/remote_storage"))
+artifact_storage = LocalArtifactStorage(base_dir=Path(settings.ARTIFACT_STORAGE_DIR))
 
 inference_engine: InferenceEngine
 engine_type = getattr(settings, "INFERENCE_ENGINE", "onnx").lower()
 if engine_type == "tensorrt":
-    inference_engine = TensorRTExecutor(cache_dir=Path("/tmp/phoenix/model_cache"))
+    inference_engine = TensorRTExecutor(cache_dir=Path(settings.CACHE_DIR))
 elif engine_type == "triton":
     inference_engine = TritonInferenceClient(triton_url=getattr(settings, "TRITON_URL", "http://localhost:8000"))
 else:
-    inference_engine = ONNXInferenceEngine(cache_dir=Path("/tmp/phoenix/model_cache"))
+    inference_engine = ONNXInferenceEngine(cache_dir=Path(settings.CACHE_DIR))
 batch_config = BatchConfig(max_batch_size=16, max_wait_time_ms=10)
 batch_manager = BatchManager(inference_engine, config=batch_config)
 kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
 drift_calculator = DriftCalculator()
-model_evaluator = ModelEvaluator()
+model_evaluator: IModelEvaluator = ClassificationEvaluator()
 
 feature_store: FeatureStore
 if settings.USE_REDIS:
     feature_store = RedisFeatureStore(redis_url=settings.REDIS_URL)
 else:
     feature_store = InMemoryFeatureStore()
+
+# --- Plugin Registry (model-agnostic plugin resolution) ---
+from src.domain.shared.plugin_registry import PluginRegistry  # noqa: E402
+
+plugin_registry = PluginRegistry()
 
 shutdown_event = asyncio.Event()
 
@@ -67,7 +75,7 @@ def ensure_model_exists(
     model_id = model_id or settings.DEFAULT_MODEL_ID
     version = version or settings.DEFAULT_MODEL_VERSION
 
-    # Normalize model_id for filesystem (e.g. credit-risk -> credit_risk)
+    # Normalize model_id for filesystem (e.g. my-model -> my_model)
     fs_model_id = model_id.replace("-", "_")
 
     root = find_project_root()

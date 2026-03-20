@@ -25,9 +25,14 @@ from src.infrastructure.http.container import (
     find_project_root,
     inference_engine,
     kafka_producer,
+    plugin_registry,
     shutdown_event,
 )
 from src.infrastructure.http.grpc_server import create_grpc_server
+from src.infrastructure.http.model_config_loader import (
+    load_all_model_configs,
+    load_features_from_metrics,
+)
 from src.infrastructure.persistence.database import Base, engine, get_db
 from src.infrastructure.persistence.models import ModelORM
 from src.infrastructure.persistence.postgres_drift_repo import (
@@ -97,7 +102,7 @@ def _load_reference_data() -> list[float]:
 
 
 def _load_real_features() -> list[dict[str, Any]]:
-    """Load real feature records seeded from the German Credit dataset."""
+    """Load real feature records from the seeded reference data."""
     root = find_project_root()
     feat_path = root / "data" / "reference_features.json"
     if feat_path.exists():
@@ -108,16 +113,54 @@ def _load_real_features() -> list[dict[str, Any]]:
     return []
 
 
-def _load_real_metrics() -> dict[str, Any]:
-    """Load real training metrics from the model training output."""
-    _settings = get_settings()
-    fs_model_id = _settings.DEFAULT_MODEL_ID.replace("-", "_")
+def _load_real_metrics(model_id: str, version: str) -> dict[str, Any]:
+    """Load real training metrics from the model training output.
+
+    Dynamically resolves the metrics path from model_id and version,
+    making this function model-agnostic.
+    """
+    fs_model_id = model_id.replace("-", "_")
     root = find_project_root()
-    metrics_path = root / "models" / fs_model_id / _settings.DEFAULT_MODEL_VERSION / "metrics.json"
+    metrics_path = root / "models" / fs_model_id / version / "metrics.json"
     if metrics_path.exists():
         with open(metrics_path) as f:
             return cast(dict[str, Any], json.load(f))
     return {"accuracy": 0.0, "f1_score": 0.0}
+
+
+def _resolve_feature_names(model_id: str, version: str) -> list[str]:
+    """Resolve feature names dynamically from model config or metrics.json.
+
+    Resolution order:
+    1. Model config YAML (model_configs/<model_id>.yaml -> feature_names)
+    2. Training metrics (models/<model_id>/<version>/metrics.json -> all_features)
+    3. Empty list (model starts without named features)
+    """
+    _settings = get_settings()
+    root = find_project_root()
+
+    # 1. Try model config YAML
+    config_dir = root / _settings.MODEL_CONFIG_DIR
+    configs = load_all_model_configs(config_dir)
+    if model_id in configs and configs[model_id].has_named_features:
+        features = list(configs[model_id].feature_names)
+        logger.info("📋 Loaded %d features from config: %s", len(features), model_id)
+        return features
+
+    # 2. Try metrics.json
+    fs_model_id = model_id.replace("-", "_")
+    metrics_path = root / "models" / fs_model_id / version / "metrics.json"
+    features = load_features_from_metrics(metrics_path)
+    if features:
+        logger.info("📊 Loaded %d features from metrics.json", len(features))
+        return features
+
+    # 3. No features found
+    logger.info(
+        "ℹ️ No feature names found for %s:%s — starting without named features",
+        model_id, version,
+    )
+    return []
 
 
 async def run_monitoring_loop() -> None:
@@ -147,8 +190,22 @@ async def run_monitoring_loop() -> None:
                     alert_manager=alert_manager,
                 )
 
+                # Monitor first available model from config
+                monitor_id = get_settings().DEFAULT_MODEL_ID
+                if not monitor_id:
+                    # Auto-select from model_configs/
+                    root = find_project_root()
+                    cfgs = load_all_model_configs(
+                        root / get_settings().MODEL_CONFIG_DIR
+                    )
+                    monitor_id = next(iter(cfgs), "") if cfgs else ""
+                if not monitor_id:
+                    logger.warning("⚠️ No model configured for monitoring")
+                    await asyncio.sleep(MONITORING_INTERVAL_SECONDS)
+                    continue
+
                 await ms.check_drift(
-                    model_id=get_settings().DEFAULT_MODEL_ID,
+                    model_id=monitor_id,
                     reference_data=reference_data,
                     feature_index=0,
                 )
@@ -157,6 +214,55 @@ async def run_monitoring_loop() -> None:
             return
         except Exception as e:
             logger.error("⚠️ Monitoring Loop Error: %s", e, exc_info=True)
+
+
+async def _seed_model_if_needed(
+    db: Any,
+    model_repo: PostgresModelRegistry,
+    model_id: str,
+    model_version: str,
+) -> None:
+    """Seed model into registry if not already present."""
+    result = await db.execute(
+        select(ModelORM).where(
+            ModelORM.id == model_id, ModelORM.version == model_version
+        )
+    )
+    if result.scalar_one_or_none():
+        return
+
+    try:
+        real_model_path = ensure_model_exists(model_id, model_version)
+        real_metrics = _load_real_metrics(model_id, model_version)
+        feature_names = _resolve_feature_names(model_id, model_version)
+        logger.info(
+            "✅ Seeding model %s:%s from %s",
+            model_id, model_version, real_model_path,
+        )
+
+        # Build metadata dynamically — no hardcoded features/datasets
+        model_metadata: dict[str, Any] = {
+            "role": "champion",
+            "metrics": real_metrics,
+        }
+        if feature_names:
+            model_metadata["features"] = feature_names
+        if real_metrics.get("dataset"):
+            model_metadata["dataset"] = real_metrics["dataset"]
+
+        seed_model = Model(
+            id=model_id,
+            version=model_version,
+            uri=f"local://{real_model_path}",
+            framework="onnx",
+            metadata=model_metadata,
+        )
+        await model_repo.save(seed_model)
+        await model_repo.update_stage(model_id, model_version, "champion")
+        await db.commit()
+        logger.info("✅ Registered model with real metrics: %s", real_metrics)
+    except Exception as e:
+        logger.error("❌ Failed to seed model: %s", e)
 
 
 @asynccontextmanager
@@ -169,124 +275,56 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async for db in get_db():
         model_repo = PostgresModelRegistry(db)
         
-        grpc_server = create_grpc_server(
-            model_repo=model_repo,
-            inference_engine=inference_engine,
-            batch_manager=batch_manager,
-            feature_store=feature_store,
-            artifact_storage=artifact_storage,
-            port=50051,
-        )
+        try:
+            grpc_server = create_grpc_server(
+                model_repo=model_repo,
+                inference_engine=inference_engine,
+                batch_manager=batch_manager,
+                feature_store=feature_store,
+                artifact_storage=artifact_storage,
+                port=50051,
+            )
+        except RuntimeError as e:
+            logger.warning("⚠️ gRPC server skipped (port in use): %s", e)
+            grpc_server = None
 
         _settings = get_settings()
         _model_id = _settings.DEFAULT_MODEL_ID
         _model_version = _settings.DEFAULT_MODEL_VERSION
 
-        result = await db.execute(
-            select(ModelORM).where(
-                ModelORM.id == _model_id, ModelORM.version == _model_version
-            )
-        )
-        if not result.scalar_one_or_none():
-            try:
-                real_model_path = ensure_model_exists(_model_id, _model_version)
-                real_metrics = _load_real_metrics()
-                logger.info(
-                    "✅ Seeding model %s:%s from %s",
-                    _model_id, _model_version, real_model_path,
-                )
-                seed_model = Model(
-                    id=_model_id,
-                    version=_model_version,
-                    uri=f"local://{real_model_path}",
-                    framework="onnx",
-                    metadata={
-                        "features": [
-                            "duration",
-                            "credit_amount",
-                            "installment_commitment",
-                            "residence_since",
-                            "age",
-                            "existing_credits",
-                            "num_dependents",
-                            "checking_status",
-                            "credit_history",
-                            "purpose",
-                            "savings_status",
-                            "employment",
-                            "personal_status",
-                            "other_parties",
-                            "property_magnitude",
-                            "other_payment_plans",
-                            "housing",
-                            "job",
-                            "own_telephone",
-                            "foreign_worker",
-                            "credit_per_month",
-                            "age_credit_ratio",
-                            "installment_credit_ratio",
-                            "age_employment_score",
-                            "credit_risk_density",
-                            "duration_installment",
-                            "checking_savings_interact",
-                            "age_checking_interact",
-                            "credit_existing_interact",
-                            "log_credit_amount",
-                        ],
-                        "role": "champion",
-                        "metrics": real_metrics,
-                        "dataset": "german-credit-openml",
-                    },
-                )
-                await model_repo.save(seed_model)
-                await model_repo.update_stage(_model_id, _model_version, "champion")
-                await db.commit()
-                logger.info("✅ Registered model with real metrics: %s", real_metrics)
-            except Exception as e:
-                logger.error("❌ Failed to seed model: %s", e)
+        # Seed default model (if configured)
+        if _model_id:
+            await _seed_model_if_needed(db, model_repo, _model_id, _model_version)
 
+        # Seed ALL models from model_configs/ directory
+        root = find_project_root()
+        config_dir = root / _settings.MODEL_CONFIG_DIR
+        model_configs = load_all_model_configs(config_dir)
+        for cfg_id, cfg in model_configs.items():
+            if cfg_id != _model_id:
+                cfg_version = cfg.version or _model_version
+                await _seed_model_if_needed(
+                    db, model_repo, cfg_id, cfg_version,
+                )
+
+        # Seed feature store from reference data (model-agnostic)
         real_features = _load_real_features()
         if real_features:
             for record in real_features:
                 await feature_store.add_features(record["entity_id"], record["features"])
             logger.info("✅ Seeded %d real feature records", len(real_features))
 
-        await feature_store.add_features(
-            "customer-good",
-            {
-                    "duration": 0.5,
-                    "credit_amount": -0.3,
-                    "installment_commitment": 0.8,
-                    "residence_since": 0.5,
-                    "age": 0.5,
-                    "existing_credits": 0.5,
-                    "num_dependents": 0.5,
-                    "checking_status": 0.5,
-                    "credit_history": 0.5,
-                    "purpose": 0.5,
-                    "savings_status": 0.5,
-                    "employment": 0.5,
-                    "personal_status": 0.5,
-                    "other_parties": 0.5,
-                    "property_magnitude": 0.5,
-                    "other_payment_plans": 0.5,
-                    "housing": 0.5,
-                    "job": 0.5,
-                    "own_telephone": 0.5,
-                    "foreign_worker": 0.5,
-                    "credit_per_month": 0.5,
-                    "age_credit_ratio": 0.5,
-                    "installment_credit_ratio": 0.5,
-                    "age_employment_score": 0.5,
-                    "credit_risk_density": 0.5,
-                    "duration_installment": 0.5,
-                    "checking_savings_interact": 0.5,
-                    "age_checking_interact": 0.5,
-                    "credit_existing_interact": 0.5,
-                    "log_credit_amount": 0.5,
-                },
-            )
         break
+
+    # Log model configs and plugin registry state
+    if model_configs:
+        logger.info(
+            "📋 Loaded %d model configs: %s",
+            len(model_configs),
+            list(model_configs.keys()),
+        )
+    if plugin_registry.registered_models:
+        logger.info("🔌 Plugins registered: %s", plugin_registry.summary())
 
     shutdown_event.clear()
     

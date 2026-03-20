@@ -7,9 +7,13 @@ from onnx import TensorProto, helper
 logger = logging.getLogger(__name__)
 
 
-def generate_simple_onnx(output_path: Path) -> None:
-    """Generates a simple ONNX model (Sigmoid(X*W+B)) for testing purposes."""
-    n_features = 30  # Match real model's feature count (20 base + 10 engineered)
+def generate_simple_onnx(output_path: Path, n_features: int = 4) -> None:
+    """Generates a simple ONNX model (Sigmoid(X*W+B)) for testing purposes.
+
+    Args:
+        output_path: Where to save the generated ONNX model.
+        n_features: Number of input features for the model.
+    """
     X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [None, n_features])
     Y = helper.make_tensor_value_info("output", TensorProto.FLOAT, [None, 2])
 
@@ -36,8 +40,14 @@ def generate_simple_onnx(output_path: Path) -> None:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     onnx.save(model, str(output_path))
-    logger.info("ONNX model generated at %s", output_path)
+    logger.info("ONNX model generated at %s (n_features=%d)", output_path, n_features)
 
 
 if __name__ == "__main__":
-    generate_simple_onnx(Path("/tmp/phoenix/remote_storage/demo/v1/model.onnx"))
+    import sys
+
+    _MIN_ARGS_WITH_FEATURES = 3
+    path = sys.argv[1] if len(sys.argv) > 1 else "/tmp/phoenix/test_model.onnx"
+    features = int(sys.argv[2]) if len(sys.argv) >= _MIN_ARGS_WITH_FEATURES else 4
+    generate_simple_onnx(Path(path), n_features=features)
+

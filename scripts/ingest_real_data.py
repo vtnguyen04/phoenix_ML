@@ -9,18 +9,20 @@ from src.domain.inference.entities.model import Model
 from src.infrastructure.persistence.postgres_model_registry import (
     PostgresModelRegistry,
 )
-from src.shared.ingestion.data_collector import CreditDataCollector
+from src.shared.ingestion.data_collector import ExampleCreditDataCollector
 from src.shared.ingestion.redis_ingestor import RedisDataIngestor
 from src.shared.ingestion.service import IngestionService
 
 SUCCESS_STATUS = 200
+DEFAULT_MODEL_ID = os.environ.get("DEFAULT_MODEL_ID", "credit-risk")
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
 
 
 async def main() -> None:
     print("🚀 Starting REAL-WORLD data pipeline...")
 
     # 1. Collect Real Data (The 'Crawl' phase)
-    collector = CreditDataCollector()
+    collector = ExampleCreditDataCollector()
     real_df = await collector.collect()
     print(f"📊 Collected {len(real_df)} real-world records.")
 
@@ -47,6 +49,8 @@ async def main() -> None:
     print("✅ Ingested 50 real-world feature records into Redis.")
 
     # 3. Register Model in Docker Postgres (Port 5433)
+    _model_id = DEFAULT_MODEL_ID
+    _fs_model_id = _model_id.replace("-", "_")
     db_url = os.environ.get(
         "DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5433/phoenix"
     )
@@ -55,9 +59,9 @@ async def main() -> None:
 
     async with session_factory() as session:
         registry = PostgresModelRegistry(session)
-        model_uri = "local:///models/credit_risk/v1/model.onnx"
-        credit_model = Model(
-            id="credit-risk",
+        model_uri = f"local:///models/{_fs_model_id}/v1/model.onnx"
+        model_obj = Model(
+            id=_model_id,
             version="v1",
             uri=model_uri,
             framework="onnx",
@@ -65,9 +69,9 @@ async def main() -> None:
             created_at=datetime.now(UTC),
             is_active=True,
         )
-        await registry.save(credit_model)
-        await registry.update_stage("credit-risk", "v1", "champion")
-        print("✅ Registered model 'credit-risk:v1' as Champion in Postgres.")
+        await registry.save(model_obj)
+        await registry.update_stage(_model_id, "v1", "champion")
+        print(f"✅ Registered model '{_model_id}:v1' as Champion in Postgres.")
 
     # 4. Predict and Verify
     print("\n🔮 Performing predictions on real-world data...")
@@ -75,8 +79,8 @@ async def main() -> None:
         for i in range(5):
             eid = f"real-cust-{i}"
             resp = await client.post(
-                "http://localhost:8001/predict",
-                json={"model_id": "credit-risk", "entity_id": eid},
+                f"{API_URL}/predict",
+                json={"model_id": _model_id, "entity_id": eid},
             )
             if resp.status_code == SUCCESS_STATUS:
                 print(f"✔️ Prediction for {eid}: {resp.json()['result']}")

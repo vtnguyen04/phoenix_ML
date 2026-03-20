@@ -22,7 +22,7 @@ from src.domain.monitoring.repositories.drift_report_repository import (
 from src.domain.monitoring.repositories.prediction_log_repository import (
     PredictionLogRepository,
 )
-from src.domain.monitoring.services.model_evaluator import ModelEvaluator
+from src.domain.monitoring.services.model_evaluator import IModelEvaluator
 
 
 class GetModelQueryHandler:
@@ -73,7 +73,7 @@ class GetModelPerformanceQueryHandler:
     def __init__(
         self,
         log_repo: PredictionLogRepository,
-        evaluator: ModelEvaluator,
+        evaluator: IModelEvaluator,
     ) -> None:
         self._log_repo = log_repo
         self._evaluator = evaluator

@@ -1,0 +1,29 @@
+# ───────────────────────────────────────────────────────────────
+# Phoenix ML Platform — Fraud Detection Model Configuration
+# ───────────────────────────────────────────────────────────────
+
+model_id: fraud-detection
+version: v1
+framework: onnx
+task_type: classification
+model_path: models/fraud_detection/v1/model.onnx
+train_script: examples/fraud_detection/train.py
+dataset_name: synthetic-fraud
+
+feature_names:
+  - transaction_amount
+  - merchant_category
+  - card_type
+  - transaction_hour
+  - distance_from_home
+  - distance_from_last_txn
+  - ratio_to_median_amount
+  - is_weekend
+  - is_night
+  - num_txn_last_24h
+  - num_txn_last_7d
+  - avg_amount_last_30d
+
+metadata:
+  role: champion
+  dataset: synthetic-fraud

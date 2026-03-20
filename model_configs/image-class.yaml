@@ -1,0 +1,36 @@
+# ───────────────────────────────────────────────────────────────
+# Phoenix ML Platform — Image Classification Model Configuration
+# ───────────────────────────────────────────────────────────────
+# Fashion-MNIST: 28×28 grayscale images → 10 clothing categories
+# Input: 784 floats (flattened pixels, normalized [0,1])
+# Output: 10 classes
+# ───────────────────────────────────────────────────────────────
+
+model_id: image-class
+version: v1
+framework: onnx
+task_type: classification
+model_path: models/image_class/v1/model.onnx
+train_script: examples/image_classification/train.py
+dataset_name: fashion-mnist
+
+# For image models, feature_names can be omitted (raw pixel input).
+# The framework will use the n_features from metrics.json instead.
+feature_names: []
+
+metadata:
+  role: champion
+  dataset: fashion-mnist
+  image_size: "28x28"
+  n_classes: 10
+  class_names:
+    - T-shirt/top
+    - Trouser
+    - Pullover
+    - Dress
+    - Coat
+    - Sandal
+    - Shirt
+    - Sneaker
+    - Bag
+    - Ankle boot

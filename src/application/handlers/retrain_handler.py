@@ -8,7 +8,7 @@ from pathlib import Path
 from src.application.commands.trigger_retrain_command import TriggerRetrainCommand
 from src.domain.inference.entities.model import Model
 from src.domain.model_registry.repositories.model_repository import ModelRepository
-from src.domain.monitoring.services.model_evaluator import ModelEvaluator
+from src.domain.monitoring.services.model_evaluator import IModelEvaluator
 from src.infrastructure.monitoring.prometheus_metrics import (
     MODEL_ACCURACY,
     MODEL_F1_SCORE,
@@ -29,7 +29,7 @@ class RetrainHandler:
         self,
         project_root: Path,
         model_repo: ModelRepository,
-        evaluator: ModelEvaluator,
+        evaluator: IModelEvaluator,
     ) -> None:
         self._project_root = project_root
         self._model_repo = model_repo
@@ -68,11 +68,16 @@ class RetrainHandler:
 
         if champion and "metrics" in champion.metadata:
             champion_metrics = champion.metadata["metrics"]
-            should_promote = self._evaluator.is_better(champion_metrics, challenger_metrics)
+            should_promote = self._evaluator.is_better(
+                champion_metrics, challenger_metrics
+            )
+            primary = self._evaluator.primary_metric()
             logger.info(
-                "📊 Comparison: Challenger F1=%s vs Champion F1=%s",
-                challenger_metrics["f1_score"],
-                champion_metrics.get("f1_score", 0),
+                "📊 Comparison: Challenger %s=%s vs Champion %s=%s",
+                primary,
+                challenger_metrics.get(primary, "N/A"),
+                primary,
+                champion_metrics.get(primary, "N/A"),
             )
 
         # 5. Register and potentially Promote
@@ -125,8 +130,18 @@ class RetrainHandler:
             logger.error("❌ Training failed: %s", e, exc_info=True)
             return False
 
-    def _update_prometheus(self, model_id: str, version: str, metrics: dict[str, float]) -> None:
-        MODEL_ACCURACY.labels(model_id=model_id, version=version).set(metrics["accuracy"])
-        MODEL_F1_SCORE.labels(model_id=model_id, version=version).set(metrics["f1_score"])
-        MODEL_PRECISION.labels(model_id=model_id, version=version).set(metrics["precision"])
-        MODEL_RECALL.labels(model_id=model_id, version=version).set(metrics["recall"])
+    def _update_prometheus(
+        self, model_id: str, version: str, metrics: dict[str, float]
+    ) -> None:
+        """Log metrics to Prometheus — only logs metrics that exist."""
+        _metric_map = {
+            "accuracy": MODEL_ACCURACY,
+            "f1_score": MODEL_F1_SCORE,
+            "precision": MODEL_PRECISION,
+            "recall": MODEL_RECALL,
+        }
+        for metric_name, gauge in _metric_map.items():
+            if metric_name in metrics:
+                gauge.labels(model_id=model_id, version=version).set(
+                    metrics[metric_name]
+                )

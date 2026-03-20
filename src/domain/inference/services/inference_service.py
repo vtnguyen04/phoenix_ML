@@ -66,7 +66,10 @@ class InferenceService:
             metadata = model.metadata or {}
             required_features = metadata.get("features")
             if not isinstance(required_features, list) or not required_features:
-                required_features = ["f1", "f2", "f3", "f4"]
+                raise ValueError(
+                    f"Model '{request.model_id}' has no feature list in metadata. "
+                    "Provide features explicitly or configure model metadata."
+                )
 
             feature_values = await self._feature_store.get_online_features(
                 request.entity_id, required_features

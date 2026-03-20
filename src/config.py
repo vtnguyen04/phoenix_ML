@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     Reads from environment variables (e.g., REDIS_URL=...)
     """
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(
+        env_file=".env", case_sensitive=True, extra="ignore"
+    )
 
     # App Config
     APP_NAME: str = "Phoenix ML Platform"
@@ -27,10 +29,14 @@ class Settings(BaseSettings):
     # Default to sqlite for local dev without docker
     DATABASE_URL: str = "sqlite+aiosqlite:///./phoenix.db"
 
-    # Model Config
-    DEFAULT_MODEL_ID: str = "credit-risk"
+    # Model Config — model-agnostic defaults, override via env vars
+    DEFAULT_MODEL_ID: str = ""
     DEFAULT_MODEL_VERSION: str = "v1"
-    DEFAULT_MODEL_PATH: str = "local://models/demo.onnx"
+    MODEL_CONFIG_DIR: str = "model_configs"
+
+    # Storage Config — override for Docker / Cloud
+    CACHE_DIR: str = "/tmp/phoenix/model_cache"
+    ARTIFACT_STORAGE_DIR: str = "/tmp/phoenix/remote_storage"
 
     # Observability Config
     JAEGER_ENDPOINT: str = "http://localhost:4317"
