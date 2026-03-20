@@ -14,7 +14,7 @@
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://docker.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**[📖 Documentation](https://vtnguyen04.github.io/phoenix_ML/)** · **[🚀 Quick Start](#-quick-start)** · **[📊 Architecture](#-system-architecture)** · **[🧪 Testing](#-quality-assurance)**
+**[📖 Documentation](https://vtnguyen04.github.io/phoenix_ML/)** · **[🚀 Quick Start](#-quick-start)** · **[📊 Architecture](#-system-architecture)** · **[🧪 Testing](#-quality-assurance)** · **[🛠️ Customization](docs/guides/customization.md)**
 
 </div>
 
@@ -166,6 +166,7 @@ graph TD
 | **Observability** | Prometheus · Grafana · Jaeger (OpenTelemetry) |
 | **Frontend** | React 18 · TypeScript · Vite · Vanilla CSS · Vitest |
 | **Infrastructure** | Docker Compose (14+ services) · GitHub Actions CI · `uv` package manager · Alembic migrations |
+| **Testing** | Pytest (87% coverage) · Vitest (104 tests) · ESLint · Ruff · Mypy (142 source files, 0 errors) |
 
 ---
 
@@ -295,13 +296,17 @@ cd frontend && npm install && npm run dev
 ### CI Pipeline
 
 ```bash
-# All quality gates
-uv run ruff check .                       # Linting (195 files)
-uv run mypy . --explicit-package-bases    # Type checking
-uv run pytest tests/ --cov=src            # Tests + coverage
+# All quality gates (last run: all pass ✅)
+uv run ruff check src/ tests/ scripts/ dags/    # Linting — 0 errors
+uv run mypy src/ --ignore-missing-imports        # Type checking — 0 errors (142 files)
+uv run pytest tests/ --cov=src                   # Tests — 87% coverage
+
+# Frontend tests
+cd frontend && npx vitest run                    # 104 tests, 16 test files
+npx eslint . --ext ts,tsx                        # ESLint — 0 warnings
 
 # Load testing
-locust -f benchmarks/load_test.py --host http://localhost:8001
+uv run locust -f benchmarks/load_test.py --host http://localhost:8001
 ```
 
 ---
@@ -342,9 +347,9 @@ phoenix-ml-platform/
 ├── frontend/                    # React + TypeScript dashboard
 ├── dags/                        # Airflow DAGs (self_healing_pipeline)
 ├── tests/                       # Unit / Integration / E2E
-├── scripts/                     # Simulation & seeding scripts
+├── scripts/                     # Simulation, seeding, E2E test scripts
 ├── benchmarks/                  # Locust load tests
-├── docs/                        # Architecture, ADRs, API reference, guides
+├── docs/                        # Architecture, ADRs, API ref, customization, monitoring, troubleshooting
 ├── grafana/                     # Provisioned dashboards
 ├── .github/workflows/           # CI/CD pipelines
 ├── dvc.yaml                     # ML pipeline stages

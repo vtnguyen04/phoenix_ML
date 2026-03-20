@@ -16,6 +16,9 @@ Technical documentation for the **Phoenix ML Platform** — a self-healing, mode
 ## Guides
 
 - **[Library API Guide](guides/library-api.md)**: Code examples for using Phoenix ML as a Python library
+- **[Customization Guide](guides/customization.md)**: Add new models, configure thresholds, custom engines, alert notifiers
+- **[Monitoring & Alerting](guides/monitoring.md)**: Drift detection, anomaly detection, alerts, rollback, Airflow self-healing
+- **[Troubleshooting](guides/troubleshooting.md)**: Common issues, error reference, port mapping
 - **[Contributing](../CONTRIBUTING.md)**: Development setup, code standards, how to add examples, PR checklist
 
 ## Architecture Decision Records

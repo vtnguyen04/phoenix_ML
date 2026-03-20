@@ -158,9 +158,9 @@ sequenceDiagram
 
 ## 7. Test Coverage
 
-- **Backend**: 195+ source files, 50+ test files, all CI checks pass (Ruff, mypy, pytest)
-- **Frontend**: 96 tests (Vitest + React Testing Library)
-- **CI**: GitHub Actions with Ruff, Mypy, pytest, vitest
+- **Backend**: 145 source files, 75 test files, 87% coverage — all CI checks pass (Ruff 0, Mypy 0, Pytest pass)
+- **Frontend**: 104 tests across 16 test files (Vitest + React Testing Library), ESLint 0 warnings
+- **CI**: GitHub Actions with Ruff, Mypy, pytest, vitest, ESLint
 
 ---
-*Document Status: v2.0 — Updated March 2026*
+*Document Status: v3.0 — Updated March 2026*

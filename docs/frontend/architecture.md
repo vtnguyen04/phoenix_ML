@@ -7,7 +7,8 @@
 | React 18 + TypeScript | UI framework |
 | Vite | Build tool + dev server |
 | Vanilla CSS | Styling with custom design system (dark theme, glassmorphism) |
-| Vitest + React Testing Library | Unit testing (96 tests, 16 test files) |
+| Vitest + React Testing Library | Unit testing (104 tests, 16 test files) |
+| ESLint | TypeScript linting (0 warnings) |
 
 ## Component Architecture (SOLID)
 
@@ -30,7 +31,7 @@ frontend/src/
 │   └── ui/
 │       ├── StatCard.tsx       # Reusable metric card
 │       └── CustomerSelector.tsx
-├── test/                      # 16 test files, 96 tests
+├── test/                      # 16 test files, 104 tests
 ├── App.tsx                    # Orchestrator: auto-fetch + 15s refresh interval
 ├── index.css                  # Design system (dark theme, glassmorphism, CSS variables)
 └── main.tsx                   # Entry point
@@ -69,8 +70,9 @@ cd frontend && npm install && npm run dev  # http://localhost:5173
 # API URL configured via env: VITE_API_URL
 
 # Testing
-npx vitest run          # 96 tests
+npx vitest run          # 104 tests, 16 test files
 npx vitest run --ui     # Interactive UI
+npx eslint . --ext ts,tsx  # Lint (0 warnings)
 ```
 
 ---
