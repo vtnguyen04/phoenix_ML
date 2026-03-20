@@ -25,6 +25,8 @@ export const SERVICES: ServiceDef[] = [
   { name: 'PostgreSQL',  port: 5433,  icon: '🐘' },
   { name: 'Redis',       port: 6380,  icon: '⚡' },
   { name: 'Kafka',       port: 9094,  icon: '📨' },
+  { name: 'Airflow',     port: 8080,  icon: '🌊', healthUrl: 'http://localhost:8080/health' },
+  { name: 'MLflow',      port: 5000,  icon: '🧪', healthUrl: 'http://localhost:5000/health' },
   { name: 'Prometheus',  port: 9091,  icon: '🔥', healthUrl: 'http://localhost:9091/-/healthy' },
   { name: 'Grafana',     port: 3001,  icon: '📈', healthUrl: `${GRAFANA_URL}/api/health` },
   { name: 'Jaeger',      port: 16686, icon: '🔍', healthUrl: 'http://localhost:16686/' },
@@ -42,9 +44,12 @@ export interface NavLink {
 export const NAV_LINKS: NavLink[] = [
   { label: 'Dashboard',  icon: '📊', href: '#dashboard' },
   { label: 'Grafana',    icon: '📈', href: GRAFANA_URL,                    external: true },
+  { label: 'Airflow',    icon: '🌊', href: 'http://localhost:8080',        external: true },
+  { label: 'MLflow',     icon: '🧪', href: 'http://localhost:5000',        external: true },
   { label: 'Jaeger',     icon: '🔍', href: 'http://localhost:16686',       external: true },
   { label: 'Prometheus', icon: '🔥', href: 'http://localhost:9091',        external: true },
   { label: 'MinIO',      icon: '📦', href: 'http://localhost:9001',        external: true },
+  { label: 'Kafka UI',   icon: '📨', href: 'http://localhost:8082',        external: true },
 ];
 
 // ── Model Task Types ─────────────────────────────────────
