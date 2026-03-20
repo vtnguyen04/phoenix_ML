@@ -26,6 +26,9 @@ class InfrastructureSettings(BaseSettings):
     # MLflow
     MLFLOW_TRACKING_URI: str = "http://localhost:5000"
 
+    # Model Registry Backend
+    MODEL_REGISTRY_BACKEND: str = "postgres"
+
     # Airflow
     AIRFLOW_API_URL: str = "http://localhost:8080/api/v1"
     AIRFLOW_ADMIN_USER: str = "admin"

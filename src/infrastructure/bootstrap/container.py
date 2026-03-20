@@ -146,7 +146,7 @@ def ensure_model_exists(
         # stub model has the correct input dimensions.
         n_features = 4  # default fallback
         try:
-            from src.infrastructure.http.model_config_loader import (  # noqa: PLC0415
+            from src.infrastructure.bootstrap.model_config_loader import (  # noqa: PLC0415
                 load_all_model_configs,
             )
 

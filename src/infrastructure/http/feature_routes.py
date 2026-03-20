@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from src.domain.feature_store.entities.feature_registry import FeatureMetadata
-from src.infrastructure.http.container import feature_store
+from src.infrastructure.bootstrap.container import feature_store
 
 logger = logging.getLogger(__name__)
 

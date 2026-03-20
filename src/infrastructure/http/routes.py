@@ -25,7 +25,7 @@ from src.application.services.monitoring_service import MonitoringService
 from src.config import get_settings
 from src.domain.inference.entities.prediction import Prediction
 from src.domain.monitoring.entities.drift_report import DriftReport
-from src.infrastructure.http.container import (
+from src.infrastructure.bootstrap.container import (
     drift_calculator,
     event_bus,
     find_project_root,
@@ -169,7 +169,7 @@ async def check_drift(
         log_repo = PostgresPredictionLogRepository(db)
         drift_repo = PostgresDriftReportRepository(db)
 
-        from src.infrastructure.http.lifespan import (  # noqa: PLC0415
+        from src.infrastructure.bootstrap.lifespan import (  # noqa: PLC0415
             alert_manager,
         )
 

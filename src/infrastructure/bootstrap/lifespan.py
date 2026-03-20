@@ -16,7 +16,7 @@ from src.domain.monitoring.services.alert_manager import (
     AlertRule,
     AlertSeverity,
 )
-from src.infrastructure.http.container import (
+from src.infrastructure.bootstrap.container import (
     artifact_storage,
     batch_manager,
     drift_calculator,
@@ -29,8 +29,8 @@ from src.infrastructure.http.container import (
     plugin_registry,
     shutdown_event,
 )
-from src.infrastructure.http.grpc_server import create_grpc_server
-from src.infrastructure.http.model_config_loader import (
+from src.infrastructure.grpc.grpc_server import create_grpc_server
+from src.infrastructure.bootstrap.model_config_loader import (
     load_all_model_configs,
     load_features_from_metrics,
 )

@@ -15,7 +15,7 @@ from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
 from src.config import get_settings
-from src.infrastructure.http.container import find_project_root
+from src.infrastructure.bootstrap.container import find_project_root
 from src.infrastructure.http.fastapi_server import app
 from src.infrastructure.persistence.database import get_db
 from src.infrastructure.persistence.postgres_drift_repo import (
@@ -43,7 +43,7 @@ def _resolve_feature_count() -> int:
                 return len(features)
 
     # 2. Try model config
-    from src.infrastructure.http.model_config_loader import load_all_model_configs
+    from src.infrastructure.bootstrap.model_config_loader import load_all_model_configs
 
     configs = load_all_model_configs(root / settings.MODEL_CONFIG_DIR)
     model_id = settings.DEFAULT_MODEL_ID

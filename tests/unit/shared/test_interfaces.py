@@ -3,7 +3,7 @@
 import pytest
 
 from src.domain.shared.interfaces.message_producer import MessageProducer
-from src.shared.interfaces import CacheBackend, EventPublisher
+from src.domain.shared.interfaces import CacheBackend, EventPublisher
 
 
 class TestEventPublisherInterface:
