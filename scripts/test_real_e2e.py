@@ -177,7 +177,7 @@ def step4_airflow() -> None:
         resp = requests.get(
             f"{AIRFLOW}/dags/self_healing_pipeline/dagRuns",
             auth=AIRFLOW_AUTH,
-            params={"limit": 5, "order_by": "-execution_date"},
+            params={"limit": "5", "order_by": "-execution_date"},
             timeout=10,
         )
         if resp.status_code == 200:
