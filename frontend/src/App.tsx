@@ -11,11 +11,10 @@ import { DriftPanel } from './components/dashboard/DriftPanel';
 import { ServicesStatus } from './components/dashboard/ServicesStatus';
 import './index.css';
 
+const MODEL_ID = 'credit-risk';
 const REFRESH_INTERVAL = 15_000;
 
 export default function App() {
-  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
-  const [selectedModelId, setSelectedModelId] = useState<string>('');
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [model, setModel] = useState<ModelInfo | null>(null);
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
@@ -26,45 +25,22 @@ export default function App() {
   const [driftError, setDriftError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch available models on mount
-  useEffect(() => {
-    mlService.getModels().then((models) => {
-      setAvailableModels(models);
-      if (models.length > 0 && !selectedModelId) {
-        setSelectedModelId(models[0].model_id);
-      }
-    }).catch(() => {
-      setError('Cannot fetch model list');
-    });
-  }, []);
-
-  // Clear state when switching models
-  useEffect(() => {
-    if (!selectedModelId) return;
-    setModel(null);
-    setPrediction(null);
-    setDrift(null);
-    setDriftReports([]);
-    setError(null);
-    setDriftError(null);
-  }, [selectedModelId]);
-
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         const [h, m] = await Promise.all([
           mlService.getHealth(),
-          mlService.getModel(selectedModelId),
+          mlService.getModel(MODEL_ID),
         ]);
         setHealth(h);
         setModel(m);
         setError(null);
       } catch {
-        setError(`Cannot fetch data for ${selectedModelId}`);
+        setError('Cannot connect to API');
       }
 
       try {
-        const reports = await mlService.getDriftReports(selectedModelId);
+        const reports = await mlService.getDriftReports(MODEL_ID);
         setDriftReports(reports);
         if (reports.length > 0) {
           setDrift(reports[0]);
@@ -77,26 +53,26 @@ export default function App() {
     fetchInitialData();
     const interval = setInterval(fetchInitialData, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [selectedModelId]);
+  }, []);
 
   const handlePredict = useCallback(async (entityId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await mlService.predict(selectedModelId, entityId);
+      const res = await mlService.predict(MODEL_ID, entityId);
       setPrediction(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Prediction failed');
     } finally {
       setLoading(false);
     }
-  }, [selectedModelId]);
+  }, []);
 
   const handleScanDrift = useCallback(async () => {
     setDriftLoading(true);
     setDriftError(null);
     try {
-      const res = await mlService.getDrift(selectedModelId);
+      const res = await mlService.getDrift(MODEL_ID);
       setDrift(res);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Drift scan failed';
@@ -108,7 +84,7 @@ export default function App() {
     } finally {
       setDriftLoading(false);
     }
-  }, [selectedModelId]);
+  }, []);
 
   const metrics = model?.metadata.metrics;
 
@@ -118,18 +94,7 @@ export default function App() {
 
       <main className="main-content">
         <header className="main-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <h1>Production Dashboard</h1>
-            <select 
-              value={selectedModelId} 
-              onChange={(e) => setSelectedModelId(e.target.value)}
-              style={{ padding: '8px', borderRadius: '4px', background: '#1a1f36', color: '#fff', border: '1px solid #2a2f4c' }}
-            >
-              {availableModels.map(m => (
-                <option key={m.model_id} value={m.model_id}>{m.model_id}</option>
-              ))}
-            </select>
-          </div>
+          <h1>Production Dashboard</h1>
           <div className="header-badges">
             {error && <span className="badge badge-danger">{error}</span>}
             <span className="badge badge-info">Auto-refresh: {REFRESH_INTERVAL / 1000}s</span>

@@ -101,9 +101,4 @@ export const mlService = {
     const res = await fetch(`${API_BASE}/monitoring/performance/${modelId}`);
     return handleResponse<PerformanceReport>(res);
   },
-
-  getModels: async (): Promise<ModelInfo[]> => {
-    const res = await fetch(`${API_BASE}/models`);
-    return handleResponse<ModelInfo[]>(res);
-  },
 };

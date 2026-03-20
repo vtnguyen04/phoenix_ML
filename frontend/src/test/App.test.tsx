@@ -27,10 +27,6 @@ vi.mock('../api/mlService', () => ({
         },
       },
     }),
-    getModels: vi.fn().mockResolvedValue([
-      { model_id: 'credit-risk', version: 'v1', status: 'champion', metadata: {} },
-      { model_id: 'fraud-detection', version: 'v1', status: 'champion', metadata: {} },
-    ]),
     getDriftReports: vi.fn().mockResolvedValue([]),
     predict: vi.fn(),
     getDrift: vi.fn(),
