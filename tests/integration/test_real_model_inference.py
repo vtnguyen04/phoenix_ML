@@ -18,7 +18,7 @@ async def test_real_credit_risk_model_inference() -> None:
     # Ensure model file exists for CI environment
     if not model_path.exists():
         model_path.parent.mkdir(parents=True, exist_ok=True)
-        generate_simple_onnx(model_path)
+        generate_simple_onnx(model_path, n_features=30)
 
     engine = ONNXInferenceEngine(cache_dir=cache_dir)
 

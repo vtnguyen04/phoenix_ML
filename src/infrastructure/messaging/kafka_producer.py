@@ -19,6 +19,10 @@ class KafkaProducer:
         self._is_noop = False
 
     async def start(self) -> None:
+        if not self.bootstrap_servers:
+            self._is_noop = True
+            logger.info("⏭️ Kafka skipped: bootstrap_servers is empty")
+            return
         if self._producer is None and not self._is_noop:
             try:
                 self._producer = AIOKafkaProducer(

@@ -12,11 +12,11 @@ class RedisDataIngestor(IDataIngestor):
     """
 
     def __init__(self, redis_url: str = "redis://localhost:6380"):
-        self.redis = redis.from_url(redis_url, decode_responses=True)  # type: ignore
+        self.redis = redis.from_url(redis_url, decode_responses=True)
 
     async def ingest(self, entity_id: str, data: dict[str, float]) -> bool:
         key = f"features:{entity_id}"
-        await self.redis.hset(key, mapping=data)
+        await self.redis.hset(key, mapping=data)  # type: ignore[misc]
         return True
 
     async def batch_ingest(self, data_list: list[dict[str, Any]]) -> int:

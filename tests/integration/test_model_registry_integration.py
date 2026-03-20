@@ -86,9 +86,7 @@ class TestModelRegistryIntegration:
         assert new is not None
         assert new.version == "v2"
 
-    async def test_get_active_versions(
-        self, model_repo: InMemoryModelRepository
-    ) -> None:
+    async def test_get_active_versions(self, model_repo: InMemoryModelRepository) -> None:
         """Active versions returns models with active status."""
         for ver in ("v1", "v2", "v3"):
             m = Model(

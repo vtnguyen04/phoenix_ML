@@ -1,0 +1,59 @@
+# ───────────────────────────────────────────────────────────────
+# Phoenix ML Platform — Example Model Configuration
+# ───────────────────────────────────────────────────────────────
+# This file demonstrates how to register a model with the framework.
+# Place YAML configs in the MODEL_CONFIG_DIR (default: model_configs/).
+#
+# Supported task_type values:
+#   classification, regression, object_detection, recommendation,
+#   timeseries, nlp, embedding, custom
+#
+# The framework reads this config at startup to seed the model registry.
+# ───────────────────────────────────────────────────────────────
+
+model_id: credit-risk
+version: v1
+framework: onnx
+task_type: classification
+model_path: models/credit_risk/v1/model.onnx
+train_script: examples/credit_risk/train.py
+dataset_name: german-credit-openml
+
+# Feature names — ordered list matching the model's input tensor.
+# Set to empty list for models using raw tensor input (e.g. images).
+# If omitted, the framework reads from metrics.json "all_features" key.
+feature_names:
+  - duration
+  - credit_amount
+  - installment_commitment
+  - residence_since
+  - age
+  - existing_credits
+  - num_dependents
+  - checking_status
+  - credit_history
+  - purpose
+  - savings_status
+  - employment
+  - personal_status
+  - other_parties
+  - property_magnitude
+  - other_payment_plans
+  - housing
+  - job
+  - own_telephone
+  - foreign_worker
+  - credit_per_month
+  - age_credit_ratio
+  - installment_credit_ratio
+  - age_employment_score
+  - credit_risk_density
+  - duration_installment
+  - checking_savings_interact
+  - age_checking_interact
+  - credit_existing_interact
+  - log_credit_amount
+
+metadata:
+  role: champion
+  dataset: german-credit-openml

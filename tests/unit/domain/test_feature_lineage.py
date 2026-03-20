@@ -142,9 +142,7 @@ class TestFeatureRegistry:
         lineage = FeatureLineage(source="openml")
         lineage.add_transformation("scaler")
         registry.register(
-            FeatureMetadata(
-                name="amount", dtype="float", description="", owner="", lineage=lineage
-            )
+            FeatureMetadata(name="amount", dtype="float", description="", owner="", lineage=lineage)
         )
 
         result = registry.get_lineage("amount")

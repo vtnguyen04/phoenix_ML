@@ -41,17 +41,13 @@ def breaker() -> CircuitBreaker:
 class TestCircuitBreakerIntegration:
     """Integration tests for circuit breaker state machine."""
 
-    async def test_closed_state_passes_through(
-        self, breaker: CircuitBreaker
-    ) -> None:
+    async def test_closed_state_passes_through(self, breaker: CircuitBreaker) -> None:
         """In CLOSED state, successful calls pass through normally."""
         result = await breaker.execute(_success, _fallback)
         assert result == "ok"
         assert breaker.state == CircuitState.CLOSED
 
-    async def test_failures_trip_circuit_to_open(
-        self, breaker: CircuitBreaker
-    ) -> None:
+    async def test_failures_trip_circuit_to_open(self, breaker: CircuitBreaker) -> None:
         """After threshold failures, circuit trips to OPEN."""
         for i in range(3):
             if i < 2:
@@ -65,9 +61,7 @@ class TestCircuitBreakerIntegration:
 
         assert breaker.state == CircuitState.OPEN
 
-    async def test_open_state_routes_to_fallback(
-        self, breaker: CircuitBreaker
-    ) -> None:
+    async def test_open_state_routes_to_fallback(self, breaker: CircuitBreaker) -> None:
         """While OPEN, all calls go to fallback without calling the function."""
         # Trip the breaker
         for _ in range(3):
@@ -83,9 +77,7 @@ class TestCircuitBreakerIntegration:
             result = await breaker.execute(_success, _fallback)
             assert result == "fallback"
 
-    async def test_open_to_half_open_after_timeout(
-        self, breaker: CircuitBreaker
-    ) -> None:
+    async def test_open_to_half_open_after_timeout(self, breaker: CircuitBreaker) -> None:
         """After recovery_timeout, circuit transitions OPEN → HALF_OPEN."""
         import asyncio  # noqa: PLC0415
 
@@ -106,9 +98,7 @@ class TestCircuitBreakerIntegration:
         assert result == "ok"
         assert breaker.state == CircuitState.HALF_OPEN  # type: ignore[comparison-overlap]
 
-    async def test_half_open_to_closed_on_successes(
-        self, breaker: CircuitBreaker
-    ) -> None:
+    async def test_half_open_to_closed_on_successes(self, breaker: CircuitBreaker) -> None:
         """Enough successes in HALF_OPEN → CLOSED."""
         import asyncio  # noqa: PLC0415
 

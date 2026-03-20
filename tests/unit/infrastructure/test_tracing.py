@@ -1,5 +1,3 @@
-
-
 from src.infrastructure.monitoring.tracing import (
     get_tracer,
     init_tracing,

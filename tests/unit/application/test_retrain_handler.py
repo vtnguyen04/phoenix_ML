@@ -7,7 +7,7 @@ import pytest
 from src.application.commands.trigger_retrain_command import TriggerRetrainCommand
 from src.application.handlers.retrain_handler import RetrainHandler
 from src.domain.model_registry.repositories.model_repository import ModelRepository
-from src.domain.monitoring.services.model_evaluator import ModelEvaluator
+from src.domain.monitoring.services.model_evaluator import ClassificationEvaluator
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def mock_repo() -> AsyncMock:
 
 @pytest.fixture
 def mock_evaluator() -> Mock:
-    m = Mock(spec=ModelEvaluator)
+    m = Mock(spec=ClassificationEvaluator)
     m.is_better.return_value = True
     return m
 

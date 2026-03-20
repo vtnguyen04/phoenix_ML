@@ -41,9 +41,7 @@ class TestPredictionAnomaly:
 
     def test_with_baseline(self, detector: AnomalyDetector) -> None:
         scores = [0.1, 0.12, 0.08, 0.11, 0.09]
-        report = detector.detect_prediction_anomaly(
-            scores, baseline_mean=0.8, baseline_std=0.05
-        )
+        report = detector.detect_prediction_anomaly(scores, baseline_mean=0.8, baseline_std=0.05)
         assert report.is_anomalous
 
 

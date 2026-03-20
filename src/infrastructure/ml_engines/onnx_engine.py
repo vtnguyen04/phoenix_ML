@@ -96,20 +96,29 @@ class ONNXInferenceEngine(InferenceEngine):
                 confidence_val = float(probs_map.get(lookup_key, 1.0))
 
             elif isinstance(result_tensors, np.ndarray) and result_tensors.ndim > 1:
-                # Case: Deep Learning [N, C]
-                result = int(np.argmax(result_tensors[i]))
-                confidence_val = float(np.max(result_tensors[i]))
+                row = result_tensors[i]
+                if result_tensors.shape[1] == 1:
+                    # Case: Regression [N, 1] — return raw value
+                    result = float(row[0])
+                else:
+                    # Case: Multi-class classification [N, C]
+                    result = int(np.argmax(row))
+                    confidence_val = float(np.max(row))
             else:
                 # Fallback
                 val = result_tensors[i]
                 result = val.tolist() if hasattr(val, "tolist") else val
+
+            # Clamp confidence to [0, 1] for regression models
+            # whose raw outputs may exceed the probability range
+            clamped_confidence = max(0.0, min(1.0, confidence_val))
 
             predictions.append(
                 Prediction(
                     model_id=model.id,
                     model_version=model.version,
                     result=result,
-                    confidence=ConfidenceScore(value=confidence_val),
+                    confidence=ConfidenceScore(value=clamped_confidence),
                     latency_ms=avg_latency_ms,
                 )
             )

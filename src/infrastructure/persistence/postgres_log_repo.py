@@ -31,7 +31,9 @@ class PostgresPredictionLogRepository(PredictionLogRepository):
         self._session.add(orm)
         await self._session.commit()
 
-    async def update_ground_truth(self, prediction_id: str, ground_truth: int) -> None:
+    async def update_ground_truth(
+        self, prediction_id: str, ground_truth: int | float | str
+    ) -> None:
         stmt = (
             update(PredictionLogORM)
             .where(PredictionLogORM.id == prediction_id)

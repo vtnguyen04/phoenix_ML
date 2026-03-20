@@ -19,9 +19,7 @@ def drift_calculator() -> DriftCalculator:
 class TestMonitoringPipeline:
     """Integration tests for the monitoring pipeline."""
 
-    def test_ks_test_no_drift_same_distribution(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_ks_test_no_drift_same_distribution(self, drift_calculator: DriftCalculator) -> None:
         """KS test on same distribution should report no drift."""
         rng = np.random.default_rng(42)
         data = rng.normal(loc=0, scale=1, size=500).tolist()
@@ -38,9 +36,7 @@ class TestMonitoringPipeline:
         assert report.method == "ks_test"
         assert "No action" in report.recommendation
 
-    def test_ks_test_detects_shifted_distribution(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_ks_test_detects_shifted_distribution(self, drift_calculator: DriftCalculator) -> None:
         """KS test detects drift when distribution is shifted."""
         rng = np.random.default_rng(42)
         reference = rng.normal(loc=0, scale=1, size=500).tolist()
@@ -56,9 +52,7 @@ class TestMonitoringPipeline:
         assert report.drift_detected is True
         assert report.p_value < 0.05
 
-    def test_psi_test_no_drift(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_psi_test_no_drift(self, drift_calculator: DriftCalculator) -> None:
         """PSI on similar distributions should report no drift."""
         rng = np.random.default_rng(42)
         data = rng.normal(loc=0, scale=1, size=1000).tolist()
@@ -73,9 +67,7 @@ class TestMonitoringPipeline:
         assert report.drift_detected is False
         assert report.method == "psi"
 
-    def test_psi_test_detects_drift(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_psi_test_detects_drift(self, drift_calculator: DriftCalculator) -> None:
         """PSI detects drift with heavily shifted distribution."""
         rng = np.random.default_rng(42)
         reference = rng.normal(loc=0, scale=1, size=500).tolist()
@@ -90,9 +82,7 @@ class TestMonitoringPipeline:
 
         assert report.drift_detected is True
 
-    def test_wasserstein_detects_drift(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_wasserstein_detects_drift(self, drift_calculator: DriftCalculator) -> None:
         """Wasserstein distance flags significant shift."""
         rng = np.random.default_rng(42)
         reference = rng.normal(loc=0, scale=1, size=500).tolist()
@@ -108,9 +98,7 @@ class TestMonitoringPipeline:
         assert report.drift_detected is True
         assert report.method == "wasserstein"
 
-    def test_chi2_test_no_drift(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_chi2_test_no_drift(self, drift_calculator: DriftCalculator) -> None:
         """Chi-squared test on same distribution reports no drift."""
         rng = np.random.default_rng(42)
         data = rng.normal(loc=0, scale=1, size=1000).tolist()
@@ -125,9 +113,7 @@ class TestMonitoringPipeline:
         assert report.drift_detected is False
         assert report.method == "chi2"
 
-    def test_empty_data_raises(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_empty_data_raises(self, drift_calculator: DriftCalculator) -> None:
         """Empty data samples should raise ValueError."""
         with pytest.raises(ValueError, match="cannot be empty"):
             drift_calculator.calculate_drift(
@@ -137,9 +123,7 @@ class TestMonitoringPipeline:
                 test_type="ks",
             )
 
-    def test_recommendation_severity_levels(
-        self, drift_calculator: DriftCalculator
-    ) -> None:
+    def test_recommendation_severity_levels(self, drift_calculator: DriftCalculator) -> None:
         """Verify recommendation text reflects drift severity."""
         rng = np.random.default_rng(42)
         reference = rng.normal(loc=0, scale=1, size=500).tolist()
