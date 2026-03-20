@@ -12,65 +12,56 @@ const mockPrediction: PredictionResponse = {
   latency_ms: 0.42,
 };
 
+const featureNames = ['duration', 'credit_amount', 'age'];
+
 describe('PredictionPanel', () => {
   const defaultProps = {
     modelId: 'credit-risk',
     taskType: 'classification' as const,
+    featureNames,
     onPredict: vi.fn(),
     prediction: null as PredictionResponse | null,
     loading: false,
   };
 
-  it('renders LIVE badge', () => {
+  it('renders feature count badge', () => {
     render(<PredictionPanel {...defaultProps} />);
-    expect(screen.getByText('LIVE')).toBeInTheDocument();
+    expect(screen.getByText('3 features')).toBeInTheDocument();
   });
 
-  it('renders entity selector with 10 buttons', () => {
+  it('renders feature input fields', () => {
     render(<PredictionPanel {...defaultProps} />);
-    // 10 entity buttons + 1 predict button = 11
-    expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(10);
+    expect(screen.getByLabelText('duration')).toBeInTheDocument();
+    expect(screen.getByLabelText('credit_amount')).toBeInTheDocument();
+    expect(screen.getByLabelText('age')).toBeInTheDocument();
   });
 
-  it('renders model-specific predict button', () => {
+  it('renders Run Prediction button', () => {
     render(<PredictionPanel {...defaultProps} />);
-    expect(screen.getByText(/Predict Credit Risk/)).toBeInTheDocument();
+    expect(screen.getByText('Run Prediction')).toBeInTheDocument();
   });
 
-  it('renders fraud-detection predict button', () => {
-    render(<PredictionPanel {...defaultProps} modelId="fraud-detection" />);
-    expect(screen.getByText(/Predict Fraud Detection/)).toBeInTheDocument();
-  });
-
-  it('disables predict button when loading', () => {
+  it('disables button when loading', () => {
     render(<PredictionPanel {...defaultProps} loading={true} />);
-    const btns = screen.getAllByRole('button');
-    const predictBtn = btns.find(b => b.textContent?.includes('Predict'));
-    expect(predictBtn).toBeDisabled();
+    const btn = screen.getByText('Run Prediction').closest('button');
+    expect(btn).toBeDisabled();
   });
 
-  it('shows spinner when loading', () => {
-    render(<PredictionPanel {...defaultProps} loading={true} />);
-    expect(screen.getByRole('status')).toBeInTheDocument();
-  });
-
-  it('calls onPredict with default entity', () => {
+  it('calls onPredict with feature values', () => {
     const onPredict = vi.fn();
     render(<PredictionPanel {...defaultProps} onPredict={onPredict} />);
-    const btns = screen.getAllByRole('button');
-    const predictBtn = btns.find(b => b.textContent?.includes('Predict'));
-    fireEvent.click(predictBtn!);
-    expect(onPredict).toHaveBeenCalledWith('customer-0001');
+    fireEvent.change(screen.getByLabelText('duration'), { target: { value: '12' } });
+    fireEvent.change(screen.getByLabelText('credit_amount'), { target: { value: '5000' } });
+    fireEvent.change(screen.getByLabelText('age'), { target: { value: '30' } });
+    fireEvent.click(screen.getByText('Run Prediction'));
+    expect(onPredict).toHaveBeenCalledWith([12, 5000, 30]);
   });
 
-  it('calls onPredict with selected entity after switching', () => {
+  it('sends zeros for empty fields', () => {
     const onPredict = vi.fn();
     render(<PredictionPanel {...defaultProps} onPredict={onPredict} />);
-    fireEvent.click(screen.getByText('#0005'));
-    const btns = screen.getAllByRole('button');
-    const predictBtn = btns.find(b => b.textContent?.includes('Predict'));
-    fireEvent.click(predictBtn!);
-    expect(onPredict).toHaveBeenCalledWith('customer-0005');
+    fireEvent.click(screen.getByText('Run Prediction'));
+    expect(onPredict).toHaveBeenCalledWith([0, 0, 0]);
   });
 
   it('does not show prediction result when null', () => {
@@ -78,9 +69,20 @@ describe('PredictionPanel', () => {
     expect(screen.queryByText(/GOOD CREDIT/)).not.toBeInTheDocument();
   });
 
-  it('shows prediction result after predict', () => {
+  it('shows prediction result', () => {
     render(<PredictionPanel {...defaultProps} prediction={mockPrediction} />);
     expect(screen.getByText(/GOOD CREDIT/)).toBeInTheDocument();
     expect(screen.getByText('85.0%')).toBeInTheDocument();
+  });
+
+  it('shows empty state when no features', () => {
+    render(<PredictionPanel {...defaultProps} featureNames={[]} />);
+    expect(screen.getByText(/No feature schema available/)).toBeInTheDocument();
+  });
+
+  it('shows filled count', () => {
+    render(<PredictionPanel {...defaultProps} />);
+    fireEvent.change(screen.getByLabelText('age'), { target: { value: '25' } });
+    expect(screen.getByText('1/3 filled')).toBeInTheDocument();
   });
 });

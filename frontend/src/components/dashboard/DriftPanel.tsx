@@ -13,7 +13,7 @@ export function DriftPanel({ drift, onScan, loading, error }: DriftPanelProps) {
   return (
     <div className="card">
       <div className="card-header">
-        <h2 className="card-title">🛡️ Drift Monitor</h2>
+        <h2 className="card-title">Drift Monitor</h2>
         <button className="btn btn-sm" onClick={onScan} disabled={loading}>
           {loading ? <Spinner /> : '🔄'} Scan Now
         </button>

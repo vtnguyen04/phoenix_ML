@@ -9,7 +9,7 @@ export function ServicesStatus() {
   return (
     <div className="card">
       <div className="card-header">
-        <h2 className="card-title">🏗️ Infrastructure</h2>
+        <h2 className="card-title">Infrastructure</h2>
         <span className="badge badge-success">{SERVICES.length} SERVICES</span>
       </div>
       <div className="services-grid">

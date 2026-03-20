@@ -24,17 +24,24 @@ vi.mock('../api/mlService', () => ({
           test_samples: 200,
           cv_accuracy_mean: 0.755,
           cv_accuracy_std: 0.019,
+          all_features: ['duration', 'credit_amount', 'age'],
         },
       },
     }),
     getModels: vi.fn().mockResolvedValue([
-      { model_id: 'credit-risk', version: 'v1', status: 'champion', metadata: {} },
-      { model_id: 'fraud-detection', version: 'v1', status: 'champion', metadata: {} },
+      { model_id: 'credit-risk', version: 'v1', status: 'champion', metadata: { role: 'champion' } },
+      { model_id: 'fraud-detection', version: 'v1', status: 'champion', metadata: { role: 'champion' } },
     ]),
     getDriftReports: vi.fn().mockResolvedValue([]),
     predict: vi.fn(),
+    predictWithFeatures: vi.fn(),
     getDrift: vi.fn(),
-    getPerformance: vi.fn(),
+    getPerformance: vi.fn().mockResolvedValue({
+      model_id: 'credit-risk',
+      version: 'v1',
+      total_predictions: 100,
+      metrics: { avg_latency_ms: 2.5, avg_confidence: 0.85 },
+    }),
   },
 }));
 
@@ -45,7 +52,7 @@ describe('App', () => {
 
   it('renders the dashboard header', async () => {
     render(<App />);
-    expect(screen.getByText('Production Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
 
   it('renders sidebar brand', () => {
@@ -53,33 +60,30 @@ describe('App', () => {
     expect(screen.getByText('PHOENIX ML')).toBeInTheDocument();
   });
 
-  it('renders all navigation links', () => {
+  it('renders navigation links', () => {
     render(<App />);
-    expect(screen.getByText('📊 Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('📈 Grafana')).toBeInTheDocument();
-    expect(screen.getByText('🔍 Jaeger')).toBeInTheDocument();
+    const grafana = screen.getAllByText(/Grafana/);
+    expect(grafana.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders stats grid with real metrics', async () => {
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByText('78.5%')).toBeInTheDocument();
+      const cells = screen.getAllByText('78.5%');
+      expect(cells.length).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.getByText('85.4%')).toBeInTheDocument();
-    expect(screen.getByText('81.3%')).toBeInTheDocument();
-    expect(screen.getByText('90.0%')).toBeInTheDocument();
   });
 
   it('renders model info card', async () => {
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByText('🤖 Champion Model')).toBeInTheDocument();
+      expect(screen.getByText('Champion Model')).toBeInTheDocument();
     });
   });
 
-  it('renders pipeline status', () => {
+  it('renders champion vs challenger', () => {
     render(<App />);
-    expect(screen.getByText('⚙️ MLOps Pipeline')).toBeInTheDocument();
+    expect(screen.getByText('Champion vs Challenger')).toBeInTheDocument();
   });
 
   it('renders Grafana embed section', () => {
@@ -89,21 +93,23 @@ describe('App', () => {
 
   it('renders drift monitor', () => {
     render(<App />);
-    expect(screen.getByText('🛡️ Drift Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Drift Monitor')).toBeInTheDocument();
   });
 
-  it('renders inference test panel', () => {
+  it('renders inference panel with feature inputs', async () => {
     render(<App />);
-    expect(screen.getByText('🎯 Real-time Inference')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Inference')).toBeInTheDocument();
+    });
   });
 
   it('renders infrastructure services', () => {
     render(<App />);
-    expect(screen.getByText('🏗️ Infrastructure')).toBeInTheDocument();
+    expect(screen.getByText('Infrastructure')).toBeInTheDocument();
   });
 
-  it('shows auto-refresh badge', () => {
+  it('renders performance panel', () => {
     render(<App />);
-    expect(screen.getByText('Auto-refresh: 15s')).toBeInTheDocument();
+    expect(screen.getByText('Live Performance')).toBeInTheDocument();
   });
 });

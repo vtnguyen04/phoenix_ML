@@ -5,7 +5,7 @@ import { ServicesStatus } from '../../components/dashboard/ServicesStatus';
 describe('ServicesStatus', () => {
   it('renders Infrastructure title', () => {
     render(<ServicesStatus />);
-    expect(screen.getByText('🏗️ Infrastructure')).toBeInTheDocument();
+    expect(screen.getByText('Infrastructure')).toBeInTheDocument();
   });
 
   it('renders all 10 services', () => {
