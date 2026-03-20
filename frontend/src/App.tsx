@@ -9,9 +9,8 @@ import { PipelineStatus } from './components/dashboard/PipelineStatus';
 import { PredictionPanel } from './components/dashboard/PredictionPanel';
 import { DriftPanel } from './components/dashboard/DriftPanel';
 import { ServicesStatus } from './components/dashboard/ServicesStatus';
+import { REFRESH_INTERVAL_MS, detectTaskType } from './config';
 import './index.css';
-
-const REFRESH_INTERVAL = 15_000;
 
 export default function App() {
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
@@ -50,6 +49,8 @@ export default function App() {
   }, [selectedModelId]);
 
   useEffect(() => {
+    if (!selectedModelId) return;
+
     const fetchInitialData = async () => {
       try {
         const [h, m] = await Promise.all([
@@ -75,7 +76,7 @@ export default function App() {
     };
 
     fetchInitialData();
-    const interval = setInterval(fetchInitialData, REFRESH_INTERVAL);
+    const interval = setInterval(fetchInitialData, REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [selectedModelId]);
 
@@ -111,19 +112,20 @@ export default function App() {
   }, [selectedModelId]);
 
   const metrics = model?.metadata.metrics;
+  const taskType = detectTaskType(metrics as Record<string, unknown> | undefined);
 
   return (
     <div className="app-layout">
-      <Sidebar health={health} />
+      <Sidebar health={health} modelCount={availableModels.length} />
 
       <main className="main-content">
         <header className="main-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div className="header-left">
             <h1>Production Dashboard</h1>
-            <select 
-              value={selectedModelId} 
+            <select
+              className="model-selector"
+              value={selectedModelId}
               onChange={(e) => setSelectedModelId(e.target.value)}
-              style={{ padding: '8px', borderRadius: '4px', background: '#1a1f36', color: '#fff', border: '1px solid #2a2f4c' }}
             >
               {availableModels.map(m => (
                 <option key={m.model_id} value={m.model_id}>{m.model_id}</option>
@@ -132,16 +134,11 @@ export default function App() {
           </div>
           <div className="header-badges">
             {error && <span className="badge badge-danger">{error}</span>}
-            <span className="badge badge-info">Auto-refresh: {REFRESH_INTERVAL / 1000}s</span>
+            <span className="badge badge-info">Auto-refresh: {REFRESH_INTERVAL_MS / 1000}s</span>
           </div>
         </header>
 
-        <StatsGrid
-          accuracy={metrics?.accuracy ?? null}
-          f1Score={metrics?.f1_score ?? null}
-          precision={metrics?.precision ?? null}
-          recall={metrics?.recall ?? null}
-        />
+        <StatsGrid metrics={metrics as Record<string, number> | undefined} taskType={taskType} />
 
         <div className="grid-2">
           <ModelInfoCard model={model} />
@@ -164,6 +161,8 @@ export default function App() {
             error={driftError}
           />
           <PredictionPanel
+            modelId={selectedModelId}
+            taskType={taskType}
             onPredict={handlePredict}
             prediction={prediction}
             loading={loading}

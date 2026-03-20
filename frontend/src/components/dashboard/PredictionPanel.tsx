@@ -2,24 +2,39 @@ import { useState } from 'react';
 import type { PredictionResponse } from '../../api/mlService';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Spinner } from '../ui/Spinner';
-import { CustomerSelector } from '../ui/CustomerSelector';
+import { EntitySelector } from '../ui/EntitySelector';
 import { PredictionResult } from '../ui/PredictionResult';
+import { getEntityPrefix } from '../../config';
+import type { TaskType } from '../../config';
 
 interface PredictionPanelProps {
+  modelId: string;
+  taskType: TaskType;
   onPredict: (entityId: string) => void;
   prediction: PredictionResponse | null;
   loading: boolean;
 }
 
 /**
- * PredictionPanel — Interactive credit risk inference panel.
- * SRP: Composes customer selection + predict action + result display.
- * DIP: Depends on callback interface (onPredict), not concrete service.
+ * PredictionPanel — Model-agnostic inference panel.
+ * Adapts entity input prefix and button label based on model.
  */
-export function PredictionPanel({ onPredict, prediction, loading }: PredictionPanelProps) {
-  const [selectedCustomer, setSelectedCustomer] = useState('customer-0001');
+export function PredictionPanel({
+  modelId,
+  taskType,
+  onPredict,
+  prediction,
+  loading,
+}: PredictionPanelProps) {
+  const prefix = getEntityPrefix(modelId);
+  const [selectedEntity, setSelectedEntity] = useState(`${prefix}-0001`);
 
-  const handlePredict = () => onPredict(selectedCustomer);
+  const handlePredict = () => onPredict(selectedEntity);
+
+  const label = modelId
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 
   return (
     <div className="card">
@@ -28,24 +43,28 @@ export function PredictionPanel({ onPredict, prediction, loading }: PredictionPa
         <StatusBadge variant="info">LIVE</StatusBadge>
       </div>
 
-      <CustomerSelector
-        onSelect={setSelectedCustomer}
-        selected={selectedCustomer}
+      <EntitySelector
+        prefix={prefix}
+        onSelect={setSelectedEntity}
+        selected={selectedEntity}
         count={10}
       />
 
       <button
-        className="btn btn-primary"
+        className="btn btn-primary btn-full"
         onClick={handlePredict}
         disabled={loading}
-        style={{ width: '100%', justifyContent: 'center' }}
       >
-        {loading ? <Spinner /> : '⚡'} Predict Credit Risk
+        {loading ? <Spinner /> : '⚡'} Predict {label}
       </button>
 
       {prediction && (
-        <div style={{ marginTop: 20 }}>
-          <PredictionResult prediction={prediction} />
+        <div className="prediction-result-wrapper">
+          <PredictionResult
+            prediction={prediction}
+            modelId={modelId}
+            taskType={taskType}
+          />
         </div>
       )}
     </div>

@@ -1,10 +1,16 @@
 import type { HealthResponse } from '../../api/mlService';
+import { NAV_LINKS } from '../../config';
 
 interface SidebarProps {
   health: HealthResponse | null;
+  modelCount: number;
 }
 
-export function Sidebar({ health }: SidebarProps) {
+/**
+ * Sidebar — Config-driven navigation.
+ * Links read from config.ts, no hardcoded URLs.
+ */
+export function Sidebar({ health, modelCount }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -13,37 +19,30 @@ export function Sidebar({ health }: SidebarProps) {
       </div>
 
       <nav className="sidebar-nav">
-        <a className="nav-item active" href="#dashboard">📊 Dashboard</a>
-        <a className="nav-item" href="http://localhost:3001" target="_blank" rel="noreferrer">
-          📈 Grafana
-        </a>
-        <a className="nav-item" href="http://localhost:16686" target="_blank" rel="noreferrer">
-          🔍 Jaeger
-        </a>
-        <a className="nav-item" href="http://localhost:9091" target="_blank" rel="noreferrer">
-          🔥 Prometheus
-        </a>
-        <a className="nav-item" href="http://localhost:9001" target="_blank" rel="noreferrer">
-          📦 MinIO
-        </a>
+        {NAV_LINKS.map((link) => (
+          <a
+            key={link.label}
+            className={`nav-item ${!link.external ? 'active' : ''}`}
+            href={link.href}
+            target={link.external ? '_blank' : undefined}
+            rel={link.external ? 'noreferrer' : undefined}
+          >
+            {link.icon} {link.label}
+          </a>
+        ))}
       </nav>
 
       <div className="sidebar-status">
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+        <div className="sidebar-status-row">
           <span className={`status-dot ${health ? 'online' : 'offline'}`} />
-          <span style={{ fontSize: 13, fontWeight: 600 }}>
+          <span className="sidebar-status-label">
             {health ? 'System Online' : 'Connecting...'}
           </span>
         </div>
-        {health && (
-          <span style={{
-            fontSize: 11,
-            color: 'var(--text-muted)',
-            fontFamily: 'var(--font-mono)',
-          }}>
-            v{health.version}
-          </span>
-        )}
+        <div className="sidebar-status-meta">
+          {health && <span className="sidebar-version">v{health.version}</span>}
+          <span className="sidebar-model-count">{modelCount} models</span>
+        </div>
       </div>
     </aside>
   );

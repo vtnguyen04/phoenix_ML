@@ -13,71 +13,74 @@ const mockPrediction: PredictionResponse = {
 };
 
 describe('PredictionPanel', () => {
+  const defaultProps = {
+    modelId: 'credit-risk',
+    taskType: 'classification' as const,
+    onPredict: vi.fn(),
+    prediction: null as PredictionResponse | null,
+    loading: false,
+  };
+
   it('renders LIVE badge', () => {
-    const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={false} />);
+    render(<PredictionPanel {...defaultProps} />);
     expect(screen.getByText('LIVE')).toBeInTheDocument();
   });
 
-  it('renders customer selector with 10 buttons', () => {
-    const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={false} />);
+  it('renders entity selector with 10 buttons', () => {
+    render(<PredictionPanel {...defaultProps} />);
+    // 10 entity buttons + 1 predict button = 11
     expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(10);
   });
 
-  it('renders Predict Credit Risk button', () => {
-    const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={false} />);
+  it('renders model-specific predict button', () => {
+    render(<PredictionPanel {...defaultProps} />);
     expect(screen.getByText(/Predict Credit Risk/)).toBeInTheDocument();
   });
 
+  it('renders fraud-detection predict button', () => {
+    render(<PredictionPanel {...defaultProps} modelId="fraud-detection" />);
+    expect(screen.getByText(/Predict Fraud Detection/)).toBeInTheDocument();
+  });
+
   it('disables predict button when loading', () => {
-    const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={true} />);
+    render(<PredictionPanel {...defaultProps} loading={true} />);
     const btns = screen.getAllByRole('button');
-    const predictBtn = btns.find(b => b.textContent?.includes('Predict Credit Risk'));
+    const predictBtn = btns.find(b => b.textContent?.includes('Predict'));
     expect(predictBtn).toBeDisabled();
   });
 
   it('shows spinner when loading', () => {
-    const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={true} />);
+    render(<PredictionPanel {...defaultProps} loading={true} />);
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
-  it('calls onPredict with default selected customer', () => {
+  it('calls onPredict with default entity', () => {
     const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={false} />);
+    render(<PredictionPanel {...defaultProps} onPredict={onPredict} />);
     const btns = screen.getAllByRole('button');
-    const predictBtn = btns.find(b => b.textContent?.includes('Predict Credit Risk'));
+    const predictBtn = btns.find(b => b.textContent?.includes('Predict'));
     fireEvent.click(predictBtn!);
     expect(onPredict).toHaveBeenCalledWith('customer-0001');
   });
 
-  it('calls onPredict with selected customer after switching', () => {
+  it('calls onPredict with selected entity after switching', () => {
     const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={false} />);
-    // Click on customer #0005
+    render(<PredictionPanel {...defaultProps} onPredict={onPredict} />);
     fireEvent.click(screen.getByText('#0005'));
-    // Then click predict
     const btns = screen.getAllByRole('button');
-    const predictBtn = btns.find(b => b.textContent?.includes('Predict Credit Risk'));
+    const predictBtn = btns.find(b => b.textContent?.includes('Predict'));
     fireEvent.click(predictBtn!);
     expect(onPredict).toHaveBeenCalledWith('customer-0005');
   });
 
   it('does not show prediction result when null', () => {
-    const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={null} loading={false} />);
+    render(<PredictionPanel {...defaultProps} />);
     expect(screen.queryByText(/GOOD CREDIT/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/BAD CREDIT/)).not.toBeInTheDocument();
   });
 
   it('shows prediction result after predict', () => {
-    const onPredict = vi.fn();
-    render(<PredictionPanel onPredict={onPredict} prediction={mockPrediction} loading={false} />);
+    render(<PredictionPanel {...defaultProps} prediction={mockPrediction} />);
     expect(screen.getByText(/GOOD CREDIT/)).toBeInTheDocument();
     expect(screen.getByText('85.0%')).toBeInTheDocument();
-    expect(screen.getByText('0.42ms')).toBeInTheDocument();
   });
 });

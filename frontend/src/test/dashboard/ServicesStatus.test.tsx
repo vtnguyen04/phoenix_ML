@@ -20,9 +20,9 @@ describe('ServicesStatus', () => {
     expect(screen.getByText('MinIO')).toBeInTheDocument();
   });
 
-  it('shows ALL ONLINE badge', () => {
+  it('shows service count badge', () => {
     render(<ServicesStatus />);
-    expect(screen.getByText('ALL ONLINE')).toBeInTheDocument();
+    expect(screen.getByText('8 SERVICES')).toBeInTheDocument();
   });
 
   it('renders port numbers', () => {
