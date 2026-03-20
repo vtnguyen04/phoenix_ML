@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 from src.config import get_settings
@@ -8,10 +9,18 @@ from src.domain.feature_store.repositories.feature_store import FeatureStore
 from src.domain.inference.services.batch_manager import BatchConfig, BatchManager
 from src.domain.inference.services.inference_engine import InferenceEngine
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
+from src.domain.monitoring.services.metrics_publisher import MetricsPublisher
 from src.domain.monitoring.services.model_evaluator import (
-    ClassificationEvaluator,
     IModelEvaluator,
+    get_evaluator,
 )
+from src.domain.shared.domain_events import (
+    DriftDetected,
+    DriftScorePublished,
+    ModelRetrained,
+    PredictionCompleted,
+)
+from src.domain.shared.event_bus import DomainEventBus
 from src.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
@@ -23,6 +32,9 @@ from src.infrastructure.messaging.kafka_producer import KafkaProducer
 from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
 from src.infrastructure.ml_engines.tensorrt_executor import TensorRTExecutor
 from src.infrastructure.ml_engines.triton_client import TritonInferenceClient
+from src.infrastructure.monitoring.prometheus_metrics_publisher import (
+    PrometheusMetricsPublisher,
+)
 from src.shared.utils.model_generator import generate_simple_onnx
 
 logger = logging.getLogger(__name__)
@@ -30,25 +42,67 @@ settings = get_settings()
 
 artifact_storage = LocalArtifactStorage(base_dir=Path(settings.ARTIFACT_STORAGE_DIR))
 
-inference_engine: InferenceEngine
+# ── Engine Factory Registry (OCP: add new engines via dict entry) ─────
+_ENGINE_FACTORIES: dict[str, Callable[[], InferenceEngine]] = {
+    "onnx": lambda: ONNXInferenceEngine(cache_dir=Path(settings.CACHE_DIR)),
+    "tensorrt": lambda: TensorRTExecutor(cache_dir=Path(settings.CACHE_DIR)),
+    "triton": lambda: TritonInferenceClient(
+        triton_url=getattr(settings, "TRITON_URL", "http://localhost:8000"),
+    ),
+}
+
 engine_type = getattr(settings, "INFERENCE_ENGINE", "onnx").lower()
-if engine_type == "tensorrt":
-    inference_engine = TensorRTExecutor(cache_dir=Path(settings.CACHE_DIR))
-elif engine_type == "triton":
-    inference_engine = TritonInferenceClient(triton_url=getattr(settings, "TRITON_URL", "http://localhost:8000"))
-else:
-    inference_engine = ONNXInferenceEngine(cache_dir=Path(settings.CACHE_DIR))
-batch_config = BatchConfig(max_batch_size=16, max_wait_time_ms=10)
+_engine_factory = _ENGINE_FACTORIES.get(engine_type, _ENGINE_FACTORIES["onnx"])
+inference_engine: InferenceEngine = _engine_factory()
+
+batch_config = BatchConfig(
+    max_batch_size=settings.BATCH_MAX_SIZE,
+    max_wait_time_ms=settings.BATCH_MAX_WAIT_MS,
+)
 batch_manager = BatchManager(inference_engine, config=batch_config)
 kafka_producer = KafkaProducer(bootstrap_servers=settings.KAFKA_URL)
 drift_calculator = DriftCalculator()
-model_evaluator: IModelEvaluator = ClassificationEvaluator()
 
-feature_store: FeatureStore
-if settings.USE_REDIS:
-    feature_store = RedisFeatureStore(redis_url=settings.REDIS_URL)
-else:
-    feature_store = InMemoryFeatureStore()
+# ── Evaluator Factory (uses existing get_evaluator from model_evaluator) ──
+default_task_type = getattr(settings, "DEFAULT_TASK_TYPE", "classification")
+model_evaluator: IModelEvaluator = get_evaluator(default_task_type)
+
+# ── MetricsPublisher (Adapter Pattern) ────────────────────────────
+metrics_publisher: MetricsPublisher = PrometheusMetricsPublisher()
+
+# ── Domain Event Bus (Observer Pattern) ───────────────────────────
+#    Subscribers react to domain events independently.
+#    Adding new side-effects = register a subscriber. Zero handler changes.
+event_bus = DomainEventBus()
+
+# Subscribe MetricsPublisher to domain events
+event_bus.subscribe(PredictionCompleted, lambda e: (
+    metrics_publisher.record_prediction(e.model_id, e.version, e.status),
+    metrics_publisher.record_latency(e.model_id, e.version, e.latency),
+    metrics_publisher.record_confidence(e.model_id, e.version, e.confidence)
+    if e.status == "success" else None,
+))
+
+event_bus.subscribe(DriftScorePublished, lambda e: (
+    metrics_publisher.publish_drift_score(e.model_id, e.feature_name, e.method, e.score)
+))
+
+event_bus.subscribe(DriftDetected, lambda e: (
+    metrics_publisher.record_drift_detected(e.model_id, e.feature_name)
+))
+
+event_bus.subscribe(ModelRetrained, lambda e: (
+    metrics_publisher.publish_model_metrics(e.model_id, e.version, e.metrics)
+))
+
+# ── Feature Store Factory Registry (OCP) ──────────────────────────
+_FEATURE_STORE_FACTORIES: dict[str, Callable[[], FeatureStore]] = {
+    "redis": lambda: RedisFeatureStore(redis_url=settings.REDIS_URL),
+    "memory": lambda: InMemoryFeatureStore(),
+}
+
+_fs_key = "redis" if settings.USE_REDIS else "memory"
+feature_store: FeatureStore = _FEATURE_STORE_FACTORIES[_fs_key]()
 
 # --- Plugin Registry (model-agnostic plugin resolution) ---
 from src.domain.shared.plugin_registry import PluginRegistry  # noqa: E402
@@ -92,7 +146,7 @@ def ensure_model_exists(
         # stub model has the correct input dimensions.
         n_features = 4  # default fallback
         try:
-            from src.infrastructure.http.model_config_loader import (  # noqa: PLC0415
+            from src.infrastructure.bootstrap.model_config_loader import (  # noqa: PLC0415
                 load_all_model_configs,
             )
 

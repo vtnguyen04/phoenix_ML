@@ -18,6 +18,7 @@ from src.domain.inference.services.batch_manager import BatchConfig, BatchManage
 from src.domain.inference.services.inference_service import InferenceService
 from src.domain.inference.services.routing_strategy import SingleModelStrategy
 from src.domain.inference.value_objects.feature_vector import FeatureVector
+from src.domain.shared.event_bus import DomainEventBus
 from src.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
@@ -166,7 +167,7 @@ class TestRealModelInference:
             artifact_storage=LocalArtifactStorage(base_dir=Path("/tmp/test")),
             routing_strategy=SingleModelStrategy(),
         )
-        handler = PredictHandler(service)
+        handler = PredictHandler(service, DomainEventBus())
 
         try:
             # Predict for 5 real customers

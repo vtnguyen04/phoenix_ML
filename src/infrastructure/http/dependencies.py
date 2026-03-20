@@ -1,15 +1,17 @@
-import os
+from collections.abc import Callable
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.handlers.predict_handler import PredictHandler
+from src.config import get_settings
 from src.domain.inference.services.inference_service import InferenceService
 from src.domain.inference.services.routing_strategy import ABTestStrategy
 from src.domain.model_registry.repositories.model_repository import ModelRepository
-from src.infrastructure.http.container import (
+from src.infrastructure.bootstrap.container import (
     artifact_storage,
     batch_manager,
+    event_bus,
     feature_store,
     inference_engine,
 )
@@ -21,16 +23,25 @@ from src.infrastructure.persistence.postgres_model_registry import (
     PostgresModelRegistry,
 )
 
+settings = get_settings()
+
+# ── Model Registry Factory (OCP: add new backends via dict entry) ──
+_REGISTRY_FACTORIES: dict[str, Callable[..., ModelRepository]] = {
+    "mlflow": lambda db: MlflowModelRegistry(
+        tracking_uri=settings.MLFLOW_TRACKING_URI,
+    ),
+    "postgres": lambda db: PostgresModelRegistry(db),
+}
+
+# Read backend from config (not os.getenv)
+_registry_backend = settings.MODEL_REGISTRY_BACKEND
+
 
 async def get_predict_handler(
     db: AsyncSession = Depends(get_db),  # noqa: B008
 ) -> PredictHandler:
-    registry_backend = os.getenv("MODEL_REGISTRY_BACKEND", "postgres").strip().lower()
-    if registry_backend == "mlflow":
-        tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
-        model_repo: ModelRepository = MlflowModelRegistry(tracking_uri=tracking_uri)
-    else:
-        model_repo = PostgresModelRegistry(db)
+    factory = _REGISTRY_FACTORIES.get(_registry_backend, _REGISTRY_FACTORIES["postgres"])
+    model_repo: ModelRepository = factory(db)
 
     inference_service = InferenceService(
         model_repo=model_repo,
@@ -40,4 +51,4 @@ async def get_predict_handler(
         artifact_storage=artifact_storage,
         routing_strategy=ABTestStrategy(0.5),
     )
-    return PredictHandler(inference_service)
+    return PredictHandler(inference_service, event_bus)

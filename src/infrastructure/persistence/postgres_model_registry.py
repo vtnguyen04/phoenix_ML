@@ -65,6 +65,12 @@ class PostgresModelRegistry(ModelRepository):
         await self._session.execute(stmt)
         await self._session.commit()
 
+    async def list_all(self) -> list[Model]:
+        """Return all active models (one per model_id, latest version)."""
+        stmt = select(ModelORM).where(ModelORM.is_active).order_by(ModelORM.id)
+        result = await self._session.execute(stmt)
+        return [self._to_entity(o) for o in result.scalars().all()]
+
     def _to_entity(self, orm: ModelORM) -> Model:
         metadata = dict(orm.metadata_json)
         metadata["role"] = orm.stage

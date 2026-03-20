@@ -1,6 +1,6 @@
 import logging
-import os
 
+from src.config import get_settings
 from src.domain.monitoring.entities.drift_report import DriftReport
 from src.domain.monitoring.repositories.drift_report_repository import (
     DriftReportRepository,
@@ -10,15 +10,11 @@ from src.domain.monitoring.repositories.prediction_log_repository import (
 )
 from src.domain.monitoring.services.alert_manager import AlertManager
 from src.domain.monitoring.services.drift_calculator import DriftCalculator
-from src.infrastructure.monitoring.prometheus_metrics import (
-    DRIFT_DETECTED_COUNT,
-    DRIFT_SCORE,
-)
+from src.domain.shared.domain_events import DriftDetected, DriftScorePublished
+from src.domain.shared.event_bus import DomainEventBus
 
 logger = logging.getLogger(__name__)
-
-# DAG name must match the Airflow DAG id
-_AIRFLOW_DAG_ID = "self_healing_pipeline"
+_settings = get_settings()
 
 
 class MonitoringService:
@@ -26,10 +22,10 @@ class MonitoringService:
     Application Service for Monitoring — Detection Only.
 
     Detects drift and triggers the Airflow Self-Healing Pipeline.
-    All remediation (alert, rollback, retrain, register) is handled by Airflow.
+    Uses Observer Pattern: emits DriftScorePublished / DriftDetected events.
     """
 
-    MIN_DATA_POINTS = 5
+    MIN_DATA_POINTS = _settings.MONITORING_MIN_DATA_POINTS
 
     def __init__(
         self,
@@ -37,11 +33,13 @@ class MonitoringService:
         drift_calculator: DriftCalculator,
         drift_report_repo: DriftReportRepository,
         alert_manager: AlertManager | None = None,
+        event_bus: DomainEventBus | None = None,
     ) -> None:
         self._log_repo = log_repo
         self._drift_calculator = drift_calculator
         self._drift_report_repo = drift_report_repo
         self._alert_manager = alert_manager
+        self._event_bus = event_bus
 
     async def check_drift(
         self,
@@ -83,18 +81,26 @@ class MonitoringService:
 
         await self._drift_report_repo.save(model_id, report)
 
-        DRIFT_SCORE.labels(
-            model_id=model_id, feature_name=feature_name, method=report.method
-        ).set(report.statistic)
+        # Emit domain events (Observer Pattern)
+        if self._event_bus:
+            self._event_bus.publish(DriftScorePublished(
+                model_id=model_id,
+                feature_name=feature_name,
+                method=report.method,
+                score=report.statistic,
+            ))
+
+            if report.drift_detected:
+                self._event_bus.publish(DriftDetected(
+                    model_id=model_id,
+                    feature_name=feature_name,
+                    score=report.statistic,
+                    method=report.method,
+                ))
 
         if report.drift_detected:
-            DRIFT_DETECTED_COUNT.labels(
-                model_id=model_id, feature_name=feature_name
-            ).inc()
-
             logger.warning("🚨 DRIFT DETECTED: %s", report.recommendation)
 
-            # Evaluate alert rules locally (for Prometheus metrics)
             if self._alert_manager:
                 self._alert_manager.evaluate(
                     metric_name="drift_score",
@@ -102,7 +108,6 @@ class MonitoringService:
                     model_id=model_id,
                 )
 
-            # Trigger Airflow self-healing pipeline (with dedup)
             await self._trigger_self_healing(model_id, report)
 
         return report
@@ -111,58 +116,59 @@ class MonitoringService:
         self, model_id: str, report: DriftReport
     ) -> None:
         """
-        Trigger the Airflow Self-Healing Pipeline with deduplication.
+        Trigger Airflow self-healing pipeline via REST API.
         Checks if a run is already active before triggering a new one.
         """
         import httpx  # noqa: PLC0415
 
-        airflow_url = os.environ.get(
-            "AIRFLOW_API_URL", "http://airflow-webserver:8080"
-        )
-        airflow_user = os.environ.get("AIRFLOW_ADMIN_USER", "admin")
-        airflow_pass = os.environ.get("AIRFLOW_ADMIN_PASSWORD", "admin")
-        auth = (airflow_user, airflow_pass)
+        airflow_url = _settings.AIRFLOW_API_URL
+        airflow_user = _settings.AIRFLOW_ADMIN_USER
+        airflow_pass = _settings.AIRFLOW_ADMIN_PASSWORD
+        dag_id = _settings.AIRFLOW_DAG_ID
 
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                # --- Deduplication: check for active runs ---
-                check_resp = await client.get(
-                    f"{airflow_url}/api/v1/dags/{_AIRFLOW_DAG_ID}/dagRuns",
-                    params={"state": "running,queued", "limit": 1},
-                    auth=auth,
+            async with httpx.AsyncClient(
+                base_url=airflow_url,
+                auth=(airflow_user, airflow_pass),
+                timeout=10.0,
+            ) as client:
+                # Check for already-running instances
+                runs_resp = await client.get(
+                    f"/dags/{dag_id}/dagRuns",
+                    params={"state": "running", "limit": 1},
                 )
-                if check_resp.status_code == 200:  # noqa: PLR2004
-                    active_runs = check_resp.json().get("dag_runs", [])
+                if runs_resp.status_code == 200:  # noqa: PLR2004
+                    active_runs = runs_resp.json().get("dag_runs", [])
                     if active_runs:
                         logger.info(
-                            "⏭️ Self-healing already running (run=%s) — skipping",
-                            active_runs[0].get("dag_run_id"),
+                            "⏳ Self-healing pipeline already running for %s — skipping",
+                            model_id,
                         )
                         return
 
-                # --- Trigger new run ---
-                resp = await client.post(
-                    f"{airflow_url}/api/v1/dags/{_AIRFLOW_DAG_ID}/dagRuns",
+                # Trigger new DAG run
+                trigger_resp = await client.post(
+                    f"/dags/{dag_id}/dagRuns",
                     json={
                         "conf": {
                             "model_id": model_id,
-                            "reason": report.recommendation,
                             "drift_score": report.statistic,
+                            "drift_method": report.method,
+                            "feature_name": report.feature_name,
                         }
                     },
-                    auth=auth,
                 )
-                if resp.status_code == 200:  # noqa: PLR2004
-                    dag_run_id = resp.json().get("dag_run_id")
+
+                if trigger_resp.status_code in (200, 409):
                     logger.info(
-                        "🌀 Self-healing pipeline triggered: %s",
-                        dag_run_id,
+                        "✅ Self-healing pipeline triggered for %s", model_id
                     )
                 else:
                     logger.error(
-                        "❌ Airflow trigger failed: %s - %s",
-                        resp.status_code,
-                        resp.text,
+                        "❌ Failed to trigger self-healing: %s %s",
+                        trigger_resp.status_code,
+                        trigger_resp.text,
                     )
+
         except Exception as e:
-            logger.error("❌ Airflow connection error: %s", e)
+            logger.error("❌ Failed to connect to Airflow: %s", e)

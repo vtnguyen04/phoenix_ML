@@ -8,6 +8,7 @@ from src.application.commands.trigger_retrain_command import TriggerRetrainComma
 from src.application.handlers.retrain_handler import RetrainHandler
 from src.domain.model_registry.repositories.model_repository import ModelRepository
 from src.domain.monitoring.services.model_evaluator import ClassificationEvaluator
+from src.domain.shared.event_bus import DomainEventBus
 
 
 @pytest.fixture
@@ -28,6 +29,7 @@ def retrain_handler(mock_repo: AsyncMock, mock_evaluator: Mock) -> RetrainHandle
         project_root=Path("/tmp/phoenix"),
         model_repo=mock_repo,
         evaluator=mock_evaluator,
+        event_bus=DomainEventBus(),
     )
 
 

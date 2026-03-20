@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.domain.inference.value_objects.model_config import ModelConfig
-from src.infrastructure.http.model_config_loader import (
+from src.infrastructure.bootstrap.model_config_loader import (
     _dict_to_model_config,
     load_all_model_configs,
     load_features_from_metrics,

@@ -57,3 +57,7 @@ feature_names:
 metadata:
   role: champion
   dataset: german-credit-openml
+
+monitoring:
+  drift_test: ks                # KS-test: best for continuous tabular features
+  primary_metric: accuracy      # Classification primary metric

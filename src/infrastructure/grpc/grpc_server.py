@@ -24,7 +24,8 @@ from src.domain.inference.services.inference_service import InferenceService
 from src.domain.inference.services.routing_strategy import SingleModelStrategy
 from src.domain.model_registry.repositories.artifact_storage import ArtifactStorage
 from src.domain.model_registry.repositories.model_repository import ModelRepository
-from src.infrastructure.http.proto import inference_pb2, inference_pb2_grpc
+from src.infrastructure.bootstrap.container import event_bus
+from src.infrastructure.grpc.proto import inference_pb2, inference_pb2_grpc
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,7 @@ def create_grpc_server(  # noqa: PLR0913
         routing_strategy=SingleModelStrategy(),
     )
 
-    handler = PredictHandler(inference_service)
+    handler = PredictHandler(inference_service, event_bus)
     servicer = InferenceServicer(handler)
 
     interceptors = [LoggingInterceptor()]

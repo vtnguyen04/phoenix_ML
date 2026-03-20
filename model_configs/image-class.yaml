@@ -34,3 +34,7 @@ metadata:
     - Sneaker
     - Bag
     - Ankle boot
+
+monitoring:
+  drift_test: chi2              # Chi-squared: better for binned pixel distributions
+  primary_metric: accuracy      # Classification primary metric

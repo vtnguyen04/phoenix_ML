@@ -23,3 +23,7 @@ class ModelRepository(ABC):
     @abstractmethod
     async def update_stage(self, model_id: str, version: str, stage: str) -> None:
         pass
+
+    @abstractmethod
+    async def list_all(self) -> list[Model]:
+        pass

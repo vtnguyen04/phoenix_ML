@@ -3,8 +3,11 @@ from enum import Enum
 
 import numpy as np
 
-_EPSILON = 1e-10
-_ANOMALY_RATIO_THRESHOLD = 0.1
+from src.config import get_settings
+
+_settings = get_settings()
+_EPSILON = _settings.ANOMALY_EPSILON
+_ANOMALY_RATIO_THRESHOLD = _settings.ANOMALY_RATIO_THRESHOLD
 
 
 class AnomalyType(Enum):

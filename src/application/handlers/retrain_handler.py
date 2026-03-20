@@ -9,12 +9,8 @@ from src.application.commands.trigger_retrain_command import TriggerRetrainComma
 from src.domain.inference.entities.model import Model
 from src.domain.model_registry.repositories.model_repository import ModelRepository
 from src.domain.monitoring.services.model_evaluator import IModelEvaluator
-from src.infrastructure.monitoring.prometheus_metrics import (
-    MODEL_ACCURACY,
-    MODEL_F1_SCORE,
-    MODEL_PRECISION,
-    MODEL_RECALL,
-)
+from src.domain.shared.domain_events import ModelRetrained
+from src.domain.shared.event_bus import DomainEventBus
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +19,9 @@ class RetrainHandler:
     """
     Application Service that handles model retraining triggers.
     Executes training, evaluates results, and promotes if better.
+
+    Uses Observer Pattern: emits ModelRetrained event.
+    Subscribers (MetricsPublisher, KafkaProducer, etc.) react independently.
     """
 
     def __init__(
@@ -30,10 +29,12 @@ class RetrainHandler:
         project_root: Path,
         model_repo: ModelRepository,
         evaluator: IModelEvaluator,
+        event_bus: DomainEventBus,
     ) -> None:
         self._project_root = project_root
         self._model_repo = model_repo
         self._evaluator = evaluator
+        self._event_bus = event_bus
 
     async def execute(self, command: TriggerRetrainCommand) -> bool:
         """
@@ -98,8 +99,13 @@ class RetrainHandler:
             await self._model_repo.update_stage(command.model_id, version, "champion")
             logger.info("👑 Model %s:%s promoted to CHAMPION", command.model_id, version)
 
-        # 6. Update Prometheus
-        self._update_prometheus(command.model_id, version, challenger_metrics)
+        # 6. Emit domain event (Observer Pattern)
+        self._event_bus.publish(ModelRetrained(
+            model_id=command.model_id,
+            version=version,
+            metrics=challenger_metrics,
+            promoted=should_promote,
+        ))
 
         return True
 
@@ -129,19 +135,3 @@ class RetrainHandler:
         except Exception as e:
             logger.error("❌ Training failed: %s", e, exc_info=True)
             return False
-
-    def _update_prometheus(
-        self, model_id: str, version: str, metrics: dict[str, float]
-    ) -> None:
-        """Log metrics to Prometheus — only logs metrics that exist."""
-        _metric_map = {
-            "accuracy": MODEL_ACCURACY,
-            "f1_score": MODEL_F1_SCORE,
-            "precision": MODEL_PRECISION,
-            "recall": MODEL_RECALL,
-        }
-        for metric_name, gauge in _metric_map.items():
-            if metric_name in metrics:
-                gauge.labels(model_id=model_id, version=version).set(
-                    metrics[metric_name]
-                )
