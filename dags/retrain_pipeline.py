@@ -166,8 +166,9 @@ def _train_model(**kwargs: Any) -> None:
     """
     Train a new ML model version — model-agnostic.
 
-    Resolves the correct training function from model_configs/{model_id}.yaml.
-    Falls back to scripts/train_model.py for backward compatibility.
+    Resolves training function AND data_path from model_configs/{model_id}.yaml.
+    The framework auto-detects the user's config to find the correct
+    training script and dataset location.
     """
     conf = kwargs.get("dag_run", {}).conf or {}
     model_id = conf.get("model_id", os.environ.get("DEFAULT_MODEL_ID", "credit-risk"))
@@ -182,14 +183,37 @@ def _train_model(**kwargs: Any) -> None:
         _PROJECT_ROOT / "models" / fs_model_id / version / "reference_features.json"
     )
 
+    # Resolve data_path from model config YAML
+    data_path: str | None = None
+    config_path = _PROJECT_ROOT / "model_configs" / f"{model_id}.yaml"
+    if config_path.exists():
+        try:
+            import yaml
+
+            with open(config_path) as f:
+                config = yaml.safe_load(f) or {}
+            data_path = config.get("data_path")
+            if data_path:
+                # Resolve relative paths against project root
+                resolved = _PROJECT_ROOT / data_path
+                if resolved.exists():
+                    data_path = str(resolved)
+                    logger.info("Resolved data_path from config: %s", data_path)
+                else:
+                    logger.warning("data_path %s not found, training will use default", data_path)
+                    data_path = str(resolved)  # Pass anyway, let DataLoader handle
+        except Exception as e:
+            logger.warning("Failed to read data_path from config: %s", e)
+
     # Dynamically resolve training function
     train_fn = _resolve_train_function(model_id)
 
     logger.info(
-        "Training model %s version %s using %s",
+        "Training model %s version %s using %s (data=%s)",
         model_id,
         version,
         train_fn.__module__,
+        data_path or "default",
     )
 
     # Call with supported kwargs (different scripts accept different args)
@@ -200,6 +224,8 @@ def _train_model(**kwargs: Any) -> None:
         call_kwargs["metrics_path"] = metrics_path
     if "reference_path" in sig.parameters:
         call_kwargs["reference_path"] = reference_path
+    if "data_path" in sig.parameters and data_path:
+        call_kwargs["data_path"] = data_path
 
     train_fn(output_path, **call_kwargs)
 

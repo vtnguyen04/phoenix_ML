@@ -6,9 +6,8 @@ All new development should use examples/credit_risk/train.py directly.
 """
 
 from examples.credit_risk.train import (  # noqa: F401
-    FINAL_FEATURE_NAMES,
+    FEATURE_NAMES,
     N_FEATURES,
-    load_dataset,
     train_and_export,
 )
 
