@@ -92,7 +92,7 @@ class BatchManager:
                     try:
                         predictions = await self._engine.batch_predict(model, padded_features_list)
 
-                        predictions = predictions[:len(features_list)]
+                        predictions = predictions[: len(features_list)]
 
                         for i, prediction in enumerate(predictions):
                             if not futures[i].done():

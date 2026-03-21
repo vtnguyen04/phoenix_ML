@@ -60,7 +60,7 @@ services:
     ports:
       - "5174:5173"
     environment:
-      - VITE_API_URL=http://localhost:8001
+      - VITE_API_TARGET=http://api:8000
     depends_on:
       api:
         condition: service_healthy
@@ -125,6 +125,21 @@ services:
       - KAFKA_LOG_DIRS=/tmp/kraft-combined-logs
     ports:
       - "9094:9092"
+    restart: unless-stopped
+    networks:
+      - phoenix-net
+
+  # ─── Kafka UI (Web Management) ──────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: phoenix-kafka-ui
+    ports:
+      - "8082:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=phoenix
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      - kafka
     restart: unless-stopped
     networks:
       - phoenix-net

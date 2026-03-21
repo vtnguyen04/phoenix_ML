@@ -14,7 +14,7 @@ export function ServicesStatus() {
       </div>
       <div className="services-grid">
         {SERVICES.map((svc) => (
-          <ServiceCard key={svc.name} name={svc.name} port={svc.port} icon={svc.icon} />
+          <ServiceCard key={svc.name} name={svc.name} port={svc.port} icon={svc.icon} healthUrl={svc.healthUrl} />
         ))}
       </div>
     </div>

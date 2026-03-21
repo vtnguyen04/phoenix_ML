@@ -6,9 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class InferenceSettings(BaseSettings):
     """Engine, batch, and confidence configuration."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", case_sensitive=True, extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     # Engine selection
     INFERENCE_ENGINE: str = "onnx"

@@ -18,9 +18,7 @@ class OfflineFeatureStore(ABC):
         pass
 
     @abstractmethod
-    async def extract_training_dataset(
-        self, query: str, output_path: str
-    ) -> None:
+    async def extract_training_dataset(self, query: str, output_path: str) -> None:
         """
         Extract a materialized training dataset from the offline store.
         """

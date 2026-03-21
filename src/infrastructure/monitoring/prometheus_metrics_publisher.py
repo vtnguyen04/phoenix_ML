@@ -34,8 +34,8 @@ _METRIC_MAP: dict[str, Any] = {
     # Classification
     "accuracy": MODEL_ACCURACY,
     "f1_score": MODEL_F1_SCORE,
-    "f1_macro": MODEL_F1_SCORE,     # alias for image-class
-    "test_accuracy": MODEL_ACCURACY, # alias from some training scripts
+    "f1_macro": MODEL_F1_SCORE,  # alias for image-class
+    "test_accuracy": MODEL_ACCURACY,  # alias from some training scripts
     # Regression
     "rmse": MODEL_RMSE,
     "mae": MODEL_MAE,
@@ -59,24 +59,37 @@ class PrometheusMetricsPublisher(MetricsPublisher):
     # ── Prediction observability ──────────────────────────────────
 
     def record_prediction(
-        self, model_id: str, version: str, status: str,
+        self,
+        model_id: str,
+        version: str,
+        status: str,
     ) -> None:
         PREDICTION_COUNT.labels(
-            model_id=model_id, version=version, status=status,
+            model_id=model_id,
+            version=version,
+            status=status,
         ).inc()
 
     def record_latency(
-        self, model_id: str, version: str, latency_seconds: float,
+        self,
+        model_id: str,
+        version: str,
+        latency_seconds: float,
     ) -> None:
         INFERENCE_LATENCY.labels(
-            model_id=model_id, version=version,
+            model_id=model_id,
+            version=version,
         ).observe(latency_seconds)
 
     def record_confidence(
-        self, model_id: str, version: str, confidence: float,
+        self,
+        model_id: str,
+        version: str,
+        confidence: float,
     ) -> None:
         MODEL_CONFIDENCE.labels(
-            model_id=model_id, version=version,
+            model_id=model_id,
+            version=version,
         ).observe(confidence)
 
     # ── Model evaluation metrics ──────────────────────────────────
@@ -107,7 +120,9 @@ class PrometheusMetricsPublisher(MetricsPublisher):
 
         logger.info(
             "📊 Prometheus gauges set for %s:%s (task=%s)",
-            model_id, version, task_type,
+            model_id,
+            version,
+            task_type,
         )
 
     # ── Drift detection ───────────────────────────────────────────
@@ -120,12 +135,17 @@ class PrometheusMetricsPublisher(MetricsPublisher):
         score: float,
     ) -> None:
         DRIFT_SCORE.labels(
-            model_id=model_id, feature_name=feature_name, method=method,
+            model_id=model_id,
+            feature_name=feature_name,
+            method=method,
         ).set(score)
 
     def record_drift_detected(
-        self, model_id: str, feature_name: str,
+        self,
+        model_id: str,
+        feature_name: str,
     ) -> None:
         DRIFT_DETECTED_COUNT.labels(
-            model_id=model_id, feature_name=feature_name,
+            model_id=model_id,
+            feature_name=feature_name,
         ).inc()

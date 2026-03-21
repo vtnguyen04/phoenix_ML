@@ -281,9 +281,7 @@ async def rollback_challengers(
         if role == "champion":
             champion = model.version
         elif role == "challenger":
-            await model_repo.update_stage(
-                request.model_id, model.version, "archived"
-            )
+            await model_repo.update_stage(request.model_id, model.version, "archived")
             archived.append(model.version)
 
     return {

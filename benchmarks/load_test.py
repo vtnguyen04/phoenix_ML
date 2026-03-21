@@ -39,13 +39,13 @@ class PredictUser(HttpUser):
     def predict_house_price(self) -> None:
         """Predict house price (8 features)."""
         features = [
-            random.uniform(1, 10),    # MedInc
-            random.uniform(10, 50),   # HouseAge
-            random.uniform(3, 10),    # AveRooms
-            random.uniform(0.5, 3),   # AveBedrms
+            random.uniform(1, 10),  # MedInc
+            random.uniform(10, 50),  # HouseAge
+            random.uniform(3, 10),  # AveRooms
+            random.uniform(0.5, 3),  # AveBedrms
             random.uniform(500, 5000),  # Population
-            random.uniform(1, 6),     # AveOccup
-            random.uniform(32, 42),   # Latitude
+            random.uniform(1, 6),  # AveOccup
+            random.uniform(32, 42),  # Latitude
             random.uniform(-124, -114),  # Longitude
         ]
         self.client.post(

@@ -59,18 +59,14 @@ class TrainingJob:
     def start(self) -> None:
         """Transition to RUNNING state."""
         if self.status != TrainingStatus.PENDING:
-            raise ValueError(
-                f"Cannot start job in {self.status.value} state; must be PENDING"
-            )
+            raise ValueError(f"Cannot start job in {self.status.value} state; must be PENDING")
         self.status = TrainingStatus.RUNNING
         self.started_at = datetime.now(UTC)
 
     def complete(self, metrics: TrainingMetrics, artifact_path: str) -> None:
         """Transition to COMPLETED with results."""
         if self.status != TrainingStatus.RUNNING:
-            raise ValueError(
-                f"Cannot complete job in {self.status.value} state; must be RUNNING"
-            )
+            raise ValueError(f"Cannot complete job in {self.status.value} state; must be RUNNING")
         self.status = TrainingStatus.COMPLETED
         self.metrics = metrics
         self.model_artifact_path = artifact_path
@@ -79,9 +75,7 @@ class TrainingJob:
     def fail(self, error: str) -> None:
         """Transition to FAILED with error message."""
         if self.status not in (TrainingStatus.PENDING, TrainingStatus.RUNNING):
-            raise ValueError(
-                f"Cannot fail job in {self.status.value} state"
-            )
+            raise ValueError(f"Cannot fail job in {self.status.value} state")
         self.status = TrainingStatus.FAILED
         self.error_message = error
         self.completed_at = datetime.now(UTC)
@@ -89,9 +83,7 @@ class TrainingJob:
     def cancel(self) -> None:
         """Cancel a pending or running job."""
         if self.status not in (TrainingStatus.PENDING, TrainingStatus.RUNNING):
-            raise ValueError(
-                f"Cannot cancel job in {self.status.value} state"
-            )
+            raise ValueError(f"Cannot cancel job in {self.status.value} state")
         self.status = TrainingStatus.CANCELLED
         self.completed_at = datetime.now(UTC)
 
@@ -111,5 +103,3 @@ class TrainingJob:
             TrainingStatus.FAILED,
             TrainingStatus.CANCELLED,
         )
-
-

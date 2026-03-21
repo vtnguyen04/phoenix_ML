@@ -17,6 +17,7 @@ framework: onnx
 task_type: classification
 model_path: models/credit_risk/v1/model.onnx
 train_script: examples/credit_risk/train.py
+data_path: data/credit_risk/dataset.csv
 dataset_name: german-credit-openml
 
 # Feature names — ordered list matching the model's input tensor.

@@ -8,6 +8,7 @@ framework: onnx
 task_type: classification
 model_path: models/fraud_detection/v1/model.onnx
 train_script: examples/fraud_detection/train.py
+data_path: data/fraud_detection/dataset.csv
 dataset_name: synthetic-fraud
 
 feature_names:

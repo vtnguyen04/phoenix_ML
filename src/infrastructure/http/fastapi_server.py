@@ -41,6 +41,7 @@ app.mount("/metrics", metrics_app)
 app.include_router(router)
 app.include_router(feature_router)
 
+
 def run() -> None:
     """CLI entry point: `phoenix-serve` command."""
     import uvicorn  # noqa: PLC0415

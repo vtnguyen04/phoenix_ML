@@ -54,7 +54,9 @@ _cfg = DriftConfig()
 
 
 def _generate_recommendation(
-    drift_detected: bool, score: float, feature_name: str,
+    drift_detected: bool,
+    score: float,
+    feature_name: str,
 ) -> str:
     if not drift_detected:
         return "No action needed. Distribution remains stable."
@@ -246,9 +248,7 @@ class DriftCalculator:
         strategy = _DRIFT_STRATEGIES.get(test_type)
         if strategy is None:
             supported = ", ".join(sorted(_DRIFT_STRATEGIES))
-            raise ValueError(
-                f"Unsupported test type: '{test_type}'. Supported: {supported}"
-            )
+            raise ValueError(f"Unsupported test type: '{test_type}'. Supported: {supported}")
 
         return strategy.calculate(
             feature_name=feature_name,

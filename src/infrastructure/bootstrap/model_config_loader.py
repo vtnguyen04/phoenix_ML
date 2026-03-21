@@ -77,7 +77,8 @@ def _dict_to_model_config(data: dict[str, Any]) -> ModelConfig:
     }
     task_type = data.get("task_type", "classification")
     default_drift_test, default_primary_metric = _TASK_DEFAULTS.get(
-        task_type, ("ks", "accuracy"),
+        task_type,
+        ("ks", "accuracy"),
     )
 
     return ModelConfig(
@@ -89,6 +90,7 @@ def _dict_to_model_config(data: dict[str, Any]) -> ModelConfig:
         feature_names=feature_names,
         metadata=metadata_tuple,
         dataset_name=data.get("dataset_name", ""),
+        data_path=data.get("data_path", ""),
         train_script=data.get("train_script", ""),
         monitoring_drift_test=monitoring.get("drift_test", default_drift_test),
         monitoring_primary_metric=monitoring.get("primary_metric", default_primary_metric),
