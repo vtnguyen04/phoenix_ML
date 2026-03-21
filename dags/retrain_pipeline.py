@@ -183,27 +183,22 @@ def _train_model(**kwargs: Any) -> None:
         _PROJECT_ROOT / "models" / fs_model_id / version / "reference_features.json"
     )
 
-    # Resolve data_path from model config YAML
+    # Resolve data_path from model config via ModelConfigLoader
     data_path: str | None = None
     config_path = _PROJECT_ROOT / "model_configs" / f"{model_id}.yaml"
     if config_path.exists():
         try:
-            import yaml
+            from src.infrastructure.bootstrap.model_config_loader import (
+                load_model_config,
+            )
 
-            with open(config_path) as f:
-                config = yaml.safe_load(f) or {}
-            data_path = config.get("data_path")
-            if data_path:
-                # Resolve relative paths against project root
-                resolved = _PROJECT_ROOT / data_path
-                if resolved.exists():
-                    data_path = str(resolved)
-                    logger.info("Resolved data_path from config: %s", data_path)
-                else:
-                    logger.warning("data_path %s not found, training will use default", data_path)
-                    data_path = str(resolved)  # Pass anyway, let DataLoader handle
+            model_config = load_model_config(config_path)
+            if model_config.data_path:
+                resolved = _PROJECT_ROOT / model_config.data_path
+                data_path = str(resolved)
+                logger.info("Resolved data_path: %s", data_path)
         except Exception as e:
-            logger.warning("Failed to read data_path from config: %s", e)
+            logger.warning("Failed to read config for %s: %s", model_id, e)
 
     # Dynamically resolve training function
     train_fn = _resolve_train_function(model_id)

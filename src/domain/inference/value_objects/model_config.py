@@ -36,6 +36,7 @@ class ModelConfig:
             (e.g. image-based object detection).
         metadata: Additional model-specific metadata (metrics, dataset, etc.).
         dataset_name: Human-readable dataset identifier for lineage.
+        data_path: Relative path to training dataset (CSV, NPZ, directory).
         train_script: Path to training script for self-healing retrain.
         monitoring_drift_test: Statistical test for drift detection.
             Supported: "ks", "psi", "wasserstein", "chi2".
@@ -51,6 +52,7 @@ class ModelConfig:
     feature_names: tuple[str, ...] = ()
     metadata: tuple[tuple[str, Any], ...] = ()
     dataset_name: str = ""
+    data_path: str = ""
     train_script: str = ""
     monitoring_drift_test: str = "ks"
     monitoring_primary_metric: str = "accuracy"
@@ -70,6 +72,7 @@ class ModelConfig:
             feature_names=self.feature_names,
             metadata=self.metadata,
             dataset_name=self.dataset_name,
+            data_path=self.data_path,
             train_script=self.train_script,
             monitoring_drift_test=self.monitoring_drift_test,
             monitoring_primary_metric=self.monitoring_primary_metric,
