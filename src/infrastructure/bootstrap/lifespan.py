@@ -25,6 +25,7 @@ from src.infrastructure.bootstrap.container import (
     feature_store,
     find_project_root,
     inference_engine,
+    kafka_consumer,
     kafka_producer,
     plugin_registry,
     shutdown_event,
@@ -169,9 +170,11 @@ def _resolve_feature_names(model_id: str, version: str) -> list[str]:
     # 3. No features found
     logger.info(
         "ℹ️ No feature names found for %s:%s — starting without named features",
-        model_id, version,
+        model_id,
+        version,
     )
     return []
+
 
 async def run_monitoring_loop() -> None:
     """Background task that periodically checks for data drift on ALL models.
@@ -244,9 +247,7 @@ async def run_monitoring_loop() -> None:
                         # Not enough prediction data yet — skip silently
                         pass
                     except Exception as e:
-                        logger.warning(
-                            "⚠️ Drift check failed for %s: %s", mid, e
-                        )
+                        logger.warning("⚠️ Drift check failed for %s: %s", mid, e)
                 break
         except asyncio.CancelledError:
             return
@@ -264,9 +265,7 @@ async def _seed_model_if_needed(
 ) -> None:
     """Seed model into registry if not already present."""
     result = await db.execute(
-        select(ModelORM).where(
-            ModelORM.id == model_id, ModelORM.version == model_version
-        )
+        select(ModelORM).where(ModelORM.id == model_id, ModelORM.version == model_version)
     )
     if result.scalar_one_or_none():
         return
@@ -277,7 +276,9 @@ async def _seed_model_if_needed(
         feature_names = _resolve_feature_names(model_id, model_version)
         logger.info(
             "✅ Seeding model %s:%s from %s",
-            model_id, model_version, real_model_path,
+            model_id,
+            model_version,
+            real_model_path,
         )
 
         # Build metadata dynamically — no hardcoded features/datasets
@@ -305,18 +306,20 @@ async def _seed_model_if_needed(
         # Publish metrics via event bus (Observer Pattern — no direct Prometheus dep)
         from src.domain.shared.domain_events import ModelRetrained  # noqa: PLC0415
 
-        event_bus.publish(ModelRetrained(
-            model_id=model_id,
-            version=model_version,
-            metrics=real_metrics,
-            promoted=True,
-        ))
+        event_bus.publish(
+            ModelRetrained(
+                model_id=model_id,
+                version=model_version,
+                metrics=real_metrics,
+                promoted=True,
+            )
+        )
     except Exception as e:
         logger.error("❌ Failed to seed model: %s", e)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: PLR0915
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -354,7 +357,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if cfg_id != _model_id:
                 cfg_version = cfg.version or _model_version
                 await _seed_model_if_needed(
-                    db, model_repo, cfg_id, cfg_version,
+                    db,
+                    model_repo,
+                    cfg_id,
+                    cfg_version,
                 )
 
         # Seed feature store from reference data (model-agnostic)
@@ -384,19 +390,38 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
+    # ── Kafka Consumer: process inference-events for downstream analytics ──
+    async def _handle_inference_event(event: dict[str, Any]) -> None:
+        """Handle consumed inference events (logging, analytics, etc.)."""
+        logger.debug(
+            "📨 Consumed inference event: model=%s result=%s",
+            event.get("model_id"),
+            event.get("result"),
+        )
+
+    consumer_task = asyncio.create_task(
+        kafka_consumer.start("inference-events", handler=_handle_inference_event)
+    )
+
     yield
 
     logger.info("🧹 Lifespan shutdown started...")
     shutdown_event.set()
     monitor_task.cancel()
+    consumer_task.cancel()
 
     if grpc_server:
         await grpc_server.stop(grace=2.0)
 
     await batch_manager.stop()
     await kafka_producer.stop()
+    await kafka_consumer.stop()
     try:
         await asyncio.wait_for(monitor_task, timeout=2.0)
+    except (TimeoutError, asyncio.CancelledError):
+        pass
+    try:
+        await asyncio.wait_for(consumer_task, timeout=2.0)
     except (TimeoutError, asyncio.CancelledError):
         pass
     await engine.dispose()

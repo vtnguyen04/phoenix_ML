@@ -124,4 +124,3 @@ class FeatureRegistry:
     def list_all(self) -> dict[str, dict[str, Any]]:
         """Export all features as dict."""
         return {name: meta.to_dict() for name, meta in self._features.items()}
-

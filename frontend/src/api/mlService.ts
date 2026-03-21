@@ -82,6 +82,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const mlService = {
+  getModels: async (): Promise<ModelInfo[]> => {
+    const res = await fetch(`${API_BASE}/models`);
+    return handleResponse<ModelInfo[]>(res);
+  },
+
   getHealth: async (): Promise<HealthResponse> => {
     const res = await fetch(`${API_BASE}/health`);
     return handleResponse<HealthResponse>(res);

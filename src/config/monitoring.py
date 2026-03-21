@@ -6,9 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class MonitoringSettings(BaseSettings):
     """All monitoring-related thresholds and intervals."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", case_sensitive=True, extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     # Monitoring loop
     MONITORING_INTERVAL_SECONDS: int = 30

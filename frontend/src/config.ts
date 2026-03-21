@@ -25,6 +25,7 @@ export const SERVICES: ServiceDef[] = [
   { name: 'PostgreSQL',  port: 5433,  icon: '🐘' },
   { name: 'Redis',       port: 6380,  icon: '⚡' },
   { name: 'Kafka',       port: 9094,  icon: '📨' },
+  { name: 'Kafka UI',    port: 8082,  icon: '📨', healthUrl: 'http://localhost:8082/' },
   { name: 'Airflow',     port: 8080,  icon: '🌊', healthUrl: 'http://localhost:8080/health' },
   { name: 'MLflow',      port: 5000,  icon: '🧪', healthUrl: 'http://localhost:5000/health' },
   { name: 'Prometheus',  port: 9091,  icon: '🔥', healthUrl: 'http://localhost:9091/-/healthy' },

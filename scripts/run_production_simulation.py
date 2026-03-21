@@ -42,6 +42,7 @@ async def step_1_seed_features() -> None:
     if not features_path.exists():
         print("   ⚠️  reference_features.json not found. Running seed_features.py...")
         from scripts.seed_features import seed_features
+
         seed_features(output_path=str(features_path), num_records=N_CUSTOMERS)
 
     with open(features_path) as f:
@@ -71,15 +72,19 @@ async def step_2_register_mlflow() -> None:
             print(f"   MLflow status: {resp.text.strip()}")
 
             # Create experiment
-            resp = await client.post("/api/2.0/mlflow/experiments/create",
-                json={"name": f"{DEFAULT_MODEL_ID}-production"})
+            resp = await client.post(
+                "/api/2.0/mlflow/experiments/create",
+                json={"name": f"{DEFAULT_MODEL_ID}-production"},
+            )
             if resp.status_code == 200:
                 exp_id = resp.json().get("experiment_id")
                 print(f"   ✅ Created experiment: {DEFAULT_MODEL_ID}-production (ID: {exp_id})")
             else:
                 # Experiment may already exist
-                resp = await client.get("/api/2.0/mlflow/experiments/get-by-name",
-                    params={"experiment_name": f"{DEFAULT_MODEL_ID}-production"})
+                resp = await client.get(
+                    "/api/2.0/mlflow/experiments/get-by-name",
+                    params={"experiment_name": f"{DEFAULT_MODEL_ID}-production"},
+                )
                 if resp.status_code == 200:
                     exp_id = resp.json().get("experiment", {}).get("experiment_id")
                     print(f"   ✅ Experiment already exists (ID: {exp_id})")
@@ -94,29 +99,46 @@ async def step_2_register_mlflow() -> None:
                 with open(metrics_path) as f:
                     metrics = json.load(f)
 
-                resp = await client.post("/api/2.0/mlflow/runs/create",
-                    json={"experiment_id": exp_id, "run_name": "champion-v1"})
+                resp = await client.post(
+                    "/api/2.0/mlflow/runs/create",
+                    json={"experiment_id": exp_id, "run_name": "champion-v1"},
+                )
                 if resp.status_code == 200:
                     run_id = resp.json()["run"]["info"]["run_id"]
                     print(f"   ✅ Created run: {run_id}")
 
                     # Log metrics
-                    for key in ["accuracy", "f1_score", "precision", "recall",
-                                "cv_accuracy_mean", "cv_f1_mean"]:
+                    for key in [
+                        "accuracy",
+                        "f1_score",
+                        "precision",
+                        "recall",
+                        "cv_accuracy_mean",
+                        "cv_f1_mean",
+                    ]:
                         if key in metrics:
-                            await client.post("/api/2.0/mlflow/runs/log-metric",
-                                json={"run_id": run_id, "key": key,
-                                      "value": metrics[key], "timestamp": int(time.time() * 1000)})
+                            await client.post(
+                                "/api/2.0/mlflow/runs/log-metric",
+                                json={
+                                    "run_id": run_id,
+                                    "key": key,
+                                    "value": metrics[key],
+                                    "timestamp": int(time.time() * 1000),
+                                },
+                            )
 
                     # Log params
                     for key in ["model_type", "dataset", "n_features"]:
                         if key in metrics:
-                            await client.post("/api/2.0/mlflow/runs/log-param",
-                                json={"run_id": run_id, "key": key, "value": str(metrics[key])})
+                            await client.post(
+                                "/api/2.0/mlflow/runs/log-param",
+                                json={"run_id": run_id, "key": key, "value": str(metrics[key])},
+                            )
 
                     # End run
-                    await client.post("/api/2.0/mlflow/runs/update",
-                        json={"run_id": run_id, "status": "FINISHED"})
+                    await client.post(
+                        "/api/2.0/mlflow/runs/update", json={"run_id": run_id, "status": "FINISHED"}
+                    )
                     print(f"   ✅ Logged {len(metrics)} metrics → MLflow")
             else:
                 print("   ⚠️  No metrics.json found. Train model first.")
@@ -141,10 +163,13 @@ async def step_3_normal_traffic(n: int = N_NORMAL_TRAFFIC) -> dict[str, object]:
         for i in range(n):
             entity_id = f"customer-{random.randint(0, min(N_CUSTOMERS - 1, 99)):04d}"
             try:
-                resp = await client.post("/predict", json={
-                    "model_id": DEFAULT_MODEL_ID,
-                    "entity_id": entity_id,
-                })
+                resp = await client.post(
+                    "/predict",
+                    json={
+                        "model_id": DEFAULT_MODEL_ID,
+                        "entity_id": entity_id,
+                    },
+                )
                 if resp.status_code == 200:
                     data = resp.json()
                     success += 1
@@ -164,8 +189,8 @@ async def step_3_normal_traffic(n: int = N_NORMAL_TRAFFIC) -> dict[str, object]:
     print(f"      Success: {success}, Errors: {error}")
     print(f"      RPS: {n / elapsed:.1f}")
     if latencies:
-        print(f"      Latency P50: {sorted(latencies)[len(latencies)//2]:.2f}ms")
-        print(f"      Latency P99: {sorted(latencies)[int(len(latencies)*0.99)]:.2f}ms")
+        print(f"      Latency P50: {sorted(latencies)[len(latencies) // 2]:.2f}ms")
+        print(f"      Latency P99: {sorted(latencies)[int(len(latencies) * 0.99)]:.2f}ms")
     if predictions:
         good = sum(1 for p in predictions if p == 1)
         bad = sum(1 for p in predictions if p == 0)
@@ -189,10 +214,13 @@ async def step_4_drifted_traffic(n: int = N_DRIFTED_TRAFFIC) -> None:
             features = rng.normal(loc=5.0, scale=2.0, size=30).astype(float).tolist()
 
             try:
-                await client.post("/predict", json={
-                    "model_id": DEFAULT_MODEL_ID,
-                    "features": features,
-                })
+                await client.post(
+                    "/predict",
+                    json={
+                        "model_id": DEFAULT_MODEL_ID,
+                        "features": features,
+                    },
+                )
             except Exception:
                 pass
 
@@ -234,10 +262,16 @@ async def step_5_check_drift() -> None:
             resp = await client.get("/metrics")
             if resp.status_code == 200:
                 metrics_text = resp.text
-                prediction_lines = [line for line in metrics_text.split("\n")
-                                    if "prediction_count_total" in line and "#" not in line]
-                drift_lines = [line for line in metrics_text.split("\n")
-                               if "drift" in line.lower() and "#" not in line]
+                prediction_lines = [
+                    line
+                    for line in metrics_text.split("\n")
+                    if "prediction_count_total" in line and "#" not in line
+                ]
+                drift_lines = [
+                    line
+                    for line in metrics_text.split("\n")
+                    if "drift" in line.lower() and "#" not in line
+                ]
 
                 if prediction_lines:
                     print("\n   📊 Prometheus Metrics:")

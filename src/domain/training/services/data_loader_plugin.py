@@ -57,9 +57,7 @@ class IDataLoader(ABC):
     """
 
     @abstractmethod
-    async def load(
-        self, data_path: str, **kwargs: Any
-    ) -> tuple[Any, DatasetInfo]:
+    async def load(self, data_path: str, **kwargs: Any) -> tuple[Any, DatasetInfo]:
         """Load a dataset from the given path.
 
         Args:

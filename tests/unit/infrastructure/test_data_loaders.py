@@ -30,12 +30,14 @@ from src.infrastructure.data_loaders.tabular_loader import TabularDataLoader
 @pytest.fixture()
 def csv_dataset(tmp_path: Path) -> Path:
     """Create a simple CSV dataset for testing."""
-    df = pd.DataFrame({
-        "feature_a": np.random.randn(100).astype(np.float32),
-        "feature_b": np.random.randn(100).astype(np.float32),
-        "feature_c": np.random.randn(100).astype(np.float32),
-        "target": np.random.randint(0, 2, size=100),
-    })
+    df = pd.DataFrame(
+        {
+            "feature_a": np.random.randn(100).astype(np.float32),
+            "feature_b": np.random.randn(100).astype(np.float32),
+            "feature_c": np.random.randn(100).astype(np.float32),
+            "target": np.random.randint(0, 2, size=100),
+        }
+    )
     path = tmp_path / "test_dataset.csv"
     df.to_csv(path, index=False)
     return path

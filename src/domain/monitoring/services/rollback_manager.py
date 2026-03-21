@@ -61,8 +61,7 @@ class RollbackManager:
             return RollbackDecision(
                 should_rollback=False,
                 reason=(
-                    f"Insufficient data: "
-                    f"{metrics.total_requests}/{self._min_requests} requests"
+                    f"Insufficient data: {metrics.total_requests}/{self._min_requests} requests"
                 ),
                 model_id=metrics.model_id,
                 challenger_version=metrics.challenger_version,
@@ -70,9 +69,7 @@ class RollbackManager:
             )
 
         error_rate = (
-            metrics.error_count / metrics.total_requests
-            if metrics.total_requests > 0
-            else 0.0
+            metrics.error_count / metrics.total_requests if metrics.total_requests > 0 else 0.0
         )
 
         if error_rate > self._error_rate_threshold:

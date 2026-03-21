@@ -33,9 +33,7 @@ class ImageDataLoader(IDataLoader):
     Returns (X, y) numpy arrays with metadata in DatasetInfo.
     """
 
-    async def load(
-        self, data_path: str, **kwargs: Any
-    ) -> tuple[Any, DatasetInfo]:
+    async def load(self, data_path: str, **kwargs: Any) -> tuple[Any, DatasetInfo]:
         """Load image dataset from NPZ or directory.
 
         Args:
@@ -60,9 +58,7 @@ class ImageDataLoader(IDataLoader):
             return await self._load_directory(path, **kwargs)
         raise ValueError(f"Unsupported format: {path.suffix}. Use .npz or directory.")
 
-    async def _load_npz(
-        self, path: Path, **kwargs: Any
-    ) -> tuple[Any, DatasetInfo]:
+    async def _load_npz(self, path: Path, **kwargs: Any) -> tuple[Any, DatasetInfo]:
         """Load from compressed numpy archive."""
         x_key = kwargs.get("x_key", "X")
         y_key = kwargs.get("y_key", "y")
@@ -126,9 +122,7 @@ class ImageDataLoader(IDataLoader):
         )
         return (x_data, y_data), info
 
-    async def _load_directory(
-        self, path: Path, **kwargs: Any
-    ) -> tuple[Any, DatasetInfo]:
+    async def _load_directory(self, path: Path, **kwargs: Any) -> tuple[Any, DatasetInfo]:
         """Load from directory structure: path/class_0/, path/class_1/, ..."""
         from PIL import Image
 
@@ -145,7 +139,10 @@ class ImageDataLoader(IDataLoader):
         for label_idx, class_dir in enumerate(class_dirs):
             for img_file in sorted(class_dir.glob("*")):
                 if img_file.suffix.lower() in (
-                    ".png", ".jpg", ".jpeg", ".bmp",
+                    ".png",
+                    ".jpg",
+                    ".jpeg",
+                    ".bmp",
                 ):
                     img = Image.open(img_file).convert("L").resize(img_size)
                     arr = np.array(img, dtype=np.float32).flatten()

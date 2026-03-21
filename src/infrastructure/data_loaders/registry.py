@@ -110,7 +110,9 @@ class _TaskTypeResolver(_Resolver):
             logger_cls = loader_cls.__name__
             logger.debug(
                 "Resolved via task_type: %s (%s) → %s",
-                model_id, task_type, logger_cls,
+                model_id,
+                task_type,
+                logger_cls,
             )
             return loader_cls()
         except Exception as e:

@@ -35,10 +35,18 @@ MODEL_ID = "fraud-detection"
 DEFAULT_DATA_PATH = "data/fraud_detection/dataset.csv"
 
 FEATURE_NAMES = [
-    "transaction_amount", "merchant_category", "card_type",
-    "transaction_hour", "distance_from_home", "distance_from_last_txn",
-    "ratio_to_median_amount", "is_weekend", "is_night",
-    "num_txn_last_24h", "num_txn_last_7d", "avg_amount_last_30d",
+    "transaction_amount",
+    "merchant_category",
+    "card_type",
+    "transaction_hour",
+    "distance_from_home",
+    "distance_from_last_txn",
+    "ratio_to_median_amount",
+    "is_weekend",
+    "is_night",
+    "num_txn_last_24h",
+    "num_txn_last_7d",
+    "avg_amount_last_30d",
 ]
 N_FEATURES = len(FEATURE_NAMES)
 

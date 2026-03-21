@@ -55,33 +55,39 @@ def test_alert_manager() -> None:
     am = AlertManager()
 
     # Register rules
-    am.register_rule(AlertRule(
-        name="high_drift",
-        metric="drift_score",
-        threshold=0.3,
-        severity=AlertSeverity.CRITICAL,
-        comparison="gt",
-        cooldown_seconds=0,   # disable cooldown for test
-        description="Drift score exceeds 0.3",
-    ))
-    am.register_rule(AlertRule(
-        name="low_accuracy",
-        metric="accuracy",
-        threshold=0.7,
-        severity=AlertSeverity.WARNING,
-        comparison="lt",
-        cooldown_seconds=0,
-        description="Accuracy below 70%",
-    ))
-    am.register_rule(AlertRule(
-        name="high_latency",
-        metric="latency_ms",
-        threshold=100.0,
-        severity=AlertSeverity.WARNING,
-        comparison="gt",
-        cooldown_seconds=0,
-        description="Latency exceeds 100ms",
-    ))
+    am.register_rule(
+        AlertRule(
+            name="high_drift",
+            metric="drift_score",
+            threshold=0.3,
+            severity=AlertSeverity.CRITICAL,
+            comparison="gt",
+            cooldown_seconds=0,  # disable cooldown for test
+            description="Drift score exceeds 0.3",
+        )
+    )
+    am.register_rule(
+        AlertRule(
+            name="low_accuracy",
+            metric="accuracy",
+            threshold=0.7,
+            severity=AlertSeverity.WARNING,
+            comparison="lt",
+            cooldown_seconds=0,
+            description="Accuracy below 70%",
+        )
+    )
+    am.register_rule(
+        AlertRule(
+            name="high_latency",
+            metric="latency_ms",
+            threshold=100.0,
+            severity=AlertSeverity.WARNING,
+            comparison="gt",
+            cooldown_seconds=0,
+            description="Latency exceeds 100ms",
+        )
+    )
 
     # Test 1: Drift above threshold → should fire
     alerts = am.evaluate("drift_score", 0.85, model_id="credit-risk")
@@ -125,14 +131,16 @@ def test_alert_manager() -> None:
 
     # Test 7: Cooldown test
     am2 = AlertManager()
-    am2.register_rule(AlertRule(
-        name="cooldown_test",
-        metric="test",
-        threshold=1.0,
-        severity=AlertSeverity.INFO,
-        comparison="gt",
-        cooldown_seconds=9999,  # very long cooldown
-    ))
+    am2.register_rule(
+        AlertRule(
+            name="cooldown_test",
+            metric="test",
+            threshold=1.0,
+            severity=AlertSeverity.INFO,
+            comparison="gt",
+            cooldown_seconds=9999,  # very long cooldown
+        )
+    )
     fire1 = am2.evaluate("test", 5.0)
     fire2 = am2.evaluate("test", 5.0)  # should be blocked by cooldown
     report(
@@ -157,8 +165,14 @@ def test_alert_manager() -> None:
     if total:
         d = total[0].to_dict()
         required_keys = {
-            "rule_name", "severity", "status", "metric_value",
-            "threshold", "message", "model_id", "timestamp",
+            "rule_name",
+            "severity",
+            "status",
+            "metric_value",
+            "threshold",
+            "message",
+            "model_id",
+            "timestamp",
         }
         report(
             "Alert.to_dict() has all required keys",
@@ -184,9 +198,7 @@ def test_anomaly_detector() -> None:
 
     # Test 2: Scores far from known baseline → anomaly detected
     anomalous_scores = [0.85, 0.86, 0.84, 0.85, 0.83, 0.86, 0.84, 0.85, 0.86, 0.84]
-    report2 = ad.detect_prediction_anomaly(
-        anomalous_scores, baseline_mean=0.5, baseline_std=0.05
-    )
+    report2 = ad.detect_prediction_anomaly(anomalous_scores, baseline_mean=0.5, baseline_std=0.05)
     report(
         "scores far from baseline → anomaly detected",
         report2.is_anomalous,
@@ -267,21 +279,23 @@ def test_rollback_manager() -> None:
 
     rm = RollbackManager(
         model_repo=mock_repo,
-        error_rate_threshold=0.10,   # 10%
+        error_rate_threshold=0.10,  # 10%
         latency_threshold_ms=500.0,  # 500ms
-        min_requests=10,             # lowered for test
+        min_requests=10,  # lowered for test
     )
 
     async def run_rollback_tests() -> None:
         # Test 1: Insufficient data → no rollback
-        decision = await rm.evaluate_challenger(ChallengerMetrics(
-            model_id="credit-risk",
-            challenger_version="v2",
-            champion_version="v1",
-            total_requests=5,
-            error_count=0,
-            avg_latency_ms=10.0,
-        ))
+        decision = await rm.evaluate_challenger(
+            ChallengerMetrics(
+                model_id="credit-risk",
+                challenger_version="v2",
+                champion_version="v1",
+                total_requests=5,
+                error_count=0,
+                avg_latency_ms=10.0,
+            )
+        )
         report(
             "insufficient data (5/10) → no rollback",
             not decision.should_rollback,
@@ -289,14 +303,16 @@ def test_rollback_manager() -> None:
         )
 
         # Test 2: Healthy challenger → no rollback
-        decision = await rm.evaluate_challenger(ChallengerMetrics(
-            model_id="fraud-detection",
-            challenger_version="v2",
-            champion_version="v1",
-            total_requests=100,
-            error_count=2,  # 2% error rate
-            avg_latency_ms=15.0,
-        ))
+        decision = await rm.evaluate_challenger(
+            ChallengerMetrics(
+                model_id="fraud-detection",
+                challenger_version="v2",
+                champion_version="v1",
+                total_requests=100,
+                error_count=2,  # 2% error rate
+                avg_latency_ms=15.0,
+            )
+        )
         report(
             "healthy challenger (2% error, 15ms) → no rollback",
             not decision.should_rollback,
@@ -305,14 +321,16 @@ def test_rollback_manager() -> None:
 
         # Test 3: High error rate → rollback triggered
         mock_repo.reset_mock()
-        decision = await rm.evaluate_challenger(ChallengerMetrics(
-            model_id="credit-risk",
-            challenger_version="v3",
-            champion_version="v1",
-            total_requests=100,
-            error_count=25,  # 25% error rate
-            avg_latency_ms=20.0,
-        ))
+        decision = await rm.evaluate_challenger(
+            ChallengerMetrics(
+                model_id="credit-risk",
+                challenger_version="v3",
+                champion_version="v1",
+                total_requests=100,
+                error_count=25,  # 25% error rate
+                avg_latency_ms=20.0,
+            )
+        )
         report(
             "25% error rate > 10% → rollback TRIGGERED",
             decision.should_rollback,
@@ -326,14 +344,16 @@ def test_rollback_manager() -> None:
 
         # Test 4: High latency → rollback triggered
         mock_repo.reset_mock()
-        decision = await rm.evaluate_challenger(ChallengerMetrics(
-            model_id="house-price",
-            challenger_version="v2",
-            champion_version="v1",
-            total_requests=50,
-            error_count=1,  # 2% — below threshold
-            avg_latency_ms=800.0,  # way above 500ms
-        ))
+        decision = await rm.evaluate_challenger(
+            ChallengerMetrics(
+                model_id="house-price",
+                challenger_version="v2",
+                champion_version="v1",
+                total_requests=50,
+                error_count=1,  # 2% — below threshold
+                avg_latency_ms=800.0,  # way above 500ms
+            )
+        )
         report(
             "800ms latency > 500ms → rollback TRIGGERED",
             decision.should_rollback,
@@ -342,14 +362,16 @@ def test_rollback_manager() -> None:
 
         # Test 5: Edge case — exactly at threshold
         mock_repo.reset_mock()
-        decision = await rm.evaluate_challenger(ChallengerMetrics(
-            model_id="image-class",
-            challenger_version="v2",
-            champion_version="v1",
-            total_requests=100,
-            error_count=10,  # exactly 10%
-            avg_latency_ms=500.0,  # exactly at threshold
-        ))
+        decision = await rm.evaluate_challenger(
+            ChallengerMetrics(
+                model_id="image-class",
+                challenger_version="v2",
+                champion_version="v1",
+                total_requests=100,
+                error_count=10,  # exactly 10%
+                avg_latency_ms=500.0,  # exactly at threshold
+            )
+        )
         report(
             "exactly at threshold (10%, 500ms) → no rollback (gt, not gte)",
             not decision.should_rollback,
@@ -357,26 +379,30 @@ def test_rollback_manager() -> None:
         )
 
         # Test 6: Zero requests → no rollback
-        decision = await rm.evaluate_challenger(ChallengerMetrics(
-            model_id="m1",
-            challenger_version="v2",
-            champion_version="v1",
-            total_requests=0,
-            error_count=0,
-            avg_latency_ms=0.0,
-        ))
+        decision = await rm.evaluate_challenger(
+            ChallengerMetrics(
+                model_id="m1",
+                challenger_version="v2",
+                champion_version="v1",
+                total_requests=0,
+                error_count=0,
+                avg_latency_ms=0.0,
+            )
+        )
         report("0 requests → no rollback", not decision.should_rollback)
 
         # Test 7: Rollback preserves correct model versions
         mock_repo.reset_mock()
-        await rm.evaluate_challenger(ChallengerMetrics(
-            model_id="fraud-detection",
-            challenger_version="v99",
-            champion_version="v1",
-            total_requests=100,
-            error_count=50,  # 50% error rate
-            avg_latency_ms=10.0,
-        ))
+        await rm.evaluate_challenger(
+            ChallengerMetrics(
+                model_id="fraud-detection",
+                challenger_version="v99",
+                champion_version="v1",
+                total_requests=100,
+                error_count=50,  # 50% error rate
+                avg_latency_ms=10.0,
+            )
+        )
         if mock_repo.update_stage.called:
             call_args = mock_repo.update_stage.call_args
             report(
@@ -396,22 +422,26 @@ def test_integration() -> None:
 
     # Setup alert manager with anomaly-driven rules
     am = AlertManager()
-    am.register_rule(AlertRule(
-        name="anomaly_confidence",
-        metric="anomaly_score",
-        threshold=2.5,
-        severity=AlertSeverity.CRITICAL,
-        comparison="gt",
-        cooldown_seconds=0,
-    ))
-    am.register_rule(AlertRule(
-        name="high_error_rate",
-        metric="error_rate",
-        threshold=0.05,
-        severity=AlertSeverity.WARNING,
-        comparison="gt",
-        cooldown_seconds=0,
-    ))
+    am.register_rule(
+        AlertRule(
+            name="anomaly_confidence",
+            metric="anomaly_score",
+            threshold=2.5,
+            severity=AlertSeverity.CRITICAL,
+            comparison="gt",
+            cooldown_seconds=0,
+        )
+    )
+    am.register_rule(
+        AlertRule(
+            name="high_error_rate",
+            metric="error_rate",
+            threshold=0.05,
+            severity=AlertSeverity.WARNING,
+            comparison="gt",
+            cooldown_seconds=0,
+        )
+    )
 
     # Detect anomaly with known baseline
     ad = AnomalyDetector(z_score_threshold=2.0)

@@ -28,7 +28,10 @@ class MetricsPublisher(ABC):
 
     @abstractmethod
     def record_prediction(
-        self, model_id: str, version: str, status: str,
+        self,
+        model_id: str,
+        version: str,
+        status: str,
     ) -> None:
         """Increment the prediction counter.
 
@@ -40,13 +43,19 @@ class MetricsPublisher(ABC):
 
     @abstractmethod
     def record_latency(
-        self, model_id: str, version: str, latency_seconds: float,
+        self,
+        model_id: str,
+        version: str,
+        latency_seconds: float,
     ) -> None:
         """Record inference latency (seconds)."""
 
     @abstractmethod
     def record_confidence(
-        self, model_id: str, version: str, confidence: float,
+        self,
+        model_id: str,
+        version: str,
+        confidence: float,
     ) -> None:
         """Record prediction confidence score."""
 
@@ -84,6 +93,8 @@ class MetricsPublisher(ABC):
 
     @abstractmethod
     def record_drift_detected(
-        self, model_id: str, feature_name: str,
+        self,
+        model_id: str,
+        feature_name: str,
     ) -> None:
         """Increment the drift-detected event counter."""

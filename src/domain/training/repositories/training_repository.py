@@ -29,9 +29,7 @@ class TrainingRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_model_id(
-        self, model_id: str, limit: int = 10
-    ) -> list[TrainingJob]:
+    async def get_by_model_id(self, model_id: str, limit: int = 10) -> list[TrainingJob]:
         """Retrieve training jobs for a given model, most recent first."""
         ...
 

@@ -35,8 +35,16 @@ MODEL_ID = "image-class"
 DEFAULT_DATA_PATH = "data/image_class/dataset.npz"
 
 CLASS_NAMES = [
-    "T-shirt/top", "Trouser", "Pullover", "Dress", "Coat",
-    "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot",
+    "T-shirt/top",
+    "Trouser",
+    "Pullover",
+    "Dress",
+    "Coat",
+    "Sandal",
+    "Shirt",
+    "Sneaker",
+    "Bag",
+    "Ankle boot",
 ]
 N_FEATURES = 784  # 28 × 28 pixels
 N_CLASSES = 10
@@ -72,21 +80,26 @@ def train_and_export(
     resolved_data = data_path or DEFAULT_DATA_PATH
     x_train, x_test, y_train, y_test = asyncio.run(_load_data(resolved_data))
 
-    pipeline = Pipeline([
-        ("scaler", StandardScaler()),
-        ("classifier", MLPClassifier(
-            hidden_layer_sizes=(256, 128),
-            activation="relu",
-            solver="adam",
-            learning_rate_init=0.001,
-            max_iter=50,
-            batch_size=256,
-            early_stopping=True,
-            validation_fraction=0.1,
-            random_state=42,
-            verbose=True,
-        )),
-    ])
+    pipeline = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "classifier",
+                MLPClassifier(
+                    hidden_layer_sizes=(256, 128),
+                    activation="relu",
+                    solver="adam",
+                    learning_rate_init=0.001,
+                    max_iter=50,
+                    batch_size=256,
+                    early_stopping=True,
+                    validation_fraction=0.1,
+                    random_state=42,
+                    verbose=True,
+                ),
+            ),
+        ]
+    )
 
     print("\n🏋️ Training MLPClassifier (256→128 hidden layers)...")
     pipeline.fit(x_train, y_train)
@@ -110,9 +123,7 @@ def train_and_export(
         "dataset": "fashion-mnist",
         "model_type": "MLPClassifier",
         "class_names": CLASS_NAMES,
-        "per_class_f1": {
-            name: round(report[name]["f1-score"], 4) for name in CLASS_NAMES
-        },
+        "per_class_f1": {name: round(report[name]["f1-score"], 4) for name in CLASS_NAMES},
     }
 
     print(f"\n📊 Accuracy: {accuracy:.4f}, F1 (macro): {f1_macro:.4f}")

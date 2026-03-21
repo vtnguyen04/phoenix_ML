@@ -89,7 +89,8 @@ class PluginRegistry:
         self._preprocessors[model_id] = preprocessor
         logger.info(
             "📌 Registered preprocessor for '%s': %s",
-            model_id, type(preprocessor).__name__,
+            model_id,
+            type(preprocessor).__name__,
         )
 
     def get_preprocessor(self, model_id: str) -> IPreprocessor:
@@ -102,7 +103,8 @@ class PluginRegistry:
         self._postprocessors[model_id] = postprocessor
         logger.info(
             "📌 Registered postprocessor for '%s': %s",
-            model_id, type(postprocessor).__name__,
+            model_id,
+            type(postprocessor).__name__,
         )
 
     def get_postprocessor(self, model_id: str) -> IPostprocessor:

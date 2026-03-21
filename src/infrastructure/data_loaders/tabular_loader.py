@@ -37,9 +37,7 @@ class TabularDataLoader(IDataLoader):
     Returns (X, y) numpy arrays with metadata in DatasetInfo.
     """
 
-    async def load(
-        self, data_path: str, **kwargs: Any
-    ) -> tuple[Any, DatasetInfo]:
+    async def load(self, data_path: str, **kwargs: Any) -> tuple[Any, DatasetInfo]:
         """Load tabular dataset from CSV or Parquet.
 
         Args:

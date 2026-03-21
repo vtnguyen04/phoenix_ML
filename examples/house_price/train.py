@@ -74,8 +74,14 @@ def train_and_export(
     print(f"✅ R²:   {r2:.4f}")
 
     feature_names = [
-        "MedInc", "HouseAge", "AveRooms", "AveBedrms",
-        "Population", "AveOccup", "Latitude", "Longitude",
+        "MedInc",
+        "HouseAge",
+        "AveRooms",
+        "AveBedrms",
+        "Population",
+        "AveOccup",
+        "Latitude",
+        "Longitude",
     ]
     n_features = len(feature_names)
 

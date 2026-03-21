@@ -38,13 +38,28 @@ def generate_credit_risk() -> None:
     df = data.frame
 
     numeric = [
-        "duration", "credit_amount", "installment_commitment",
-        "residence_since", "age", "existing_credits", "num_dependents",
+        "duration",
+        "credit_amount",
+        "installment_commitment",
+        "residence_since",
+        "age",
+        "existing_credits",
+        "num_dependents",
     ]
     categorical = [
-        "checking_status", "credit_history", "purpose", "savings_status",
-        "employment", "personal_status", "other_parties", "property_magnitude",
-        "other_payment_plans", "housing", "job", "own_telephone", "foreign_worker",
+        "checking_status",
+        "credit_history",
+        "purpose",
+        "savings_status",
+        "employment",
+        "personal_status",
+        "other_parties",
+        "property_magnitude",
+        "other_payment_plans",
+        "housing",
+        "job",
+        "own_telephone",
+        "foreign_worker",
     ]
 
     preprocessor = ColumnTransformer(
@@ -70,22 +85,41 @@ def generate_credit_risk() -> None:
     emp_i = len(numeric) + categorical.index("employment")
     chk_i = len(numeric) + categorical.index("checking_status")
     sav_i = len(numeric) + categorical.index("savings_status")
-    emp = x_base[:, emp_i:emp_i + 1]
-    chk = x_base[:, chk_i:chk_i + 1]
-    sav = x_base[:, sav_i:sav_i + 1]
+    emp = x_base[:, emp_i : emp_i + 1]
+    chk = x_base[:, chk_i : chk_i + 1]
+    sav = x_base[:, sav_i : sav_i + 1]
 
-    engineered = np.hstack([
-        credit / (dur + eps), age / (credit + eps), inst / (credit + eps),
-        age * (emp + 1), credit * inst / (dur + eps), dur * inst,
-        chk * sav, age * chk, credit * existing, np.log1p(np.abs(credit)),
-    ])
+    engineered = np.hstack(
+        [
+            credit / (dur + eps),
+            age / (credit + eps),
+            inst / (credit + eps),
+            age * (emp + 1),
+            credit * inst / (dur + eps),
+            dur * inst,
+            chk * sav,
+            age * chk,
+            credit * existing,
+            np.log1p(np.abs(credit)),
+        ]
+    )
 
-    all_features = numeric + categorical + [
-        "credit_per_month", "age_credit_ratio", "installment_credit_ratio",
-        "age_employment_score", "credit_risk_density", "duration_installment",
-        "checking_savings_interact", "age_checking_interact",
-        "credit_existing_interact", "log_credit_amount",
-    ]
+    all_features = (
+        numeric
+        + categorical
+        + [
+            "credit_per_month",
+            "age_credit_ratio",
+            "installment_credit_ratio",
+            "age_employment_score",
+            "credit_risk_density",
+            "duration_installment",
+            "checking_savings_interact",
+            "age_checking_interact",
+            "credit_existing_interact",
+            "log_credit_amount",
+        ]
+    )
 
     x_all = np.hstack([x_base, engineered]).astype(np.float32)
     y_all = (df["class"] == "good").astype(int).values
@@ -106,10 +140,18 @@ def generate_fraud_detection() -> None:
     print("📥 [fraud-detection] Generating synthetic fraud dataset...")
 
     feature_names = [
-        "transaction_amount", "merchant_category", "card_type",
-        "transaction_hour", "distance_from_home", "distance_from_last_txn",
-        "ratio_to_median_amount", "is_weekend", "is_night",
-        "num_txn_last_24h", "num_txn_last_7d", "avg_amount_last_30d",
+        "transaction_amount",
+        "merchant_category",
+        "card_type",
+        "transaction_hour",
+        "distance_from_home",
+        "distance_from_last_txn",
+        "ratio_to_median_amount",
+        "is_weekend",
+        "is_night",
+        "num_txn_last_24h",
+        "num_txn_last_7d",
+        "avg_amount_last_30d",
     ]
 
     x_data, y_data = make_classification(
@@ -181,8 +223,16 @@ def generate_image_classification() -> None:
 
     # Save class names metadata
     class_names = [
-        "T-shirt/top", "Trouser", "Pullover", "Dress", "Coat",
-        "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot",
+        "T-shirt/top",
+        "Trouser",
+        "Pullover",
+        "Dress",
+        "Coat",
+        "Sandal",
+        "Shirt",
+        "Sneaker",
+        "Bag",
+        "Ankle boot",
     ]
     with open(out_dir / "metadata.json", "w") as f:
         json.dump({"class_names": class_names, "n_classes": 10, "image_size": "28x28"}, f, indent=2)
