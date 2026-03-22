@@ -34,7 +34,7 @@ from phoenix_ml.infrastructure.bootstrap.container import (
     model_evaluator,
 )
 from phoenix_ml.infrastructure.http.dependencies import get_predict_handler
-from phoenix_ml.infrastructure.persistence.database import get_db
+from phoenix_ml.infrastructure.persistence.database import get_db, get_db_optional
 from phoenix_ml.infrastructure.persistence.postgres_drift_repo import (
     PostgresDriftReportRepository,
 )
@@ -102,14 +102,15 @@ async def predict(
     command: PredictCommand,
     background_tasks: BackgroundTasks,
     handler: PredictHandler = Depends(get_predict_handler),  # noqa: B008
-    db: AsyncSession = Depends(get_db),  # noqa: B008
+    db: AsyncSession | None = Depends(get_db_optional),  # noqa: B008
 ) -> dict[str, Any]:
     try:
         prediction = await handler.execute(command)
         prediction_id = str(uuid.uuid4())
-        background_tasks.add_task(
-            _log_prediction_background, command, prediction, prediction_id, db
-        )
+        if db is not None:
+            background_tasks.add_task(
+                _log_prediction_background, command, prediction, prediction_id, db
+            )
         return {
             "prediction_id": prediction_id,
             "model_id": prediction.model_id,

@@ -7,16 +7,22 @@ Usage::
     platform = PhoenixPlatform(
         database_url="postgresql+asyncpg://user:pass@cloud-db:5432/mydb",
         redis_url="redis://cloud-redis:6379",
+        kafka_url="kafka-broker:9092",
         mlflow_uri="http://cloud-mlflow:5000",
+        airflow_url="http://cloud-airflow:8080/api/v1",
+        jaeger_endpoint="http://jaeger:4317",
         model_configs_dir="./my_models/",
     )
     platform.serve(host="0.0.0.0", port=8000)
 
 All parameters are optional — sensible defaults used when not provided:
-  - database_url: SQLite (no database server needed)
-  - redis_url:    In-memory cache (no Redis needed)
-  - mlflow_uri:   No MLflow logging
-  - kafka_url:    Events logged locally (no Kafka needed)
+  - database_url:     SQLite (no database server needed)
+  - redis_url:        In-memory cache (no Redis needed)
+  - kafka_url:        Events logged locally (no Kafka needed)
+  - mlflow_uri:       Metrics saved locally (no MLflow needed)
+  - airflow_url:      Manual retrain via API (no Airflow needed)
+  - jaeger_endpoint:  No distributed tracing
+  - grafana_url:      Prometheus metrics still exposed at /metrics
 """
 
 import logging
@@ -32,41 +38,72 @@ class PhoenixPlatform:
     """Main framework entry point with programmatic configuration.
 
     Attributes set here override environment variables and defaults.
-    Any parameter set to None falls back to env var → default.
+    Any parameter set to None falls back to env var → default value.
+
+    Infrastructure services are all OPTIONAL — framework runs with zero
+    external dependencies (SQLite + in-memory defaults).
+
+    Examples::
+
+        # Minimal — no infra needed
+        platform = PhoenixPlatform()
+        platform.serve()
+
+        # Full cloud setup
+        platform = PhoenixPlatform(
+            database_url="postgresql+asyncpg://user:pass@rds.aws.com:5432/ml",
+            redis_url="redis://elasticache.aws.com:6379",
+            kafka_url="msk.aws.com:9092",
+            mlflow_uri="http://mlflow.internal:5000",
+            airflow_url="http://airflow.internal:8080/api/v1",
+            jaeger_endpoint="http://jaeger.internal:4317",
+        )
+        platform.serve(host="0.0.0.0", port=8000, workers=4)
     """
 
     def __init__(  # noqa: PLR0913
         self,
         *,
-        # ── Infrastructure URLs ──
+        # ── Database ──
         database_url: str | None = None,
+        # ── Cache ──
         redis_url: str | None = None,
+        use_redis: bool | None = None,
+        # ── Messaging ──
         kafka_url: str | None = None,
+        # ── Experiment Tracking ──
         mlflow_uri: str | None = None,
+        # ── Pipeline Orchestration ──
+        airflow_url: str | None = None,
+        airflow_user: str | None = None,
+        airflow_password: str | None = None,
+        # ── Observability ──
         jaeger_endpoint: str | None = None,
-        # ── Framework config ──
+        # ── Framework Config ──
         model_configs_dir: str | Path = "model_configs",
         inference_engine: str = "onnx",
         default_model_id: str = "",
-        # ── Feature flags ──
-        use_redis: bool | None = None,
+        # ── Server ──
+        grpc_port: int | None = None,
         debug: bool = False,
     ) -> None:
-        # Set env vars BEFORE importing settings (pydantic reads from env)
-        if database_url is not None:
-            os.environ["DATABASE_URL"] = database_url
-        if redis_url is not None:
-            os.environ["REDIS_URL"] = redis_url
-            if use_redis is None:
-                os.environ["USE_REDIS"] = "true"
+        self._apply_env("DATABASE_URL", database_url)
+        self._apply_env("REDIS_URL", redis_url)
+        self._apply_env("KAFKA_URL", kafka_url)
+        self._apply_env("MLFLOW_TRACKING_URI", mlflow_uri)
+        self._apply_env("AIRFLOW_API_URL", airflow_url)
+        self._apply_env("AIRFLOW_ADMIN_USER", airflow_user)
+        self._apply_env("AIRFLOW_ADMIN_PASSWORD", airflow_password)
+        self._apply_env("JAEGER_ENDPOINT", jaeger_endpoint)
+
+        # Redis auto-enable when URL is provided
+        if redis_url is not None and use_redis is None:
+            os.environ["USE_REDIS"] = "true"
         if use_redis is not None:
             os.environ["USE_REDIS"] = str(use_redis).lower()
-        if kafka_url is not None:
-            os.environ["KAFKA_URL"] = kafka_url
-        if mlflow_uri is not None:
-            os.environ["MLFLOW_TRACKING_URI"] = mlflow_uri
-        if jaeger_endpoint is not None:
-            os.environ["JAEGER_ENDPOINT"] = jaeger_endpoint
+
+        if grpc_port is not None:
+            os.environ["GRPC_PORT"] = str(grpc_port)
         if debug:
             os.environ["DEBUG"] = "true"
 
@@ -78,16 +115,35 @@ class PhoenixPlatform:
         self._model_configs_dir = Path(model_configs_dir)
         self._debug = debug
 
+        self._log_config(inference_engine)
+
+    @staticmethod
+    def _apply_env(key: str, value: str | None) -> None:
+        """Set environment variable if value is provided."""
+        if value is not None:
+            os.environ[key] = value
+
+    def _log_config(self, engine: str) -> None:
+        """Log active configuration summary."""
         logger.info("PhoenixPlatform initialized")
-        logger.info("  database:   %s", os.environ.get("DATABASE_URL", "(default: SQLite)"))
-        redis_status = (
-            "enabled" if os.environ.get("USE_REDIS") == "true"
-            else "disabled (in-memory)"
-        )
-        logger.info("  redis:      %s", redis_status)
-        logger.info("  mlflow:     %s", os.environ.get("MLFLOW_TRACKING_URI", "(disabled)"))
-        logger.info("  configs:    %s", self._model_configs_dir)
-        logger.info("  engine:     %s", inference_engine)
+        _env = os.environ.get
+
+        services = {
+            "database": _env("DATABASE_URL", "SQLite (default)"),
+            "redis": (
+                _env("REDIS_URL", "")
+                if _env("USE_REDIS") == "true"
+                else "in-memory (default)"
+            ),
+            "kafka": _env("KAFKA_URL", "disabled (events local)"),
+            "mlflow": _env("MLFLOW_TRACKING_URI", "disabled"),
+            "airflow": _env("AIRFLOW_API_URL", "disabled (manual retrain)"),
+            "jaeger": _env("JAEGER_ENDPOINT", "disabled"),
+            "engine": engine,
+            "configs": str(self._model_configs_dir),
+        }
+        for name, value in services.items():
+            logger.info("  %-10s %s", name, value)
 
     def serve(
         self,
@@ -116,7 +172,9 @@ class PhoenixPlatform:
 
     @property
     def app(self):  # type: ignore[no-untyped-def]
-        """Get the FastAPI app instance for ASGI deployment (Gunicorn, etc.)."""
-        from phoenix_ml.infrastructure.http.fastapi_server import app  # noqa: PLC0415
+        """Get the FastAPI app instance (for Gunicorn/ASGI deployment)."""
+        from phoenix_ml.infrastructure.http.fastapi_server import (  # noqa: PLC0415
+            app,
+        )
 
         return app

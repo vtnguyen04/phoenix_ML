@@ -15,7 +15,7 @@ from phoenix_ml.infrastructure.bootstrap.container import (
     feature_store,
     inference_engine,
 )
-from phoenix_ml.infrastructure.persistence.database import get_db
+from phoenix_ml.infrastructure.persistence.database import get_db_optional
 from phoenix_ml.infrastructure.persistence.mlflow_model_registry import (
     MlflowModelRegistry,
 )
@@ -38,10 +38,18 @@ _registry_backend = settings.MODEL_REGISTRY_BACKEND
 
 
 async def get_predict_handler(
-    db: AsyncSession = Depends(get_db),  # noqa: B008
+    db: AsyncSession | None = Depends(get_db_optional),  # noqa: B008
 ) -> PredictHandler:
-    factory = _REGISTRY_FACTORIES.get(_registry_backend, _REGISTRY_FACTORIES["postgres"])
-    model_repo: ModelRepository = factory(db)
+    if db is not None:
+        factory = _REGISTRY_FACTORIES.get(_registry_backend, _REGISTRY_FACTORIES["postgres"])
+        model_repo: ModelRepository = factory(db)
+    else:
+        # Fallback: use global in-memory model repo (seeded during startup)
+        from phoenix_ml.infrastructure.bootstrap.container import (  # noqa: PLC0415
+            in_memory_model_repo,
+        )
+
+        model_repo = in_memory_model_repo
 
     inference_service = InferenceService(
         model_repo=model_repo,

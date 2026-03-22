@@ -320,57 +320,111 @@ async def _seed_model_if_needed(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: PLR0915
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # ── Database initialization (optional — graceful degradation) ──
+    db_available = False
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        db_available = True
+        logger.info("✅ Database connected")
+    except Exception as e:
+        logger.warning(
+            "⚠️ Database unavailable — running without persistence: %s",
+            type(e).__name__,
+        )
 
     grpc_server = None
+    model_configs: dict[str, Any] = {}
 
-    async for db in get_db():
-        model_repo = PostgresModelRegistry(db)
+    if db_available:
+        async for db in get_db():
+            model_repo = PostgresModelRegistry(db)
 
-        try:
-            grpc_server = create_grpc_server(
-                model_repo=model_repo,
-                inference_engine=inference_engine,
-                batch_manager=batch_manager,
-                feature_store=feature_store,
-                artifact_storage=artifact_storage,
-                port=50051,
-            )
-        except RuntimeError as e:
-            logger.warning("⚠️ gRPC server skipped (port in use): %s", e)
-            grpc_server = None
+            try:
+                grpc_server = create_grpc_server(
+                    model_repo=model_repo,
+                    inference_engine=inference_engine,
+                    batch_manager=batch_manager,
+                    feature_store=feature_store,
+                    artifact_storage=artifact_storage,
+                    port=50051,
+                )
+            except RuntimeError as e:
+                logger.warning("⚠️ gRPC server skipped (port in use): %s", e)
+                grpc_server = None
 
+            _settings = get_settings()
+            _model_id = _settings.DEFAULT_MODEL_ID
+            _model_version = _settings.DEFAULT_MODEL_VERSION
+
+            # Seed default model (if configured)
+            if _model_id:
+                await _seed_model_if_needed(db, model_repo, _model_id, _model_version)
+
+            # Seed ALL models from model_configs/ directory
+            root = find_project_root()
+            config_dir = root / _settings.MODEL_CONFIG_DIR
+            model_configs = load_all_model_configs(config_dir)
+            for cfg_id, cfg in model_configs.items():
+                if cfg_id != _model_id:
+                    cfg_version = cfg.version or _model_version
+                    await _seed_model_if_needed(
+                        db,
+                        model_repo,
+                        cfg_id,
+                        cfg_version,
+                    )
+
+            # Seed feature store from reference data (model-agnostic)
+            real_features = _load_real_features()
+            if real_features:
+                for record in real_features:
+                    await feature_store.add_features(record["entity_id"], record["features"])
+                logger.info("✅ Seeded %d real feature records", len(real_features))
+
+            break
+    else:
+        # Load model configs even without DB (for inference-only mode)
         _settings = get_settings()
-        _model_id = _settings.DEFAULT_MODEL_ID
-        _model_version = _settings.DEFAULT_MODEL_VERSION
-
-        # Seed default model (if configured)
-        if _model_id:
-            await _seed_model_if_needed(db, model_repo, _model_id, _model_version)
-
-        # Seed ALL models from model_configs/ directory
         root = find_project_root()
         config_dir = root / _settings.MODEL_CONFIG_DIR
         model_configs = load_all_model_configs(config_dir)
+
+        # Seed in-memory model repo so /predict works without DB
+        from phoenix_ml.infrastructure.bootstrap.container import (  # noqa: PLC0415
+            in_memory_model_repo,
+        )
+
         for cfg_id, cfg in model_configs.items():
-            if cfg_id != _model_id:
-                cfg_version = cfg.version or _model_version
-                await _seed_model_if_needed(
-                    db,
-                    model_repo,
-                    cfg_id,
-                    cfg_version,
+            try:
+                # Use model_path from config (supports absolute paths)
+                from pathlib import Path as _Path  # noqa: PLC0415
+
+                cfg_model_path = _Path(cfg.model_path)
+                if cfg_model_path.is_absolute() and cfg_model_path.exists():
+                    model_path = cfg_model_path.absolute()
+                else:
+                    model_path = ensure_model_exists(cfg_id, cfg.version)
+
+                seed_model = Model(
+                    id=cfg_id,
+                    version=cfg.version,
+                    uri=f"local://{model_path}",
+                    framework=cfg.framework,
+                    metadata={"role": "champion"},
                 )
-
-        # Seed feature store from reference data (model-agnostic)
-        real_features = _load_real_features()
-        if real_features:
-            for record in real_features:
-                await feature_store.add_features(record["entity_id"], record["features"])
-            logger.info("✅ Seeded %d real feature records", len(real_features))
-
-        break
+                await in_memory_model_repo.save(seed_model)
+                await in_memory_model_repo.update_stage(
+                    cfg_id, cfg.version, "champion"
+                )
+                logger.info(
+                    "✅ Seeded in-memory model: %s:%s from %s",
+                    cfg_id,
+                    cfg.version,
+                    model_path,
+                )
+            except Exception as e:
+                logger.warning("⚠️ Failed to seed %s: %s", cfg_id, e)
 
     # Log model configs and plugin registry state
     if model_configs:

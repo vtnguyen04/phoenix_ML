@@ -133,6 +133,13 @@ plugin_registry = PluginRegistry()
 
 shutdown_event = asyncio.Event()
 
+# ── In-memory model repo (used when DB is unavailable) ────────────
+from phoenix_ml.infrastructure.persistence.in_memory_model_repo import (  # noqa: E402
+    InMemoryModelRepository,
+)
+
+in_memory_model_repo = InMemoryModelRepository()
+
 
 def find_project_root() -> Path:
     """Find root by searching for pyproject.toml upwards from this file."""

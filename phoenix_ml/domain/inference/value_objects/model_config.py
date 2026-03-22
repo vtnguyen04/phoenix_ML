@@ -82,6 +82,9 @@ class ModelConfig:
     retrain_schedule: str = ""
     drift_detection_enabled: bool = True
 
+    # Optional pipeline steps (omit for default train → validate → register)
+    pipeline_steps: tuple[tuple[str, ...], ...] = ()
+
     def get_metadata(self) -> dict[str, Any]:
         """Return metadata as a mutable dict for serialization."""
         return dict(self.metadata)

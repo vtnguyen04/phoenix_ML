@@ -23,3 +23,21 @@ class Base(DeclarativeBase):
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
+
+
+async def get_db_optional() -> AsyncSession | None:
+    """Optional DB session — returns None when database is unavailable.
+
+    Use this for endpoints that should work without a database
+    (e.g., /predict can skip logging when DB is down).
+    """
+    try:
+        session = AsyncSessionLocal()
+        # Test the connection is actually usable
+        from sqlalchemy import text  # noqa: PLC0415
+
+        await session.execute(text("SELECT 1"))
+        return session
+    except Exception:
+        return None
+
