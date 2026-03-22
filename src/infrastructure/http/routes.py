@@ -85,6 +85,17 @@ async def health_check() -> dict[str, str]:
     return {"status": "healthy", "version": get_settings().APP_VERSION}
 
 
+@router.get("/health/deep")
+async def deep_health_check() -> dict[str, Any]:
+    """Deep health check — verify all infrastructure dependencies."""
+    from src.infrastructure.monitoring.health_check import HealthChecker  # noqa: PLC0415
+
+    checker = HealthChecker()
+    report = await checker.check_all()
+    return report.to_dict()
+
+
+
 @router.post("/predict")
 async def predict(
     command: PredictCommand,

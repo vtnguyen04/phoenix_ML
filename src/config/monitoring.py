@@ -30,3 +30,23 @@ class MonitoringSettings(BaseSettings):
 
     # Alert
     ALERT_COOLDOWN_SECONDS: float = 300.0
+
+    # A/B test thresholds (Cohen's effect size)
+    AB_TEST_CONFIDENCE_LEVEL: float = 0.95
+    AB_TEST_NEGLIGIBLE_EFFECT: float = 0.2
+    AB_TEST_LARGE_EFFECT: float = 0.8
+
+    # Data validation
+    DATA_VALIDATION_NULL_THRESHOLD: float = 0.3
+    DATA_VALIDATION_OUTLIER_MULTIPLIER: float = 1.5
+    DATA_VALIDATION_DUPLICATE_THRESHOLD: float = 0.5
+
+    # Input validation
+    INPUT_MAX_FEATURES: int = 10_000
+    INPUT_MAX_BODY_SIZE_MB: int = 10
+
+    # Rate limiting
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
+
+    # Audit log
+    AUDIT_LOG_FILE: str = "logs/audit.jsonl"

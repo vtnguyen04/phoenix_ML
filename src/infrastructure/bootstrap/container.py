@@ -70,6 +70,11 @@ kafka_consumer = KafkaConsumer(
     group_id="phoenix-ml-consumers",
 )
 
+# ── Prediction Cache ──────────────────────────────────────────────
+from src.infrastructure.cache.prediction_cache import PredictionCache  # noqa: E402
+
+prediction_cache = PredictionCache(default_ttl_seconds=300, max_size=10_000)
+
 drift_calculator = DriftCalculator()
 
 # ── Evaluator Factory (uses existing get_evaluator from model_evaluator) ──
