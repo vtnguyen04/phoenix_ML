@@ -60,7 +60,6 @@ nav:
     - 002 - ONNX Runtime: adr/002-use-onnx-runtime.md
     - 003 - Kafka Streaming: adr/003-use-kafka-for-event-streaming.md
     - 004 - Observability Stack: adr/004-observability-with-prometheus-grafana.md
-    - 005 - DVC Data Versioning: adr/005-dvc-data-versioning.md
   - Deployment:
     - Docker Stack: deployment/docker-stack.md
   - Guides:

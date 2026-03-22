@@ -42,6 +42,21 @@ class ModelConfig:
             Supported: "ks", "psi", "wasserstein", "chi2".
         monitoring_primary_metric: Primary evaluation metric name.
             E.g. "accuracy" for classification, "rmse" for regression.
+        data_source_type: Where training data comes from.
+            "file" — CSV/NPZ on disk (default).
+            "database" — SQL query from a database.
+            "dvc" — DVC-versioned large datasets (images, etc.).
+        data_source_query: SQL query for database-sourced data.
+        data_source_connection: Database connection name for database sources.
+        retrain_trigger: What triggers model retraining.
+            "drift" — auto-retrain when drift is detected (default).
+            "manual" — user triggers via API or Airflow UI.
+            "data_change" — retrain when DVC data changes.
+            "scheduled" — cron-based periodic retrain.
+        retrain_schedule: Cron expression for scheduled retraining.
+        drift_detection_enabled: Whether drift monitoring is active.
+            Set to False for tasks without meaningful drift detection
+            (e.g. object detection, NLP).
     """
 
     model_id: str
@@ -56,6 +71,16 @@ class ModelConfig:
     train_script: str = ""
     monitoring_drift_test: str = "ks"
     monitoring_primary_metric: str = "accuracy"
+
+    # Data source configuration
+    data_source_type: str = "file"
+    data_source_query: str = ""
+    data_source_connection: str = ""
+
+    # Retrain trigger configuration
+    retrain_trigger: str = "drift"
+    retrain_schedule: str = ""
+    drift_detection_enabled: bool = True
 
     def get_metadata(self) -> dict[str, Any]:
         """Return metadata as a mutable dict for serialization."""
@@ -76,6 +101,12 @@ class ModelConfig:
             train_script=self.train_script,
             monitoring_drift_test=self.monitoring_drift_test,
             monitoring_primary_metric=self.monitoring_primary_metric,
+            data_source_type=self.data_source_type,
+            data_source_query=self.data_source_query,
+            data_source_connection=self.data_source_connection,
+            retrain_trigger=self.retrain_trigger,
+            retrain_schedule=self.retrain_schedule,
+            drift_detection_enabled=self.drift_detection_enabled,
         )
 
     @property
@@ -87,3 +118,13 @@ class ModelConfig:
     def has_named_features(self) -> bool:
         """Whether this model uses named features (vs raw tensor input)."""
         return len(self.feature_names) > 0
+
+    @property
+    def uses_dvc(self) -> bool:
+        """Whether this model's data is versioned by DVC."""
+        return self.data_source_type == "dvc"
+
+    @property
+    def is_drift_monitored(self) -> bool:
+        """Whether drift detection should run for this model."""
+        return self.drift_detection_enabled and self.retrain_trigger == "drift"

@@ -217,7 +217,7 @@ services:
     networks:
       - phoenix-net
 
-  # ─── MinIO (S3-compatible Object Storage for DVC) ──────────────
+  # ─── MinIO (S3-compatible Object Storage for MLflow Artifacts) ──
   minio:
     image: minio/minio:latest
     container_name: phoenix-minio
@@ -242,8 +242,8 @@ services:
       /bin/sh -c "
       sleep 3;
       mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
-      mc mb myminio/dvc --ignore-existing;
-      mc anonymous set download myminio/dvc;
+      mc mb myminio/mlflow-artifacts --ignore-existing;
+      mc anonymous set download myminio/mlflow-artifacts;
       exit 0;
       "
     networks:

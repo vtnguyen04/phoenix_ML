@@ -69,17 +69,36 @@ def _dict_to_model_config(data: dict[str, Any]) -> ModelConfig:
     if not isinstance(monitoring, dict):
         monitoring = {}
 
+    # Parse data_source section
+    data_source = data.get("data_source", {})
+    if not isinstance(data_source, dict):
+        data_source = {}
+
+    # Parse retrain section
+    retrain = data.get("retrain", {})
+    if not isinstance(retrain, dict):
+        retrain = {}
+
     # Task-type defaults mapping (OCP: add new task types via dict entry)
-    _TASK_DEFAULTS: dict[str, tuple[str, str]] = {
-        "classification": ("ks", "accuracy"),
-        "regression": ("wasserstein", "rmse"),
-        "image": ("chi2", "accuracy"),
+    # Format: (drift_test, primary_metric, default_data_source, default_trigger, drift_enabled)
+    _TASK_DEFAULTS: dict[str, tuple[str, str, str, str, bool]] = {
+        "classification": ("ks", "accuracy", "file", "drift", True),
+        "regression": ("wasserstein", "rmse", "file", "drift", True),
+        "image": ("chi2", "accuracy", "file", "drift", True),
+        "image_classification": ("chi2", "accuracy", "file", "drift", True),
+        "object_detection": ("ks", "map", "dvc", "data_change", False),
+        "nlp": ("ks", "accuracy", "file", "manual", False),
+        "custom": ("ks", "accuracy", "file", "manual", True),
     }
     task_type = data.get("task_type", "classification")
-    default_drift_test, default_primary_metric = _TASK_DEFAULTS.get(
-        task_type,
-        ("ks", "accuracy"),
-    )
+    defaults = _TASK_DEFAULTS.get(task_type, ("ks", "accuracy", "file", "drift", True))
+    (
+        default_drift_test,
+        default_primary_metric,
+        default_ds_type,
+        default_trigger,
+        default_drift_enabled,
+    ) = defaults
 
     return ModelConfig(
         model_id=data.get("model_id", ""),
@@ -94,6 +113,12 @@ def _dict_to_model_config(data: dict[str, Any]) -> ModelConfig:
         train_script=data.get("train_script", ""),
         monitoring_drift_test=monitoring.get("drift_test", default_drift_test),
         monitoring_primary_metric=monitoring.get("primary_metric", default_primary_metric),
+        data_source_type=data_source.get("type", default_ds_type),
+        data_source_query=data_source.get("query", ""),
+        data_source_connection=data_source.get("connection", ""),
+        retrain_trigger=retrain.get("trigger", default_trigger),
+        retrain_schedule=retrain.get("schedule", ""),
+        drift_detection_enabled=retrain.get("drift_detection", default_drift_enabled),
     )
 
 

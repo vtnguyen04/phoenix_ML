@@ -2,9 +2,8 @@
 Generate Datasets — Download/create all training datasets to data/.
 
 Downloads real datasets and saves them as CSV/NPZ files that are:
-    1. Tracked by DVC (`dvc add data/`)
-    2. Pushed to MinIO (`dvc push`)
-    3. Loaded by DataLoaders during training and retraining
+    1. Loaded by DataLoaders during training and retraining
+    2. Stored in data/ directory (gitignored)
 
 Usage:
     uv run python scripts/generate_datasets.py            # All datasets
@@ -274,9 +273,9 @@ def main() -> None:
             print(f"   ❌ Failed: {e}", file=sys.stderr)
         print()
 
-    print("✅ Done! Next steps:")
-    print("   dvc add data/")
-    print("   dvc push")
+    print("✅ Done! Train models with:")
+    print("   uv run python examples/credit_risk/train.py")
+    print("   uv run python examples/house_price/train.py")
 
 
 if __name__ == "__main__":

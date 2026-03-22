@@ -27,7 +27,6 @@ Phoenix ML là một nền tảng **MLOps end-to-end** cho phép:
 | **Model Registry** | MLflow Tracking Server |
 | **Artifact Storage** | MinIO (S3-compatible) |
 | **Monitoring** | Prometheus + Grafana + Jaeger |
-| **Data Versioning** | DVC (Data Version Control) |
 | **Pipeline** | Apache Airflow |
 | **Deployment** | Docker Compose, Kubernetes (Helm) |
 | **CI/CD** | GitHub Actions |
@@ -82,7 +81,7 @@ graph TD
 ### 📡 API & Deployment
 
 - **[API Reference](api/reference.md)** — All REST endpoints: inference, batch prediction, model management, drift monitoring, feature store
-- **[Deployment Guide](deployment/docker-stack.md)** — Docker Compose stack (14+ services), Kubernetes Helm chart, DVC pipelines, environment config
+- **[Deployment Guide](deployment/docker-stack.md)** — Docker Compose stack (14+ services), Kubernetes Helm chart, environment config
 
 ### 📚 Guides
 
@@ -100,7 +99,6 @@ graph TD
 | [002](adr/002-use-onnx-runtime.md) | ONNX Runtime as unified inference engine | ✅ Accepted |
 | [003](adr/003-use-kafka-for-event-streaming.md) | Apache Kafka for event streaming | ✅ Accepted |
 | [004](adr/004-observability-with-prometheus-grafana.md) | Prometheus + Grafana for observability | ✅ Accepted |
-| [005](adr/005-dvc-data-versioning.md) | DVC for data & model versioning | ✅ Accepted |
 
 ### 📝 Blog Posts
 
@@ -119,9 +117,10 @@ cd phoenix_ML && cp .env.example .env
 docker compose up -d
 docker compose -f docker-compose.airflow.yaml up -d
 
-# Generate data and train models
+# Train all models
 uv run python scripts/generate_datasets.py
-uv run dvc repro
+uv run python examples/credit_risk/train.py
+uv run python examples/house_price/train.py
 
 # Access
 # API:       http://localhost:8000/docs

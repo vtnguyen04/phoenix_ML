@@ -32,3 +32,10 @@ metadata:
 monitoring:
   drift_test: psi               # PSI: population stability for transaction features
   primary_metric: accuracy      # Classification primary metric
+
+data_source:
+  type: file                    # CSV file on disk
+
+retrain:
+  trigger: drift                # Auto-retrain when drift detected
+  drift_detection: true

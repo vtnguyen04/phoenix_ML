@@ -80,18 +80,10 @@ if __name__ == "__main__":
     train()
 ```
 
-### Bước 3: Add to DVC Pipeline
+### Bước 3: Add to Airflow DAG
 
-```yaml
-# Thêm vào dvc.yaml:
-  train_sentiment:
-    cmd: uv run python examples/sentiment/train.py
-    deps:
-      - data/sentiment/dataset.csv
-      - examples/sentiment/train.py
-    outs:
-      - models/sentiment_analysis/v1/
-```
+Model sẽ tự động được pick up bởi Airflow DAG `phoenix_retrain_all` khi thêm YAML config vào `model_configs/`.
+DAG scan `model_configs/*.yaml` → tạo dynamic tasks cho mỗi model.
 
 ### Bước 4: Train & Run
 

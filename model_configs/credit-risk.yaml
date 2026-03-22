@@ -62,3 +62,10 @@ metadata:
 monitoring:
   drift_test: ks                # KS-test: best for continuous tabular features
   primary_metric: accuracy      # Classification primary metric
+
+data_source:
+  type: file                    # CSV file on disk
+
+retrain:
+  trigger: drift                # Auto-retrain when drift detected
+  drift_detection: true

@@ -39,3 +39,10 @@ metadata:
 monitoring:
   drift_test: chi2              # Chi-squared: better for binned pixel distributions
   primary_metric: accuracy      # Classification primary metric
+
+data_source:
+  type: file                    # NPZ file on disk
+
+retrain:
+  trigger: drift                # Auto-retrain when drift detected
+  drift_detection: true

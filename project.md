@@ -963,7 +963,7 @@ class DriftDetector:
 ├──────────────────┼──────────────────────────────────────────────────────────────┤
 │                  │                                                               │
 │  MLOPS           │  • MLflow (experiment tracking)                              │
-│                  │  • DVC (data versioning)                                      │
+│                  │  • Airflow (pipeline orchestration)                            │
 │                  │  • Feast (feature store)                                      │
 │                  │  • Airflow/Prefect (pipeline orchestration)                  │
 │                  │                                                               │

@@ -57,7 +57,7 @@ nosetests.xml
 .DS_Store
 
 # ========================================
-# Project Data & Models (tracked by DVC)
+# Project Data & Models
 # ========================================
 data/
 !data/*.json
@@ -79,10 +79,15 @@ frontend/node_modules/
 frontend/dist/
 
 # ========================================
-# DVC Cache
+# DVC (user-generated, not shipped with framework)
 # ========================================
-.dvc/cache/
-.dvc/tmp/
+.dvc/
+.dvcignore
+dvc.yaml
+dvc.lock
+*.dvc
+
+
 
 # ========================================
 # AI Agent files

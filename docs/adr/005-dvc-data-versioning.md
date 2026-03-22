@@ -1,118 +1,69 @@
-# ADR 005: DVC for Data and Model Versioning
+# ADR 005 — DVC Integration for Data Versioning
 
 ## Status
-✅ **Accepted** — March 2026
+
+**Accepted** — Framework provides DVC integration; users configure DVC per-project.
 
 ## Context
 
-ML projects cần version control cho data và model artifacts — files quá lớn cho Git. Cần reproducibility: anyone clone repo có thể reproduce exact results.
+The Phoenix ML framework supports diverse ML problem types (tabular, image, NLP, object detection). Different problem types have different data requirements:
 
-### Vấn đề
-- Datasets (CSV, NPZ) thay đổi theo thời gian → cần version history
-- Model files (ONNX) lớn → không thể commit vào Git
-- Training scripts cần track dependencies: data changes → retrain
-- Team cần reproduce experiments: same data + code = same model
+| Problem Type | Data Format | Size | Versioning Need |
+|---|---|---|---|
+| Tabular (credit risk, fraud) | CSV in `data/` | Small (MB) | Low — can regenerate |
+| Image Classification | NPZ/folders | Medium (GB) | Medium |
+| Object Detection | Image dirs + annotations | Large (GB-TB) | **High — cannot regenerate** |
+| NLP | Text corpora | Variable | High |
+
+For large, irreplaceable datasets (images, annotations), teams need a way to **version, share, and reproduce** exact dataset versions. DVC (Data Version Control) is the industry standard for this.
 
 ## Decision
 
-Sử dụng **DVC (Data Version Control)** cho data và model versioning.
+**DVC is a framework-supported integration, not a shipped configuration.**
 
-### Pipeline Definition (dvc.yaml)
+- The framework provides **code integration** with DVC:
+  - `ModelConfig.data_source_type = "dvc"` — declare DVC-backed data
+  - `ModelConfig.retrain_trigger = "data_change"` — trigger retrain on DVC changes
+  - `dags/data_change_pipeline.py` — Airflow DAG that monitors DVC status
+  - `dvc[s3]` as a project dependency
 
-```yaml
-stages:
-  generate_datasets:
-    cmd: uv run python scripts/generate_datasets.py
-    outs:
-      - data/credit_risk/dataset.csv
-      - data/fraud_detection/dataset.csv
-      - data/house_price/dataset.csv
-      - data/image_class/dataset.npz
+- The framework does **NOT** ship DVC config files:
+  - `.dvc/config`, `dvc.yaml`, `dvc.lock`, `.dvcignore` are **user-generated**
+  - These are gitignored and set up by each team for their specific storage backend
 
-  train_credit_risk:
-    cmd: uv run python examples/credit_risk/train.py
-    deps:
-      - data/credit_risk/dataset.csv
-      - examples/credit_risk/train.py
-    outs:
-      - models/credit_risk/v1/
-
-  train_fraud_detection:
-    cmd: uv run python examples/fraud_detection/train.py
-    deps:
-      - data/fraud_detection/dataset.csv
-    outs:
-      - models/fraud_detection/v1/
-
-  train_house_price:
-    cmd: uv run python examples/house_price/train.py
-    deps:
-      - data/house_price/dataset.csv
-    outs:
-      - models/house_price/v1/
-
-  train_image_class:
-    cmd: uv run python examples/image_classification/train.py
-    deps:
-      - data/image_class/dataset.npz
-    outs:
-      - models/image_class/v1/
-```
-
-### Usage
+## How Users Set Up DVC
 
 ```bash
-# Run full pipeline (skip unchanged stages)
-uv run dvc repro
+# 1. Initialize DVC in the project
+dvc init
 
-# Run specific stage
-uv run dvc repro train_credit_risk
+# 2. Configure remote storage (MinIO, S3, GCS, etc.)
+dvc remote add -d myremote s3://my-bucket/dvc-data
+dvc remote modify myremote endpointurl http://minio:9000
 
-# Show pipeline DAG
-uv run dvc dag
+# 3. Track datasets
+dvc add data/object_detection/
+git add data/object_detection/.gitkeep data/object_detection.dvc
 
-# Push artifacts to remote (MinIO)
-uv run dvc push
+# 4. Push data to remote
+dvc push
 
-# Pull artifacts
-uv run dvc pull
-```
-
-### Pipeline DAG
-
-```mermaid
-graph TD
-    GEN["generate_datasets<br/>(scripts/generate_datasets.py)"]
-    
-    GEN --> CR["train_credit_risk<br/>(examples/credit_risk/train.py)"]
-    GEN --> FD["train_fraud_detection<br/>(examples/fraud_detection/train.py)"]
-    GEN --> HP["train_house_price<br/>(examples/house_price/train.py)"]
-    GEN --> IC["train_image_class<br/>(examples/image_classification/train.py)"]
-    
-    CR --> CR_OUT["models/credit_risk/v1/<br/>model.onnx + metrics.json"]
-    FD --> FD_OUT["models/fraud_detection/v1/<br/>model.onnx + metrics.json"]
-    HP --> HP_OUT["models/house_price/v1/<br/>model.onnx + metrics.json"]
-    IC --> IC_OUT["models/image_class/v1/<br/>model.onnx + metrics.json"]
-```
-
-### DVC + Git Workflow
-
-```
-Git tracks:       .dvc files (small pointers), dvc.yaml, dvc.lock
-DVC tracks:       data/*.csv, data/*.npz, models/**/*.onnx
-Remote storage:   MinIO (s3://phoenix-ml/)
+# 5. Configure model to use DVC
+# In model_configs/object-detection.yaml:
+#   data_source:
+#     type: dvc
+#   retrain:
+#     trigger: data_change
+#     drift_detection: false
 ```
 
 ## Consequences
 
-### Positive
-- ✅ Full reproducibility: `git checkout <commit> && dvc checkout && dvc repro`
-- ✅ Lightweight Git: only pointers, not actual data files
-- ✅ Pipeline DAG: automatic dependency tracking → skip unchanged stages
-- ✅ MinIO remote: team-wide artifact sharing
-- ✅ CI integration: `dvc repro` in GitHub Actions
+**Positive:**
+- Framework stays clean — no project-specific config files
+- Works with any DVC-compatible storage backend (S3, GCS, Azure, local)
+- `data_change_pipeline` DAG auto-detects data changes and retrains
 
-### Negative
-- ❌ Learning curve: DVC concepts (stages, deps, outs, remotes)
-- ❌ Additional tool: `dvc` CLI needed
-- ❌ Lock file conflicts: `dvc.lock` can have merge conflicts
+**Negative:**
+- Users must set up DVC themselves (documented in customization guide)
+- DVC dependency is always installed even if not used (acceptable tradeoff)

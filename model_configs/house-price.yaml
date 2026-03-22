@@ -30,3 +30,10 @@ metadata:
 monitoring:
   drift_test: wasserstein       # Earth Mover's distance: ideal for continuous targets
   primary_metric: rmse          # Regression primary metric (lower = better)
+
+data_source:
+  type: file                    # CSV file on disk
+
+retrain:
+  trigger: drift                # Auto-retrain when drift detected
+  drift_detection: true

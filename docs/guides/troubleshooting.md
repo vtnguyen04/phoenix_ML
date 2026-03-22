@@ -26,9 +26,8 @@ service.getModels();
 ```bash
 # Generate datasets and train models
 uv run python scripts/generate_datasets.py
-uv run dvc repro
 
-# Hoặc train specific model
+# Train specific model
 uv run python examples/credit_risk/train.py
 ```
 

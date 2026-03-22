@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -329,6 +330,52 @@ async def register_model(
         "stage": request.stage,
         "status": "registered",
     }
+
+
+@router.post("/models/{model_id}/retrain")
+async def trigger_retrain(model_id: str) -> dict[str, Any]:
+    """Manually trigger model retraining via Airflow.
+
+    Triggers the self_healing_pipeline DAG with the given model_id.
+    Works for any model regardless of its configured retrain trigger.
+    """
+    import httpx as _httpx  # noqa: PLC0415
+
+    airflow_url = os.environ.get("AIRFLOW_URL", "http://airflow-webserver:8080")
+    airflow_user = os.environ.get("AIRFLOW_USER", "admin")
+    airflow_password = os.environ.get("AIRFLOW_PASSWORD", "admin")
+
+    try:
+        resp = _httpx.post(
+            f"{airflow_url}/api/v1/dags/self_healing_pipeline/dagRuns",
+            json={
+                "conf": {
+                    "model_id": model_id,
+                    "reason": "Manual retrain triggered via API",
+                    "drift_score": 0.0,
+                },
+            },
+            auth=(airflow_user, airflow_password),
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        return {
+            "model_id": model_id,
+            "status": "triggered",
+            "dag_run_id": result.get("dag_run_id", "unknown"),
+            "message": f"Retrain pipeline triggered for {model_id}",
+        }
+    except _httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to trigger Airflow: {e.response.status_code}",
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Airflow connection failed: {e}",
+        ) from e
 
 
 def _load_reference_distributions(project_root: Path) -> list[float]:

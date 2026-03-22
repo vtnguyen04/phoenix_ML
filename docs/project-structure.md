@@ -50,9 +50,6 @@ phoenix_ML/
 | `prometheus.yml` | Cấu hình Prometheus: scrape interval, target (API `/metrics` endpoint) |
 | `mkdocs.yml` | Cấu hình MkDocs site: navigation, Material theme, plugins (search, mermaid) |
 | `alembic.ini` | Cấu hình Alembic: database URL, migration directory |
-| `dvc.yaml` | Pipeline DVC: `generate_datasets` → `train_<model>` cho từng model type |
-| `dvc.lock` | Lock file DVC: hash checksum của data/model artifacts |
-| `.dvcignore` | Files DVC bỏ qua |
 | `.gitignore` | Files Git bỏ qua: `__pycache__`, `.venv`, `node_modules`, `*.pyc`, `models/`, logs, etc. |
 | `.dockerignore` | Files Docker bỏ qua khi build image |
 | `README.md` | Tổng quan dự án: features, architecture, tech stack, hướng dẫn chạy |
@@ -60,13 +57,6 @@ phoenix_ML/
 | `CONTRIBUTING.md` | Hướng dẫn contribute: branching, commit convention, CI checks |
 | `project.md` | Tài liệu chi tiết nội bộ (72KB) — thiết kế, architecture decisions |
 | `PROJECT_STRUCTURE.md` | File này — mô tả cấu trúc dự án |
-
-### `.dvc/` — DVC Config
-
-| File | Nhiệm vụ |
-|------|-----------|
-| `.dvc/config` | DVC remote storage config |
-| `.dvc/.gitignore` | DVC internal gitignore |
 
 ### `.github/workflows/` — CI/CD
 
@@ -831,7 +821,6 @@ Package init.
 | `adr/002-use-onnx-runtime.md` | ADR #2: Why ONNX Runtime for inference |
 | `adr/003-use-kafka-for-event-streaming.md` | ADR #3: Why Kafka for event streaming |
 | `adr/004-observability-with-prometheus-grafana.md` | ADR #4: Why Prometheus + Grafana |
-| `adr/005-dvc-data-versioning.md` | ADR #5: Why DVC for data versioning |
 | `assets/icon.png` | Site icon |
 | `assets/logo.png` | Site logo |
 | `assets/mlops-pipeline.png` | Pipeline architecture diagram |
@@ -875,7 +864,7 @@ docker compose -f docker-compose.airflow.yaml up -d
 
 # 3. Generate datasets & train models
 uv run python scripts/generate_datasets.py
-uv run dvc repro
+uv run python examples/credit_risk/train.py
 
 # 4. Access services
 #   Frontend:     http://localhost:5174

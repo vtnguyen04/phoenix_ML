@@ -52,8 +52,7 @@ uv run python examples/house_price/train.py           # Regression (8 features)
 uv run python examples/fraud_detection/train.py       # XGBoost (12 features)
 uv run python examples/image_classification/train.py  # MLP (784 features)
 
-# Or: train all via DVC
-uv run dvc repro
+# Or: trigger all via Airflow UI (http://localhost:8080)
 
 # Seed feature store (for entity_id-based predictions)
 uv run python scripts/seed_features.py
