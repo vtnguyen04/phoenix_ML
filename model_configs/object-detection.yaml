@@ -1,0 +1,39 @@
+# ───────────────────────────────────────────────────────────────
+# Phoenix ML Platform — Object Detection Example Config
+# ───────────────────────────────────────────────────────────────
+# Demonstrates how to configure a DVC-backed, manually triggered
+# model that does NOT use drift detection.
+#
+# This is a TEMPLATE — replace paths and features with your
+# actual object detection model setup.
+# ───────────────────────────────────────────────────────────────
+
+model_id: object-detection
+version: v1
+framework: onnx
+task_type: object_detection
+model_path: models/object_detection/v1/model.onnx
+train_script: examples/object_detection/train.py
+dataset_name: custom-objects
+
+# Object detection uses raw image input — no named features
+feature_names: []
+
+# Data is a DVC-versioned directory of images + annotations
+data_source:
+  type: dvc                       # Large image dataset versioned by DVC
+  path: data/object_detection/    # DVC-tracked directory
+
+retrain:
+  trigger: data_change            # Trigger when DVC data changes (new labels added)
+  drift_detection: false          # No statistical drift for image data
+
+metadata:
+  role: champion
+  dataset: custom-objects
+  annotation_format: coco         # COCO JSON, YOLO txt, etc.
+  image_size: "640x640"
+
+monitoring:
+  drift_test: ks                  # Not used (drift_detection: false) but required
+  primary_metric: map             # mAP (mean Average Precision) for detection
