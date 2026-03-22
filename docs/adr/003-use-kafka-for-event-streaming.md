@@ -1,35 +1,90 @@
 # ADR 003: Asynchronous Event Streaming with Apache Kafka
 
 ## Status
-Accepted
+✅ **Accepted** — March 2026
 
 ## Context
-A high-throughput inference platform requires zero-latency impact from logging and monitoring tasks. In the initial prototype, synchronous database writes within the FastAPI request cycle increased p99 latency by >20ms. Furthermore, multiple independent services (Drift Monitoring, Historical Audit, and BI Dashboards) require access to the same inference stream. 
 
-We need a distributed, durable, and highly available event bus to decouple the synchronous **Inference Pipeline** from the asynchronous **Observability Pipeline**.
+ML inference platform generates high-volume events: predictions, drift detections, model updates, training completions. These events cần được xử lý async để không block main inference path.
+
+### Vấn đề
+
+- Synchronous processing: prediction logging → tăng latency
+- Tight coupling: inference service trực tiếp gọi monitoring service
+- Single point of failure: nếu logger chết → inference cũng chết
+- Scale vertically only: tất cả processing trên 1 process
 
 ## Decision
-We have standardized on **Apache Kafka** as the central event bus for all inference-related events. 
 
-### Implementation Details:
-*   **Topic Design**: A primary topic `inference-events` handles the fire-and-forget stream from the API.
-*   **Protocol**: We utilize `aiokafka` for non-blocking asynchronous production within Python.
-*   **Architecture**: To minimize operational complexity, we utilize **Kafka KRaft Mode** (Metadata Quorum), which removes the dependency on Zookeeper.
+Sử dụng **Apache Kafka** (KRaft mode, no Zookeeper) cho async event streaming.
+
+### Event Flow
+
+```mermaid
+graph LR
+    API["FastAPI<br/>routes.py"] -->|publish| KP["KafkaProducer<br/>kafka_producer.py"]
+    KP -->|"inference-events"| TOPIC["Kafka Topic"]
+    TOPIC -->|consume| KC["KafkaConsumer<br/>kafka_consumer.py"]
+    KC -->|handler| Analytics["Stream Analytics"]
+    
+    EB["DomainEventBus<br/>event_bus.py"] -->|in-process| PM["PrometheusMetrics"]
+    EB -->|in-process| Log["Logger"]
+```
+
+### Implementation Details
+
+**Producer** (`kafka_producer.py`):
+- `AIOKafkaProducer` (async)
+- JSON serialization
+- No-op fallback khi Kafka offline → development/CI không cần Kafka
+
+**Consumer** (`kafka_consumer.py`):
+- `AIOKafkaConsumer` (async)
+- Consumer group: `phoenix-ml-consumers`
+- Per-message error handling (1 message lỗi ≠ crash cả consumer)
+- Auto-commit offsets
+- No-op fallback
+
+**Topics**:
+- `inference-events` — prediction results, latency, model info
+
+### Kafka Configuration (Docker)
+
+```yaml
+kafka:
+  image: apache/kafka:latest
+  environment:
+    KAFKA_NODE_ID: 1
+    KAFKA_PROCESS_ROLES: broker,controller
+    KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+    KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+  # KRaft mode — no Zookeeper needed
+```
+
+### DomainEventBus vs Kafka
+
+| Feature | DomainEventBus | Kafka |
+|---------|---------------|-------|
+| Scope | In-process (synchronous) | Cross-process (async) |
+| Use case | Prometheus metrics, logging | Prediction logging, analytics |
+| Durability | None (RAM only) | Persistent (disk) |
+| Scaling | Single process | Horizontal (consumer groups) |
 
 ## Consequences
 
 ### Positive
-*   **Inference Latency Reduction**: API response time no longer depends on disk I/O or database performance.
-*   **Durability**: Kafka's append-only log ensures that events are safely stored even if the PostgreSQL database or the Drift Detector service is temporarily unavailable.
-*   **Extensibility**: We can spin up new consumer groups (e.g., for real-time Fraud Detection) without adding any load to the primary Inference API.
-*   **Throughput**: Naturally scales to handle millions of inference requests per day through horizontal partitioning.
+- ✅ Inference latency not affected by downstream processing
+- ✅ Horizontal scaling via consumer groups
+- ✅ Event replay: re-process events khi fix bugs
+- ✅ Decoupled services: producer/consumer evolve independently
+- ✅ KRaft mode: simpler deployment (no Zookeeper)
 
 ### Negative
-*   **Operational Overhead**: Requires monitoring Kafka cluster health (ISR, partition offsets, disk usage).
-*   **Eventual Consistency**: The monitoring dashboard and logs might lag by a few milliseconds/seconds behind the actual inference.
-*   **Payload Management**: Large feature vectors could potentially bloat Kafka topics if not managed (mitigated by only logging compressed or sampled data if necessary).
+- ❌ Additional infrastructure (Kafka broker)
+- ❌ Eventual consistency: events may arrive with delay
+- ❌ Monitoring Kafka cluster health separately
+- ❌ Development complexity: need to handle message serialization
 
-## Alternatives Considered
-*   **RabbitMQ**: Rejected due to lower throughput for large log volumes and lack of persistent replay capabilities.
-*   **Redis Pub/Sub**: Rejected due to the lack of message persistence (data is lost if consumers are offline).
-*   **AWS Kinesis**: Rejected to maintain cloud-agnostic deployment via Docker/Kubernetes.
+### Mitigations
+- **No-op fallback**: Platform works without Kafka (events silently dropped)
+- **Kafka UI**: provectuslabs/kafka-ui at port 8082 for visual management

@@ -1,111 +1,306 @@
 # Deployment Guide: Docker Compose Stack
 
-## Service Architecture
+## Tổng quan
 
-The platform consists of **14+ interconnected services** across two compose files:
-
-### Core Services (`compose.yaml`)
-
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| **api** | Custom (FastAPI) | 8001→8000 | ML inference, monitoring, model management |
-| **frontend** | Custom (React/Vite) | 5174→5173 | Dashboard with embedded Grafana |
-| **redis** | redis:alpine | 6380→6379 | Online feature store |
-| **db** | postgres:15-alpine | 5433→5432 | Model metadata, prediction logs, drift reports |
-| **kafka** | apache/kafka:latest | 9094→9092 | Async event streaming (KRaft mode) |
-| **prometheus** | prom/prometheus | 9091→9090 | Metrics scraping |
-| **grafana** | grafana/grafana | 3001→3000 | Dashboards (embedding enabled) |
-| **minio** | minio/minio | 9000, 9001 | S3-compatible storage (DVC remote) |
-| **createbuckets** | minio/mc | — | Auto-creates `dvc` bucket on startup |
-| **mlflow** | Custom | 5000→5000 | Experiment tracking |
-| **jaeger** | jaegertracing/all-in-one | 16686 | Distributed tracing (OpenTelemetry) |
-
-### Airflow Services (`docker-compose.airflow.yaml`)
-
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| **airflow-webserver** | Custom | 8080→8080 | DAG UI (admin/admin) |
-| **airflow-scheduler** | Custom | — | Task scheduling |
-| **airflow-init** | Custom | — | DB migration + admin user |
+Phoenix ML triển khai qua **Docker Compose** với 14+ containers, hoặc **Kubernetes** via Helm chart.
 
 ## Quick Start
 
 ```bash
-# Start all core services
-docker compose up -d --build
+# 1. Clone & config
+git clone https://github.com/vtnguyen04/phoenix_ML.git
+cd phoenix_ML
+cp .env.example .env
 
-# Start Airflow
+# 2. Start infrastructure services
+docker compose up -d
+
+# 3. Start Airflow (optional)
 docker compose -f docker-compose.airflow.yaml up -d
 
-# Train models (run any/all)
-uv run python examples/credit_risk/train.py
-uv run python examples/house_price/train.py
-uv run python examples/fraud_detection/train.py
-uv run python examples/image_classification/train.py
-
-# Seed feature store
-uv run python scripts/seed_features.py
-
-# Verify
-curl http://localhost:8001/health
-open http://localhost:5174      # Dashboard
-open http://localhost:3001      # Grafana
-open http://localhost:9001      # MinIO console
-open http://localhost:8080      # Airflow (admin/admin)
-open http://localhost:5000      # MLflow
-```
-
-## DVC Pipeline
-
-```bash
-# Run full ML pipeline (train all models + seed)
+# 4. Generate data & train models
+uv run python scripts/generate_datasets.py
 uv run dvc repro
 
-# Push artifacts to MinIO
-uv run dvc push
+# 5. Verify
+curl http://localhost:8001/health
+# → {"status": "healthy", "version": "1.0.0"}
 ```
 
-## Environment Variables
+## Service Architecture
 
-### API Service
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REDIS_URL` | `redis://redis:6379` | Redis connection |
-| `KAFKA_URL` | `kafka:9092` | Kafka broker |
-| `DATABASE_URL` | `postgresql+asyncpg://user:pass@db:5432/phoenix` | Postgres connection |
-| `USE_REDIS` | `true` | Enable Redis feature store |
-| `DEFAULT_MODEL_ID` | `credit-risk` | Default model for scripts |
-| `API_URL` | `http://localhost:8000` | API base URL for scripts |
-| `MLFLOW_TRACKING_URI` | `http://mlflow:5000` | MLflow server |
-| `JAEGER_ENDPOINT` | `http://jaeger:4317` | OpenTelemetry OTLP endpoint |
+### docker-compose.yaml — Core Services
 
-### Grafana
-| Variable | Value | Description |
-|----------|-------|-------------|
-| `GF_SECURITY_ALLOW_EMBEDDING` | `true` | Allow iframe embedding in frontend |
-| `GF_AUTH_ANONYMOUS_ENABLED` | `true` | No login required for embed |
-| `GF_AUTH_ANONYMOUS_ORG_ROLE` | `Viewer` | Anonymous access level |
+```mermaid
+graph LR
+    subgraph "Frontend"
+        FE["phoenix-frontend<br/>:5174"]
+    end
+    
+    subgraph "API"
+        API["phoenix-api<br/>:8001 + :50051 gRPC"]
+    end
+    
+    subgraph "Data"
+        PG["postgres<br/>:5433"]
+        RD["redis<br/>:6380"]
+    end
+    
+    subgraph "Messaging"
+        KF["kafka<br/>:9094"]
+        KUI["kafka-ui<br/>:8082"]
+    end
+    
+    subgraph "ML"
+        MLF["mlflow<br/>:5001"]
+        MINIO["minio<br/>:9000"]
+    end
+    
+    subgraph "Monitoring"
+        PROM["prometheus<br/>:9091"]
+        GRAF["grafana<br/>:3001"]
+        JAEG["jaeger<br/>:16686"]
+    end
+    
+    FE --> API
+    API --> PG
+    API --> RD
+    API --> KF
+    API --> MLF
+    API --> PROM
+    API --> JAEG
+    KUI --> KF
+    PROM --> GRAF
+    MLF --> MINIO
+```
 
-## Volumes
+### Service Details
 
-| Volume/Mount | Container Path | Purpose |
-|-------------|---------------|---------|
-| `./models` | `/app/models` | ONNX model artifacts |
-| `./src` | `/app/src` | Hot-reload source code |
-| `./data` | `/app/data` | Reference data for drift detection |
-| `./examples` | `/app/examples` | Training scripts (Airflow access) |
-| `./model_configs` | `/app/model_configs` | Model configurations (Airflow access) |
-| `./grafana/provisioning` | `/etc/grafana/provisioning` | Grafana datasources + dashboards |
-| `minio_data` | `/data` | MinIO persistent storage |
+| Service | Image | Internal Port | External Port | Volume Mounts | Health Check |
+|---------|-------|--------------|---------------|---------------|-------------|
+| `phoenix-api` | Build from `Dockerfile` | 8000 | 8001 | `./src`, `./models`, `./data`, `./model_configs` | `/health` |
+| `phoenix-frontend` | Build from `Dockerfile.frontend` | 5173 | 5174 | `./frontend/src` | — |
+| `postgres` | `postgres:15-alpine` | 5432 | 5433 | `pgdata` volume | `pg_isready` |
+| `redis` | `redis:7-alpine` | 6379 | 6380 | `redis_data` volume | `redis-cli ping` |
+| `kafka` | `apache/kafka:latest` | 9092 | 9094 | `kafka_data` volume | — |
+| `kafka-ui` | `provectuslabs/kafka-ui` | 8080 | 8082 | — | — |
+| `mlflow` | `ghcr.io/mlflow/mlflow` | 5000 | 5001 | `mlflow_data` volume | — |
+| `prometheus` | `prom/prometheus` | 9090 | 9091 | `./prometheus.yml` | — |
+| `grafana` | `grafana/grafana` | 3000 | 3001 | `./grafana/` | — |
+| `jaeger` | `jaegertracing/all-in-one` | 16686 | 16686 | — | — |
+| `minio` | `minio/minio` | 9000/9001 | 9000/9001 | `minio_data` volume | — |
 
-## Production Scaling
+### docker-compose.airflow.yaml — Airflow Stack
+
+| Service | Image | Port | Mục đích |
+|---------|-------|------|----------|
+| `airflow-webserver` | Build from `Dockerfile.airflow` | 8080 | Airflow Web UI |
+| `airflow-scheduler` | Build from `Dockerfile.airflow` | — | DAG scheduling |
+| `airflow-init` | Build from `Dockerfile.airflow` | — | Init DB + admin user (admin/admin) |
+| `postgres-airflow` | `postgres:15-alpine` | 5432 | Airflow metadata DB |
+
+## Environment Variables (.env)
 
 ```bash
-# Scale API horizontally
-docker compose up -d --scale api=3
+# ── Database ──
+DATABASE_URL=postgresql+asyncpg://phoenix:phoenix@postgres:5432/phoenix
+TEST_DATABASE_URL=sqlite+aiosqlite:///./phoenix_test.db
 
-# GPU acceleration: update Dockerfile with onnxruntime-gpu
+# ── Redis ──
+REDIS_URL=redis://redis:6379
+
+# ── Kafka ──
+KAFKA_URL=kafka:9092
+
+# ── MLflow ──
+MLFLOW_TRACKING_URI=http://mlflow:5000
+
+# ── Model Config ──
+DEFAULT_MODEL_ID=credit-risk
+DEFAULT_MODEL_VERSION=v1
+MODEL_CONFIG_DIR=model_configs
+INFERENCE_ENGINE=onnx
+
+# ── Monitoring ──
+MONITORING_INTERVAL_SECONDS=30
+DRIFT_THRESHOLD=0.3
+
+# ── Storage ──
+ARTIFACT_STORAGE_DIR=./artifacts
+CACHE_DIR=./cache
+
+# ── Ports ──
+API_PORT=8001
+FRONTEND_PORT=5174
 ```
 
+## Makefile Commands
+
+```bash
+make up          # docker compose up -d
+make down        # docker compose down
+make build       # docker compose build
+make restart     # down + up
+make logs        # docker compose logs -f
+make ps          # docker compose ps
+make clean       # down -v (remove volumes)
+make test        # uv run pytest
+make api-logs    # docker compose logs -f phoenix-api
+make frontend-logs  # docker compose logs -f phoenix-frontend
+```
+
+## DVC Pipeline (dvc.yaml)
+
+```yaml
+stages:
+  generate_datasets:
+    cmd: uv run python scripts/generate_datasets.py
+    outs:
+      - data/credit_risk/dataset.csv
+      - data/fraud_detection/dataset.csv
+      - data/house_price/dataset.csv
+      - data/image_class/dataset.npz
+
+  train_credit_risk:
+    cmd: uv run python examples/credit_risk/train.py
+    deps: [data/credit_risk/dataset.csv]
+    outs: [models/credit_risk/v1/]
+
+  train_fraud_detection:
+    cmd: uv run python examples/fraud_detection/train.py
+    deps: [data/fraud_detection/dataset.csv]
+    outs: [models/fraud_detection/v1/]
+
+  train_house_price:
+    cmd: uv run python examples/house_price/train.py
+    deps: [data/house_price/dataset.csv]
+    outs: [models/house_price/v1/]
+
+  train_image_class:
+    cmd: uv run python examples/image_classification/train.py
+    deps: [data/image_class/dataset.npz]
+    outs: [models/image_class/v1/]
+```
+
+```bash
+# Run full pipeline
+uv run dvc repro
+
+# Run specific stage
+uv run dvc repro train_credit_risk
+```
+
+## Kubernetes Deployment (Helm)
+
+```bash
+# Install via Helm
+helm install phoenix-ml deploy/helm/phoenix-ml/
+
+# Custom values
+helm install phoenix-ml deploy/helm/phoenix-ml/ \
+  --set replicaCount=3 \
+  --set image.tag=v1.0.0 \
+  --set resources.limits.memory=2Gi
+
+# Upgrade
+helm upgrade phoenix-ml deploy/helm/phoenix-ml/
+
+# Uninstall
+helm uninstall phoenix-ml
+```
+
+### Helm Chart Structure
+
+```
+deploy/helm/phoenix-ml/
+├── Chart.yaml              # name: phoenix-ml, version: 0.1.0
+├── values.yaml             # Default: 1 replica, 512Mi memory
+└── templates/
+    ├── deployment.yaml     # Pod spec, health probes, env vars
+    ├── service.yaml        # ClusterIP on port 8000
+    ├── ingress.yaml        # External access, TLS
+    └── hpa.yaml            # Auto-scale: 1-10 replicas, 80% CPU target
+```
+
+## Database Migrations
+
+```bash
+# Apply all migrations
+uv run alembic upgrade head
+
+# Create new migration
+uv run alembic revision --autogenerate -m "add new table"
+
+# Rollback last migration
+uv run alembic downgrade -1
+
+# View current version
+uv run alembic current
+```
+
+### Schema
+
+```
+models
+├── id (VARCHAR, PK)
+├── version (VARCHAR, PK)
+├── uri (VARCHAR)
+├── framework (VARCHAR)
+├── stage (VARCHAR: champion/challenger/retired/archived)
+├── metadata_json (JSONB)
+├── metrics_json (JSONB)
+├── is_active (BOOLEAN)
+└── created_at (TIMESTAMP)
+
+prediction_logs
+├── id (UUID, PK)
+├── model_id (VARCHAR)
+├── model_version (VARCHAR)
+├── features_json (JSONB)
+├── result (FLOAT)
+├── confidence (FLOAT)
+├── latency_ms (FLOAT)
+├── ground_truth (FLOAT, nullable)
+└── timestamp (TIMESTAMP)
+
+drift_reports
+├── id (UUID, PK)
+├── model_id (VARCHAR)
+├── feature_name (VARCHAR)
+├── method (VARCHAR: ks/psi/chi2)
+├── score (FLOAT)
+├── is_drifted (BOOLEAN)
+├── threshold (FLOAT)
+└── timestamp (TIMESTAMP)
+```
+
+## Grafana (Auto-provisioned)
+
+Dashboards và datasources auto-provisioned on startup:
+
+- **Datasource**: Prometheus (`http://prometheus:9090`)
+- **Dashboard**: `phoenix-ml.json` — panels: prediction count, latency histogram, drift score, model accuracy
+
+Access: `http://localhost:3001` (admin/admin)
+
+## Port Summary
+
+| Port | Service | Protocol |
+|------|---------|----------|
+| 5174 | Frontend (React) | HTTP |
+| 8001 | API (FastAPI) | HTTP |
+| 50051 | gRPC Server | gRPC |
+| 5433 | PostgreSQL | TCP |
+| 6380 | Redis | TCP |
+| 9094 | Kafka | TCP |
+| 8082 | Kafka UI | HTTP |
+| 5001 | MLflow | HTTP |
+| 9091 | Prometheus | HTTP |
+| 3001 | Grafana | HTTP |
+| 16686 | Jaeger | HTTP |
+| 9000 | MinIO (API) | HTTP |
+| 9001 | MinIO (Console) | HTTP |
+| 8080 | Airflow | HTTP |
+
 ---
-*Updated March 2026*
+*Document Status: v4.0 — Updated March 2026*

@@ -1,112 +1,160 @@
 # Self-Healing ML: Automated Drift Detection and Recovery
 
-*How Phoenix ML detects model degradation in production and automatically recovers — no human intervention required.*
+*Phoenix ML tự động phát hiện model degradation và recovery — không cần human intervention.*
 
----
+## Vấn đề: Model Decay
 
-## The Problem: Models Decay in Production
+ML models degrade over time vì:
 
-Every ML model deployed to production faces the same reality: **data distributions shift over time**. Customer behavior changes, market conditions evolve, and the patterns your model learned during training gradually become stale.
+1. **Data Drift**: Distribution production data thay đổi so với training data
+2. **Concept Drift**: Relationship giữa features và target thay đổi
+3. **Feature Changes**: Upstream data pipeline thay đổi schema/semantics
+4. **Anomalous Events**: Black swan events (COVID, recession)
 
-Traditional approaches require manual monitoring and human-triggered retraining — a process that can take days or weeks, during which the model serves increasingly unreliable predictions.
+## Giải pháp: Self-Healing Pipeline
 
-Phoenix ML solves this with a **self-healing pipeline** that autonomously detects, diagnoses, and recovers from model drift — for any model type.
+### Detection Layer
 
-## The Self-Healing Architecture
+Phoenix ML có 3 detection mechanisms chạy song song:
 
-```mermaid
-graph LR
-    Predict[🔮 Prediction] --> Log[📝 Log to Kafka]
-    Log --> Detect[🔍 Drift Detection]
-    Detect --> Alert[🚨 Alert via Webhook]
-    Alert --> Airflow[🌀 Airflow DAG]
-    Airflow --> Rollback[⏪ Rollback Challengers]
-    Rollback --> Retrain[🏋️ Retrain Model]
-    Retrain --> MLflow[📈 Log to MLflow]
-    MLflow --> Register[🗄️ Register New Version]
-    Register --> Deploy[📦 Deploy]
-    Deploy --> Predict
-```
-
-### Step 1: Continuous Monitoring
-
-Every prediction is logged with its input features via Kafka, enabling statistical comparison against the training distribution:
+#### 1. Statistical Drift Detection
 
 ```python
-class DriftCalculator:
-    def calculate_drift(
-        self, feature_name, reference_data, current_data,
-        threshold=0.05, test_type="ks"
-    ) -> DriftReport:
+# DriftCalculator (src/domain/monitoring/services/drift_calculator.py)
+# 3 algorithms configurable per model:
+
+# Kolmogorov-Smirnov test — continuous features
+result = calculator.calculate_ks(reference, current)
+
+# Population Stability Index — binned distributions
+result = calculator.calculate_psi(reference, current)
+
+# Chi-squared test — categorical features
+result = calculator.calculate_chi2(reference, current)
 ```
 
-The monitoring service runs drift checks on a configurable schedule (default: every 30 seconds).
+**How it works**:
+- Reference data = training data distribution (stored per model)
+- Current data = recent N prediction features
+- Score > threshold → drift detected
 
-### Step 2: Multi-Method Drift Detection
+#### 2. Anomaly Detection
 
-We employ four complementary statistical tests:
+```python
+# AnomalyDetector (src/domain/monitoring/services/anomaly_detector.py)
+# Z-score: phát hiện values vượt 2 std deviations
+anomalies = detector.detect_zscore(latencies, threshold=2.0)
 
-| Method | Best For | How It Works |
-|--------|----------|-------------|
-| **Kolmogorov-Smirnov** | Continuous features | Compares empirical CDFs; p-value < 0.05 = drift |
-| **Population Stability Index** | Distribution shifts | PSI > 0.25 = significant drift |
-| **Wasserstein Distance** | Magnitude of shift | Earth mover's distance vs. reference std |
-| **Chi-Squared** | Categorical features | Tests independence of observed vs. expected |
-
-Using multiple methods reduces false positives. A single test might flag noise as drift; when two or more agree, confidence is high.
-
-### Step 3: Severity-Based Recommendations
-
-The system generates actionable recommendations based on drift severity:
-
-```
-No drift    → "No action needed. Distribution remains stable."
-Moderate    → "WARNING: Drift detected in {feature}. Scheduling auto-retraining."
-Severe      → "CRITICAL: Severe drift in {feature}. Immediate retraining required."
+# IQR: phát hiện outliers via interquartile range
+anomalies = detector.detect_iqr(confidence_scores)
 ```
 
-### Step 4: Airflow Self-Healing Pipeline
+#### 3. Performance Monitoring
 
-When drift is confirmed, the **self-healing Airflow DAG** (`self_healing_pipeline`) is triggered with `max_active_runs=1` deduplication — ensuring only one retraining pipeline runs at a time:
-
-```
-Task 1: Send Alert        → Webhook notification
-Task 2: Rollback           → Archive all challenger models
-Task 3: Train Model        → Retrain using model_configs YAML + ONNX export
-Task 4: Log to MLflow      → Record metrics, params, artifacts
-Task 5: Register Model     → Register as challenger in PostgreSQL
+```python
+# ModelEvaluator (src/domain/monitoring/services/model_evaluator.py)
+# Khi có ground truth (via /feedback endpoint):
+evaluator = get_evaluator("classification")
+metrics = evaluator.evaluate(predictions, ground_truths)
+# → accuracy, f1, precision, recall
 ```
 
-The pipeline is model-agnostic: it reads the model config from `model_configs/<model_id>.yaml` and dispatches to the appropriate training script (`examples/<name>/train.py`).
+### Response Layer
 
-### Step 5: Safe Model Promotion
-
-The model registry handles the lifecycle:
-```
-challenger → champion (current champion retires to "archived")
-```
-
-The `RollbackManager` can instantly revert to the previous champion if the new model underperforms in production.
-
-## Circuit Breaker Protection
-
-During retraining, the circuit breaker pattern protects against cascading failures:
-
-```
-CLOSED → (failures exceed threshold) → OPEN → (timeout) → HALF_OPEN → (success) → CLOSED
+```mermaid
+graph TD
+    DETECT["Detection<br/>(Drift/Anomaly/Performance)"] --> ALERT["AlertManager<br/>(Rules + Cooldown)"]
+    
+    ALERT -->|severity=WARNING| NOTIFY["AlertNotifier<br/>(Slack/Discord)"]
+    ALERT -->|severity=CRITICAL| ROLLBACK["RollbackManager<br/>(Archive challengers)"]
+    ALERT -.->|trigger| RETRAIN["Airflow DAG<br/>(Retrain pipeline)"]
+    
+    ROLLBACK --> SAFE["Model safety<br/>(Champion preserved)"]
+    RETRAIN --> NEW["New model version<br/>(Evaluated + Promoted)"]
 ```
 
-When open, all inference requests fail fast with a clear error, preventing resource exhaustion. Champion model continues serving throughout the process.
+#### Alert Rules
+
+```python
+AlertRule(
+    name="high_drift",
+    metric="drift_score",
+    threshold=0.3,
+    severity="CRITICAL",
+    comparison="gt",
+    cooldown_seconds=300,  # Avoid alert spam
+)
+```
+
+**Cooldown mechanism**: Same alert won't fire again within cooldown period.
+
+#### Automatic Rollback
+
+Khi drift score > critical threshold:
+1. Archive all challenger models → stage = "archived"
+2. Keep champion model active → baseline safe
+3. Notify via webhook → team awareness
+
+#### Automatic Retraining
+
+Airflow DAG `phoenix_retrain_all`:
+1. Generate fresh synthetic data (nếu production data unavailable)
+2. Train all configured models
+3. Log metrics to MLflow
+4. Promote best model nếu metrics improve
+
+### Monitoring Loop Architecture
+
+```python
+# lifespan.py — Background monitoring task
+async def _monitoring_loop():
+    while True:
+        for model_id, config in model_configs.items():
+            try:
+                # 1. Get recent predictions
+                logs = await log_repo.get_recent(model_id, limit=100)
+                
+                # 2. Calculate drift
+                drift = drift_calculator.calculate(reference, current)
+                
+                # 3. Save report
+                await drift_repo.save(DriftReport(...))
+                
+                # 4. Publish Prometheus metric
+                metrics_publisher.publish_drift_score(model_id, drift.score)
+                
+                # 5. Check alert rules
+                alerts = alert_manager.evaluate(rules, {"drift_score": drift.score})
+                for alert in alerts:
+                    await notifier.notify(alert)
+                
+                # 6. Auto-rollback if critical
+                if drift.score > critical_threshold:
+                    rollback_manager.evaluate_rollback(model_id, ...)
+                    
+            except Exception as e:
+                logger.error(f"Monitoring failed for {model_id}: {e}")
+        
+        await asyncio.sleep(MONITORING_INTERVAL_SECONDS)
+```
 
 ## Results
 
-Tested across multiple model types (credit risk, regression, XGBoost, MLP):
-- **Drift detection latency**: < 100ms for 1000-sample comparison
-- **False positive rate**: < 1% with KS + PSI dual confirmation
-- **Recovery time**: New model trained and promoted within minutes
-- **Zero-downtime**: Champion continues serving while challengers are retrained
-- **Model-agnostic**: Same pipeline works for classification, regression, and multi-class problems
+| Metric | Without Self-Healing | With Self-Healing |
+|--------|---------------------|-------------------|
+| Drift detection time | Manual (hours/days) | Automatic (30s) |
+| Alert delivery | None | Instant (webhook) |
+| Rollback time | Manual (hours) | Automatic (seconds) |
+| Model downtime | Until human notices | Near-zero |
+| Retraining trigger | Manual | Automatic |
+
+## Key Design Decisions
+
+1. **Per-model config**: Each model has its own drift algorithm and threshold
+2. **No-op fallback**: Self-healing works even without Kafka/Redis
+3. **Cooldown**: Prevents alert storm during sustained drift
+4. **Champion preservation**: Rollback always keeps champion safe
+5. **Observable**: All metrics exported to Prometheus → Grafana dashboards
 
 ---
-
-*Self-healing ML isn't magic — it's disciplined monitoring, statistical rigor, and automated orchestration.*
+*Published: March 2026 · Author: Võ Thành Nguyễn*
