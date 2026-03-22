@@ -110,6 +110,8 @@ ignore = []
 "scripts/*" = ["PLR2004", "PLC0415"]
 "src/infrastructure/bootstrap/lifespan.py" = ["PLR0912"]
 "src/domain/monitoring/services/explainability_service.py" = ["PLR0913"]
+"src/domain/monitoring/services/ab_test_analyzer.py" = ["PLR0913"]
+"src/infrastructure/logging/audit_logger.py" = ["PLR0913"]
 
 [tool.ruff.format]
 quote-style = "double"

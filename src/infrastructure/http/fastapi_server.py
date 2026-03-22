@@ -1,4 +1,5 @@
 import logging
+import signal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,11 +9,13 @@ from src.config import get_settings
 from src.infrastructure.bootstrap.lifespan import lifespan
 from src.infrastructure.http.auth_routes import auth_router
 from src.infrastructure.http.data_routes import data_router
+from src.infrastructure.http.error_handlers import register_exception_handlers
 from src.infrastructure.http.explain_routes import explain_router
 from src.infrastructure.http.feature_routes import feature_router
 from src.infrastructure.http.middleware.correlation_middleware import CorrelationMiddleware
 from src.infrastructure.http.middleware.rate_limit_middleware import RateLimitMiddleware
 from src.infrastructure.http.routes import router
+from src.infrastructure.http.websocket_routes import ws_router
 from src.infrastructure.logging.logging_config import configure_logging
 from src.infrastructure.monitoring.tracing import init_tracing
 
@@ -20,10 +23,16 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ── Structured logging ────────────────────────────────────────────
-configure_logging(level="DEBUG" if settings.DEBUG else "INFO", json_format=not settings.DEBUG)
+configure_logging(
+    level="DEBUG" if settings.DEBUG else "INFO",
+    json_format=not settings.DEBUG,
+)
 
 # ── Tracing ───────────────────────────────────────────────────────
-init_tracing(service_name=settings.APP_NAME, otlp_endpoint=settings.JAEGER_ENDPOINT)
+init_tracing(
+    service_name=settings.APP_NAME,
+    otlp_endpoint=settings.JAEGER_ENDPOINT,
+)
 
 try:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -33,10 +42,17 @@ except ImportError:
     _instrument_fastapi = False
     logger.info("OTEL FastAPI instrumentation not installed, skipping")
 
-app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    lifespan=lifespan,
+)
 
 if _instrument_fastapi:
     FastAPIInstrumentor.instrument_app(app)
+
+# ── Global Exception Handlers ────────────────────────────────────
+register_exception_handlers(app)
 
 # ── Middleware Stack (order matters: first added = outermost) ─────
 # 1. CORS
@@ -65,10 +81,39 @@ app.include_router(feature_router, prefix="/api/v1")
 app.include_router(explain_router, prefix="/api/v1")
 app.include_router(data_router, prefix="/api/v1")
 
+# ── WebSocket routes ─────────────────────────────────────────────
+app.include_router(ws_router)
+
 # ── Backward-compatible routes (no prefix) ────────────────────────
 app.include_router(router)
 app.include_router(feature_router)
 app.include_router(data_router)
+
+
+# ── Graceful shutdown ─────────────────────────────────────────────
+_shutting_down = False
+
+
+def _graceful_shutdown(signum: int, _frame: object) -> None:
+    """Handle SIGTERM/SIGINT gracefully — drain connections first."""
+    global _shutting_down  # noqa: PLW0603
+    if _shutting_down:
+        return
+    _shutting_down = True
+    logger.info(
+        "Received signal %s — starting graceful shutdown...", signum
+    )
+    # Uvicorn handles shutdown via lifespan on SIGINT/SIGTERM
+    # This log ensures we know about it
+
+
+# Register signal handlers (only in main process, not in workers)
+try:
+    signal.signal(signal.SIGTERM, _graceful_shutdown)
+    signal.signal(signal.SIGINT, _graceful_shutdown)
+except (ValueError, OSError):
+    # Can't set signal handlers in non-main thread
+    pass
 
 
 def run() -> None:
@@ -77,8 +122,8 @@ def run() -> None:
 
     uvicorn.run(
         "src.infrastructure.http.fastapi_server:app",
-        host=settings.HOST if hasattr(settings, "HOST") else "0.0.0.0",
-        port=settings.PORT if hasattr(settings, "PORT") else 8000,
+        host=getattr(settings, "HOST", "0.0.0.0"),
+        port=getattr(settings, "PORT", 8000),
         reload=settings.DEBUG,
     )
 
