@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.domain.monitoring.services.drift_calculator import DriftCalculator
+from phoenix_ml.domain.monitoring.services.drift_calculator import DriftCalculator
 
 
 @pytest.fixture

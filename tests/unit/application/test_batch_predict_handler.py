@@ -2,9 +2,9 @@
 
 import pytest
 
-from src.application.commands.batch_predict_command import BatchPredictCommand
-from src.application.handlers.batch_predict_handler import BatchPredictHandler
-from src.application.handlers.predict_handler import PredictHandler
+from phoenix_ml.application.commands.batch_predict_command import BatchPredictCommand
+from phoenix_ml.application.handlers.batch_predict_handler import BatchPredictHandler
+from phoenix_ml.application.handlers.predict_handler import PredictHandler
 
 
 async def test_batch_predict_empty_batch() -> None:
@@ -54,8 +54,8 @@ async def test_batch_predict_processes_all_items() -> None:
     """Batch handler should attempt to process every item in the batch."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from src.domain.inference.entities.prediction import Prediction
-    from src.domain.inference.value_objects.confidence_score import ConfidenceScore
+    from phoenix_ml.domain.inference.entities.prediction import Prediction
+    from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
 
     mock_prediction = Prediction(
         model_id="m1",
@@ -87,8 +87,8 @@ async def test_batch_predict_handles_partial_failure() -> None:
     """Batch handler should gracefully handle individual prediction failures."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from src.domain.inference.entities.prediction import Prediction
-    from src.domain.inference.value_objects.confidence_score import ConfidenceScore
+    from phoenix_ml.domain.inference.entities.prediction import Prediction
+    from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
 
     ok = Prediction(
         model_id="m1",

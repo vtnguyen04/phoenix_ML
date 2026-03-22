@@ -43,7 +43,7 @@ services:
       start_period: 30s
     volumes:
       - ./models:/app/models
-      - ./src:/app/src
+      - ./phoenix_ml:/app/phoenix_ml
       - ./data:/app/data
       - ./model_configs:/app/model_configs
       - ./pyproject.toml:/app/pyproject.toml:ro

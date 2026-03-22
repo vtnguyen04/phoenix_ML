@@ -1,7 +1,7 @@
 import pytest
 
-from src.domain.inference.services.inference_service import PredictionRequest
-from src.domain.inference.services.request_pipeline import (
+from phoenix_ml.domain.inference.services.inference_service import PredictionRequest
+from phoenix_ml.domain.inference.services.request_pipeline import (
     CacheHandler,
     RateLimitHandler,
     ValidationHandler,

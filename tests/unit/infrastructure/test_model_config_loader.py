@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.infrastructure.bootstrap.model_config_loader import (
+from phoenix_ml.infrastructure.bootstrap.model_config_loader import (
     _dict_to_model_config,
     load_all_model_configs,
     load_features_from_metrics,

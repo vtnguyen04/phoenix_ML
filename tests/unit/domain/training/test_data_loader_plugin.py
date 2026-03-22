@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.domain.training.services.data_loader_plugin import DatasetInfo, IDataLoader
+from phoenix_ml.domain.training.services.data_loader_plugin import DatasetInfo, IDataLoader
 
 
 class TestDatasetInfo:

@@ -24,7 +24,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.config import get_settings  # noqa: E402
+from phoenix_ml.config import get_settings  # noqa: E402
 
 get_settings.cache_clear()
 
@@ -45,7 +45,7 @@ def _shutdown_otel_on_exit() -> Generator[None, None, None]:
     Without explicit shutdown, that thread blocks process exit.
     """
     yield
-    from src.infrastructure.monitoring.tracing import shutdown_tracing
+    from phoenix_ml.infrastructure.monitoring.tracing import shutdown_tracing
 
     shutdown_tracing()
     try:

@@ -4,11 +4,11 @@ from unittest.mock import AsyncMock, Mock, mock_open, patch
 
 import pytest
 
-from src.application.commands.trigger_retrain_command import TriggerRetrainCommand
-from src.application.handlers.retrain_handler import RetrainHandler
-from src.domain.model_registry.repositories.model_repository import ModelRepository
-from src.domain.monitoring.services.model_evaluator import ClassificationEvaluator
-from src.domain.shared.event_bus import DomainEventBus
+from phoenix_ml.application.commands.trigger_retrain_command import TriggerRetrainCommand
+from phoenix_ml.application.handlers.retrain_handler import RetrainHandler
+from phoenix_ml.domain.model_registry.repositories.model_repository import ModelRepository
+from phoenix_ml.domain.monitoring.services.model_evaluator import ClassificationEvaluator
+from phoenix_ml.domain.shared.event_bus import DomainEventBus
 
 
 @pytest.fixture

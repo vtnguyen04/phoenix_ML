@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-from src.shared.ingestion.redis_ingestor import RedisDataIngestor
+from phoenix_ml.shared.ingestion.redis_ingestor import RedisDataIngestor
 
 
 class TestRedisDataIngestor:

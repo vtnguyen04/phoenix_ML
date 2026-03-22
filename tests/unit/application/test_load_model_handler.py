@@ -2,11 +2,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.commands.load_model_command import LoadModelCommand
-from src.application.handlers.load_model_handler import LoadModelHandler
-from src.domain.inference.entities.model import Model
-from src.domain.inference.services.inference_engine import InferenceEngine
-from src.domain.model_registry.repositories.model_repository import ModelRepository
+from phoenix_ml.application.commands.load_model_command import LoadModelCommand
+from phoenix_ml.application.handlers.load_model_handler import LoadModelHandler
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.services.inference_engine import InferenceEngine
+from phoenix_ml.domain.model_registry.repositories.model_repository import ModelRepository
 
 
 @pytest.fixture

@@ -66,7 +66,7 @@ Repository = "https://github.com/phoenix-ml/phoenix-ml-platform"
 Issues = "https://github.com/phoenix-ml/phoenix-ml-platform/issues"
 
 [project.scripts]
-phoenix-serve = "src.infrastructure.http.fastapi_server:run"
+phoenix-serve = "phoenix_ml.infrastructure.http.fastapi_server:run"
 
 [project.optional-dependencies]
 dev = [
@@ -86,18 +86,18 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["src*"]
+include = ["phoenix_ml*"]
 
 [tool.setuptools.package-data]
-src = ["py.typed"]
+phoenix_ml = ["py.typed"]
 
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 exclude = [
-    "src/infrastructure/grpc/proto/inference_pb2.py",
-    "src/infrastructure/grpc/proto/inference_pb2_grpc.py",
+    "phoenix_ml/infrastructure/grpc/proto/inference_pb2.py",
+    "phoenix_ml/infrastructure/grpc/proto/inference_pb2_grpc.py",
     "notebooks/",
 ]
 
@@ -108,10 +108,10 @@ ignore = []
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "PLC0415"]
 "scripts/*" = ["PLR2004", "PLC0415"]
-"src/infrastructure/bootstrap/lifespan.py" = ["PLR0912"]
-"src/domain/monitoring/services/explainability_service.py" = ["PLR0913"]
-"src/domain/monitoring/services/ab_test_analyzer.py" = ["PLR0913"]
-"src/infrastructure/logging/audit_logger.py" = ["PLR0913"]
+"phoenix_ml/infrastructure/bootstrap/lifespan.py" = ["PLR0912"]
+"phoenix_ml/domain/monitoring/services/explainability_service.py" = ["PLR0913"]
+"phoenix_ml/domain/monitoring/services/ab_test_analyzer.py" = ["PLR0913"]
+"phoenix_ml/infrastructure/logging/audit_logger.py" = ["PLR0913"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -130,13 +130,13 @@ ignore_missing_imports = true
 explicit_package_bases = true
 disallow_untyped_defs = true
 exclude = [
-    "src/infrastructure/grpc/proto/.*",
+    "phoenix_ml/infrastructure/grpc/proto/.*",
     "benchmarks/.*",
 ]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --cov=src"
+addopts = "-ra -q --cov=phoenix_ml"
 asyncio_mode = "auto"
 testpaths = [
     "tests",

@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from src.infrastructure.http.feature_routes import feature_router
+from phoenix_ml.infrastructure.http.feature_routes import feature_router
 
 app = FastAPI()
 app.include_router(feature_router)

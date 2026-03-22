@@ -4,7 +4,7 @@ import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
-from src.infrastructure.messaging.kafka_consumer import KafkaConsumer
+from phoenix_ml.infrastructure.messaging.kafka_consumer import KafkaConsumer
 
 
 async def test_start_sets_running() -> None:

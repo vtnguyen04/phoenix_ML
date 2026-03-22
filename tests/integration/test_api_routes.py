@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from src.config import get_settings
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.infrastructure.http.fastapi_server import app
+from phoenix_ml.config import get_settings
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
+from phoenix_ml.infrastructure.http.fastapi_server import app
 
 _settings = get_settings()
 
@@ -38,8 +38,8 @@ class TestPredictEndpoint:
     """Tests for POST /predict."""
 
     def test_predict_returns_200(self, client: TestClient) -> None:
-        from src.infrastructure.http.dependencies import get_predict_handler  # noqa: PLC0415
-        from src.infrastructure.persistence.database import get_db  # noqa: PLC0415
+        from phoenix_ml.infrastructure.http.dependencies import get_predict_handler  # noqa: PLC0415
+        from phoenix_ml.infrastructure.persistence.database import get_db  # noqa: PLC0415
 
         mock_prediction = Prediction(
             model_id=_settings.DEFAULT_MODEL_ID,

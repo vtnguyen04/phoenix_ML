@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError
 
-from src.infrastructure.artifact_storage.s3_artifact_storage import S3ArtifactStorage
+from phoenix_ml.infrastructure.artifact_storage.s3_artifact_storage import S3ArtifactStorage
 
 
 @pytest.fixture

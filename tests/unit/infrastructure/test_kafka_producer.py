@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.infrastructure.messaging.kafka_producer import KafkaProducer
+from phoenix_ml.infrastructure.messaging.kafka_producer import KafkaProducer
 
 
 @pytest.fixture

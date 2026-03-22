@@ -1,6 +1,6 @@
 import pytest
 
-from src.domain.inference.services.circuit_breaker import (
+from phoenix_ml.domain.inference.services.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
     CircuitState,

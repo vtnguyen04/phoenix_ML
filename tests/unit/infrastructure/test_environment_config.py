@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.config.environment import (
+from phoenix_ml.config.environment import (
     Environment,
     get_environment_profile,
 )

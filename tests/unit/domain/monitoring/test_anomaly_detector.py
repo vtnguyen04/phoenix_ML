@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.domain.monitoring.services.anomaly_detector import (
+from phoenix_ml.domain.monitoring.services.anomaly_detector import (
     AnomalyDetector,
     AnomalyType,
 )

@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from src.infrastructure.http.error_handlers import (
+from phoenix_ml.infrastructure.http.error_handlers import (
     AppError,
     AuthenticationError,
     NotFoundError,

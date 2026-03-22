@@ -13,8 +13,8 @@ import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
-from src.config import get_settings
-from src.infrastructure.http.fastapi_server import app
+from phoenix_ml.config import get_settings
+from phoenix_ml.infrastructure.http.fastapi_server import app
 
 SUCCESS_STATUS = 200
 CONCURRENT_REQUESTS = 3
@@ -45,7 +45,7 @@ def _resolve_test_features() -> list[float]:
                 return list(features.values())
 
     # 2. Try model config → feature count
-    from src.infrastructure.bootstrap.model_config_loader import load_all_model_configs
+    from phoenix_ml.infrastructure.bootstrap.model_config_loader import load_all_model_configs
 
     configs = load_all_model_configs(root / settings.MODEL_CONFIG_DIR)
     model_id = settings.DEFAULT_MODEL_ID

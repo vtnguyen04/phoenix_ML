@@ -6,7 +6,7 @@ from pathlib import Path
 
 import onnx
 
-from src.shared.utils.model_generator import generate_simple_onnx
+from phoenix_ml.shared.utils.model_generator import generate_simple_onnx
 
 
 class TestModelGenerator:

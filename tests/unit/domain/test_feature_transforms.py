@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from src.domain.feature_store.services.feature_transforms import (
+from phoenix_ml.domain.feature_store.services.feature_transforms import (
     FeaturePipeline,
     Imputer,
     LogTransform,

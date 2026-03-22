@@ -2,9 +2,9 @@
 
 import pytest
 
-from src.domain.inference.events.model_loaded import ModelLoaded
-from src.domain.inference.events.prediction_made import PredictionMade
-from src.domain.inference.value_objects.latency_budget import LatencyBudget
+from phoenix_ml.domain.inference.events.model_loaded import ModelLoaded
+from phoenix_ml.domain.inference.events.prediction_made import PredictionMade
+from phoenix_ml.domain.inference.value_objects.latency_budget import LatencyBudget
 
 
 class TestLatencyBudget:

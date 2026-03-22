@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.domain.monitoring.services.model_evaluator import (
+from phoenix_ml.domain.monitoring.services.model_evaluator import (
     ClassificationEvaluator,
     IModelEvaluator,
     RegressionEvaluator,

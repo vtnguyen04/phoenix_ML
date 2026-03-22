@@ -11,10 +11,10 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # Import all models so Alembic sees them
-import src.infrastructure.persistence.models  # noqa: F401
+import phoenix_ml.infrastructure.persistence.models  # noqa: F401
 from alembic import context
-from src.config import get_settings
-from src.infrastructure.persistence.database import Base
+from phoenix_ml.config import get_settings
+from phoenix_ml.infrastructure.persistence.database import Base
 
 config = context.config
 

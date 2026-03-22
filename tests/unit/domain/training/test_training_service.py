@@ -9,19 +9,19 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.domain.training.entities.training_config import TrainingConfig
-from src.domain.training.entities.training_job import (
+from phoenix_ml.domain.training.entities.training_config import TrainingConfig
+from phoenix_ml.domain.training.entities.training_job import (
     TrainingJob,
     TrainingMetrics,
     TrainingStatus,
 )
-from src.domain.training.services.hyperparameter_optimizer import (
+from phoenix_ml.domain.training.services.hyperparameter_optimizer import (
     GridSearchStrategy,
     HyperparameterOptimizer,
     RandomSearchStrategy,
     SearchSpace,
 )
-from src.domain.training.services.training_service import TrainingService
+from phoenix_ml.domain.training.services.training_service import TrainingService
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 

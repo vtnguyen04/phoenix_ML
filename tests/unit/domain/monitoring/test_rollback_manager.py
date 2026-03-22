@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.domain.monitoring.services.rollback_manager import (
+from phoenix_ml.domain.monitoring.services.rollback_manager import (
     ChallengerMetrics,
     RollbackManager,
 )

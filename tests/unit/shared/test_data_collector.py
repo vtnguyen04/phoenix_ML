@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from src.shared.ingestion.data_collector import CreditDataCollector, IDataCollector
+from phoenix_ml.shared.ingestion.data_collector import CreditDataCollector, IDataCollector
 
 
 class TestIDataCollector:

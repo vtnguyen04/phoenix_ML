@@ -1,7 +1,7 @@
 import pytest
 
-from src.domain.inference.entities.model import Model
-from src.domain.inference.services.routing_strategy import (
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.services.routing_strategy import (
     ABTestStrategy,
     CanaryStrategy,
     ShadowStrategy,

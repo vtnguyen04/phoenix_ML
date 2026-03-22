@@ -2,12 +2,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.commands.predict_command import PredictCommand
-from src.application.handlers.predict_handler import PredictHandler
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.services.inference_service import InferenceService
-from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.domain.shared.event_bus import DomainEventBus
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.application.handlers.predict_handler import PredictHandler
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.inference.services.inference_service import InferenceService
+from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
+from phoenix_ml.domain.shared.event_bus import DomainEventBus
 
 
 @pytest.fixture

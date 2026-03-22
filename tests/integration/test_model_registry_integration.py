@@ -7,8 +7,8 @@ verifying the same paths the API endpoints exercise.
 
 import pytest
 
-from src.domain.inference.entities.model import Model
-from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
 
 @pytest.fixture

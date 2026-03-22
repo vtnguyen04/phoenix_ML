@@ -27,7 +27,7 @@ from sklearn.metrics import (
 )
 from xgboost import XGBClassifier
 
-from src.infrastructure.data_loaders.registry import resolve_data_loader
+from phoenix_ml.infrastructure.data_loaders.registry import resolve_data_loader
 
 logger = logging.getLogger(__name__)
 

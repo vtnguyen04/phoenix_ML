@@ -16,13 +16,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.domain.training.services.data_loader_plugin import IDataLoader
-from src.infrastructure.data_loaders.image_loader import ImageDataLoader
-from src.infrastructure.data_loaders.registry import (
+from phoenix_ml.domain.training.services.data_loader_plugin import IDataLoader
+from phoenix_ml.infrastructure.data_loaders.image_loader import ImageDataLoader
+from phoenix_ml.infrastructure.data_loaders.registry import (
     DataLoaderRegistry,
     resolve_data_loader,
 )
-from src.infrastructure.data_loaders.tabular_loader import TabularDataLoader
+from phoenix_ml.infrastructure.data_loaders.tabular_loader import TabularDataLoader
 
 # ─── Fixtures ─────────────────────────────────────────────────────
 

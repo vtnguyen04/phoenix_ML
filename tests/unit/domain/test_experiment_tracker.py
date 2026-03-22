@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.domain.training.services.experiment_tracker import ExperimentTracker
+from phoenix_ml.domain.training.services.experiment_tracker import ExperimentTracker
 
 
 @pytest.fixture

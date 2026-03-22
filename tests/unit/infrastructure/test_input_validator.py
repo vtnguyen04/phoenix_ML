@@ -1,8 +1,8 @@
 """Tests for input validator."""
 
 
-from src.application.commands.predict_command import PredictCommand
-from src.infrastructure.http.middleware.input_validator import (
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.infrastructure.http.middleware.input_validator import (
     validate_prediction_input,
 )
 

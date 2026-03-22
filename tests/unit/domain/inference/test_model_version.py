@@ -1,6 +1,6 @@
 import pytest
 
-from src.domain.inference.value_objects.model_version import ModelVersion
+from phoenix_ml.domain.inference.value_objects.model_version import ModelVersion
 
 
 def test_model_version_parsing() -> None:
