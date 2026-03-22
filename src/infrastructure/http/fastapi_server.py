@@ -7,6 +7,7 @@ from prometheus_client import make_asgi_app
 from src.config import get_settings
 from src.infrastructure.bootstrap.lifespan import lifespan
 from src.infrastructure.http.auth_routes import auth_router
+from src.infrastructure.http.data_routes import data_router
 from src.infrastructure.http.explain_routes import explain_router
 from src.infrastructure.http.feature_routes import feature_router
 from src.infrastructure.http.middleware.correlation_middleware import CorrelationMiddleware
@@ -62,10 +63,12 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
 app.include_router(feature_router, prefix="/api/v1")
 app.include_router(explain_router, prefix="/api/v1")
+app.include_router(data_router, prefix="/api/v1")
 
 # ── Backward-compatible routes (no prefix) ────────────────────────
 app.include_router(router)
 app.include_router(feature_router)
+app.include_router(data_router)
 
 
 def run() -> None:
