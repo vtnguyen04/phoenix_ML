@@ -68,7 +68,6 @@ graph TD
     subgraph "MLOps Pipeline"
         Airflow["Apache Airflow<br/>(Scheduler)"] -->|"DAG tasks"| Train["Train Models<br/>(sklearn → ONNX)"]
         Train -->|"MLflow log"| MLflow["MLflow<br/>(Experiment Tracking)"]
-        DVC["DVC Pipeline<br/>(Data Versioning)"] -->|"generate + train"| Train
     end
 ```
 
@@ -384,7 +383,7 @@ Return PredictionResponse to Client
 ### 7.2 Training Data Flow
 
 ```
-DVC Pipeline (dvc.yaml) hoặc Airflow DAG (dags/retrain_pipeline.py)
+Airflow DAG (dags/retrain_pipeline.py)
     ↓
 generate_datasets.py → data/{model}/dataset.csv hoặc .npz
     ↓

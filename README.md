@@ -40,7 +40,7 @@ Phoenix ML is a **production-grade, model-agnostic ML inference platform** that 
 | 🛡️ **Circuit Breaker** | Fault tolerance with automatic failover and recovery |
 | 📊 **Full Observability** | Prometheus metrics, Grafana dashboards, Jaeger distributed tracing |
 | 🔬 **Anomaly Detection** | Real-time monitoring for prediction anomalies, latency spikes, error rates |
-| 📦 **DVC Pipelines** | Reproducible model training with versioned data and artifacts |
+| 📦 **Airflow Pipelines** | Reproducible model training with versioned data and artifacts |
 | 🌀 **Airflow Orchestration** | 5-task self-healing DAG with max_active_runs=1 deduplication |
 | 📦 **Batch Prediction** | `/predict/batch` endpoint with concurrent processing |
 | 🧩 **Model-Agnostic** | Supports scikit-learn, XGBoost, MLP — any ONNX-exportable framework |
@@ -112,7 +112,7 @@ graph LR
 
 ```mermaid
 graph TD
-    Train["🏋️ Model Training<br/>DVC Pipeline"] --> Deploy["📦 Deployment<br/>ONNX + Docker"]
+    Train["🏋️ Model Training<br/>Airflow Pipeline"] --> Deploy["📦 Deployment<br/>ONNX + Docker"]
     Deploy --> Serve["⚡ Real-time Inference<br/>FastAPI + Routing"]
     Serve --> Monitor["📊 Monitoring<br/>Every 30s"]
     Monitor --> Anomaly["🔍 Drift Detection<br/>KS · PSI · Chi² · Wasserstein"]
@@ -162,7 +162,7 @@ graph TD
 | **Backend** | Python 3.11+ · FastAPI · gRPC · Pydantic v2 · SQLAlchemy 2.0 Async |
 | **Data** | Redis (features) · PostgreSQL (metadata) · Apache Kafka (events) · MinIO/S3 (artifacts) |
 | **ML Frameworks** | Scikit-Learn · XGBoost · ONNX · skl2onnx · onnxmltools |
-| **MLOps** | DVC (data versioning) · MLflow (experiment tracking) · Apache Airflow (orchestration) |
+| **MLOps** | MLflow (experiment tracking) · Apache Airflow (orchestration) · MinIO/S3 (artifact storage) |
 | **Observability** | Prometheus · Grafana · Jaeger (OpenTelemetry) |
 | **Frontend** | React 18 · TypeScript · Vite · Vanilla CSS · Vitest |
 | **Infrastructure** | Docker Compose (14+ services) · GitHub Actions CI · `uv` package manager · Alembic migrations |
@@ -239,8 +239,6 @@ uv run python examples/house_price/train.py
 uv run python examples/fraud_detection/train.py
 uv run python examples/image_classification/train.py
 
-# Or: reproduce the full DVC pipeline
-uv run dvc repro
 ```
 
 | Service | URL | Purpose |
@@ -352,7 +350,7 @@ phoenix-ml-platform/
 ├── docs/                        # Architecture, ADRs, API ref, customization, monitoring, troubleshooting
 ├── grafana/                     # Provisioned dashboards
 ├── .github/workflows/           # CI/CD pipelines
-├── dvc.yaml                     # ML pipeline stages
+├── docker-compose.yaml          # Core services (14+ containers)
 ├── compose.yaml                 # Core services (14+ containers)
 ├── docker-compose.airflow.yaml  # Airflow orchestration stack
 └── pyproject.toml               # Python dependencies + packaging
@@ -368,7 +366,6 @@ phoenix-ml-platform/
 | [002](docs/adr/002-use-onnx-runtime.md) | ONNX Runtime standardization | Framework-agnostic, 2-10x inference speedup |
 | [003](docs/adr/003-use-kafka-for-event-streaming.md) | Kafka for event streaming | Decouple inference from logging, durability |
 | [004](docs/adr/004-observability-with-prometheus-grafana.md) | Prometheus + Grafana | Real-time metrics, dashboard-as-code |
-| [005](docs/adr/005-dvc-data-versioning.md) | DVC + MinIO | Reproducible pipelines, S3-compatible storage |
 
 ---
 

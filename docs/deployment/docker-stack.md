@@ -20,7 +20,7 @@ docker compose -f docker-compose.airflow.yaml up -d
 
 # 4. Generate data & train models
 uv run python scripts/generate_datasets.py
-uv run dvc repro
+uv run python examples/credit_risk/train.py
 
 # 5. Verify
 curl http://localhost:8001/health
@@ -149,45 +149,19 @@ make api-logs    # docker compose logs -f phoenix-api
 make frontend-logs  # docker compose logs -f phoenix-frontend
 ```
 
-## DVC Pipeline (dvc.yaml)
+## Training Pipeline
 
-```yaml
-stages:
-  generate_datasets:
-    cmd: uv run python scripts/generate_datasets.py
-    outs:
-      - data/credit_risk/dataset.csv
-      - data/fraud_detection/dataset.csv
-      - data/house_price/dataset.csv
-      - data/image_class/dataset.npz
-
-  train_credit_risk:
-    cmd: uv run python examples/credit_risk/train.py
-    deps: [data/credit_risk/dataset.csv]
-    outs: [models/credit_risk/v1/]
-
-  train_fraud_detection:
-    cmd: uv run python examples/fraud_detection/train.py
-    deps: [data/fraud_detection/dataset.csv]
-    outs: [models/fraud_detection/v1/]
-
-  train_house_price:
-    cmd: uv run python examples/house_price/train.py
-    deps: [data/house_price/dataset.csv]
-    outs: [models/house_price/v1/]
-
-  train_image_class:
-    cmd: uv run python examples/image_classification/train.py
-    deps: [data/image_class/dataset.npz]
-    outs: [models/image_class/v1/]
-```
+Training is managed via **Airflow DAG** (`dags/retrain_pipeline.py`) or direct scripts:
 
 ```bash
-# Run full pipeline
-uv run dvc repro
+# Generate data + train all models
+uv run python scripts/generate_datasets.py
+uv run python examples/credit_risk/train.py
+uv run python examples/house_price/train.py
+uv run python examples/fraud_detection/train.py
+uv run python examples/image_classification/train.py
 
-# Run specific stage
-uv run dvc repro train_credit_risk
+# Or trigger via Airflow UI (http://localhost:8080)
 ```
 
 ## Kubernetes Deployment (Helm)

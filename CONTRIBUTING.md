@@ -63,7 +63,7 @@ metadata:
   role: champion
 ```
 
-4. Add stage in `dvc.yaml`
+4. Model sẽ tự động load bởi Airflow DAG khi thêm YAML config
 5. Run: `uv run python examples/<problem_name>/train.py`
 
 ## Testing

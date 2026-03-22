@@ -51,7 +51,6 @@ dependencies = [
     "mlflow>=2.10.0",
     "xgboost>=3.2.0",
     "onnxmltools>=1.16.0",
-    "dvc[s3]>=3.50.0",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "shap>=0.50.0",
