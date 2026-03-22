@@ -1,9 +1,9 @@
 """Tests for InMemoryPredictionLogRepository."""
 
-from src.application.commands.predict_command import PredictCommand
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.infrastructure.monitoring.in_memory_log_repo import (
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
+from phoenix_ml.infrastructure.monitoring.in_memory_log_repo import (
     InMemoryPredictionLogRepository,
 )
 

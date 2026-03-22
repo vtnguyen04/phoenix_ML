@@ -2,8 +2,8 @@
 
 import pytest
 
-from src.domain.auth.entities.user import User, UserRole
-from src.domain.auth.services.auth_service import AuthService
+from phoenix_ml.domain.auth.entities.user import User, UserRole
+from phoenix_ml.domain.auth.services.auth_service import AuthService
 
 
 @pytest.fixture

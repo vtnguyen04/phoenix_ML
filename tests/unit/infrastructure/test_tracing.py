@@ -1,4 +1,4 @@
-from src.infrastructure.monitoring.tracing import (
+from phoenix_ml.infrastructure.monitoring.tracing import (
     get_tracer,
     init_tracing,
     shutdown_tracing,

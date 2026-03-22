@@ -189,7 +189,7 @@ def _train_model(**kwargs: Any) -> None:
     config_path = _PROJECT_ROOT / "model_configs" / f"{model_id}.yaml"
     if config_path.exists():
         try:
-            from src.infrastructure.bootstrap.model_config_loader import (
+            from phoenix_ml.infrastructure.bootstrap.model_config_loader import (
                 load_model_config,
             )
 

@@ -1,7 +1,7 @@
 """Tests for SQLAlchemy ORM models and database Base."""
 
-from src.infrastructure.persistence.database import Base
-from src.infrastructure.persistence.models import (
+from phoenix_ml.infrastructure.persistence.database import Base
+from phoenix_ml.infrastructure.persistence.models import (
     DriftReportORM,
     ModelORM,
     PredictionLogORM,

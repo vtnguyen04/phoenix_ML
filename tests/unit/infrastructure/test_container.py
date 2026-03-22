@@ -5,12 +5,12 @@ from unittest.mock import patch
 
 import pytest
 
-from src.infrastructure.bootstrap.container import (
+from phoenix_ml.infrastructure.bootstrap.container import (
     ensure_model_exists,
     find_project_root,
 )
 
-_MOD = "src.infrastructure.bootstrap.container"
+_MOD = "phoenix_ml.infrastructure.bootstrap.container"
 
 
 class TestFindProjectRoot:

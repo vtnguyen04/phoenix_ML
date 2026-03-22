@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.infrastructure.feature_store.in_memory_feature_store import InMemoryFeatureStore
+from phoenix_ml.infrastructure.feature_store.in_memory_feature_store import InMemoryFeatureStore
 
 
 @pytest.fixture

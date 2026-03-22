@@ -4,21 +4,21 @@ from pathlib import Path
 
 import pytest
 
-from src.application.commands.predict_command import PredictCommand
-from src.application.handlers.predict_handler import PredictHandler
-from src.domain.inference.entities.model import Model
-from src.domain.inference.services.batch_manager import BatchManager
-from src.domain.inference.services.inference_service import InferenceService
-from src.domain.inference.services.routing_strategy import ABTestStrategy
-from src.domain.shared.event_bus import DomainEventBus
-from src.infrastructure.artifact_storage.local_artifact_storage import (
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.application.handlers.predict_handler import PredictHandler
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.services.batch_manager import BatchManager
+from phoenix_ml.domain.inference.services.inference_service import InferenceService
+from phoenix_ml.domain.inference.services.routing_strategy import ABTestStrategy
+from phoenix_ml.domain.shared.event_bus import DomainEventBus
+from phoenix_ml.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
-from src.infrastructure.feature_store.in_memory_feature_store import (
+from phoenix_ml.infrastructure.feature_store.in_memory_feature_store import (
     InMemoryFeatureStore,
 )
-from src.infrastructure.ml_engines.mock_engine import MockInferenceEngine
-from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
+from phoenix_ml.infrastructure.ml_engines.mock_engine import MockInferenceEngine
+from phoenix_ml.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
 
 class MockArtifactStorage(LocalArtifactStorage):

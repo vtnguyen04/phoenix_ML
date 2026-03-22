@@ -55,7 +55,7 @@ def _get_data_change_models() -> list[dict[str, Any]]:
 
     models = []
     try:
-        from src.infrastructure.bootstrap.model_config_loader import (
+        from phoenix_ml.infrastructure.bootstrap.model_config_loader import (
             load_all_model_configs,
         )
 

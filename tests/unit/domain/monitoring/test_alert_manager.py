@@ -1,6 +1,6 @@
 import pytest
 
-from src.domain.monitoring.services.alert_manager import (
+from phoenix_ml.domain.monitoring.services.alert_manager import (
     AlertManager,
     AlertRule,
     AlertSeverity,

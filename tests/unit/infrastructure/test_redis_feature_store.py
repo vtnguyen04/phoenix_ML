@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-from src.infrastructure.feature_store.redis_feature_store import RedisFeatureStore
+from phoenix_ml.infrastructure.feature_store.redis_feature_store import RedisFeatureStore
 
 
 async def test_get_online_features_found() -> None:

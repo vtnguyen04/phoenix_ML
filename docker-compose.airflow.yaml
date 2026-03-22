@@ -22,7 +22,7 @@ x-airflow-common:
     - ./logs:/opt/airflow/logs
     - ./models:/opt/airflow/models
     - ./data:/opt/airflow/data
-    - ./src:/opt/airflow/src
+    - ./phoenix_ml:/opt/airflow/phoenix_ml
     - ./scripts:/opt/airflow/scripts
     - ./examples:/opt/airflow/examples
     - ./model_configs:/opt/airflow/model_configs

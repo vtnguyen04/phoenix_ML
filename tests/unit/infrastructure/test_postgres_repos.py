@@ -3,14 +3,14 @@
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
-from src.application.commands.predict_command import PredictCommand
-from src.domain.inference.entities.model import Model
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.domain.monitoring.entities.drift_report import DriftReport
-from src.infrastructure.persistence.postgres_drift_repo import PostgresDriftReportRepository
-from src.infrastructure.persistence.postgres_log_repo import PostgresPredictionLogRepository
-from src.infrastructure.persistence.postgres_model_registry import PostgresModelRegistry
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
+from phoenix_ml.domain.monitoring.entities.drift_report import DriftReport
+from phoenix_ml.infrastructure.persistence.postgres_drift_repo import PostgresDriftReportRepository
+from phoenix_ml.infrastructure.persistence.postgres_log_repo import PostgresPredictionLogRepository
+from phoenix_ml.infrastructure.persistence.postgres_model_registry import PostgresModelRegistry
 
 
 def _mock_session() -> MagicMock:

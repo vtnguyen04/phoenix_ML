@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 import numpy as np
 import pytest
 
-from src.domain.monitoring.services.explainability_service import ExplainabilityService
+from phoenix_ml.domain.monitoring.services.explainability_service import ExplainabilityService
 
 
 @dataclass

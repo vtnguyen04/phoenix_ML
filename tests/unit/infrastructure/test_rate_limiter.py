@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.infrastructure.http.middleware.rate_limit_middleware import _InMemoryRateLimiter
+from phoenix_ml.infrastructure.http.middleware.rate_limit_middleware import _InMemoryRateLimiter
 
 
 @pytest.fixture

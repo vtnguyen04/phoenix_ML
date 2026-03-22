@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from src.domain.training.services.data_validator import DataValidator, Severity
+from phoenix_ml.domain.training.services.data_validator import DataValidator, Severity
 
 
 @pytest.fixture

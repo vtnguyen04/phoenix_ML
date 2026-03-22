@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.application.handlers.query_handlers import (
+from phoenix_ml.application.handlers.query_handlers import (
     GetDriftReportQueryHandler,
     GetModelPerformanceQueryHandler,
     GetModelQueryHandler,
     GetPredictionLogsQueryHandler,
 )
-from src.application.queries import (
+from phoenix_ml.application.queries import (
     GetDriftReportQuery,
     GetModelPerformanceQuery,
     GetModelQuery,

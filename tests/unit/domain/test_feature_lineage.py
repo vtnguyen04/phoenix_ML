@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.domain.feature_store.entities.feature_registry import (
+from phoenix_ml.domain.feature_store.entities.feature_registry import (
     FeatureLineage,
     FeatureMetadata,
     FeatureRegistry,

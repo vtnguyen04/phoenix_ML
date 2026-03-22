@@ -24,7 +24,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 
-from src.infrastructure.data_loaders.registry import resolve_data_loader
+from phoenix_ml.infrastructure.data_loaders.registry import resolve_data_loader
 
 logger = logging.getLogger(__name__)
 

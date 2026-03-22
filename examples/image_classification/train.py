@@ -27,7 +27,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.infrastructure.data_loaders.registry import resolve_data_loader
+from phoenix_ml.infrastructure.data_loaders.registry import resolve_data_loader
 
 logger = logging.getLogger(__name__)
 

@@ -11,22 +11,22 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.application.commands.predict_command import PredictCommand
-from src.application.handlers.predict_handler import PredictHandler
-from src.domain.inference.entities.model import Model
-from src.domain.inference.services.batch_manager import BatchConfig, BatchManager
-from src.domain.inference.services.inference_service import InferenceService
-from src.domain.inference.services.routing_strategy import SingleModelStrategy
-from src.domain.inference.value_objects.feature_vector import FeatureVector
-from src.domain.shared.event_bus import DomainEventBus
-from src.infrastructure.artifact_storage.local_artifact_storage import (
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.application.handlers.predict_handler import PredictHandler
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.services.batch_manager import BatchConfig, BatchManager
+from phoenix_ml.domain.inference.services.inference_service import InferenceService
+from phoenix_ml.domain.inference.services.routing_strategy import SingleModelStrategy
+from phoenix_ml.domain.inference.value_objects.feature_vector import FeatureVector
+from phoenix_ml.domain.shared.event_bus import DomainEventBus
+from phoenix_ml.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
-from src.infrastructure.feature_store.in_memory_feature_store import (
+from phoenix_ml.infrastructure.feature_store.in_memory_feature_store import (
     InMemoryFeatureStore,
 )
-from src.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
-from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
+from phoenix_ml.infrastructure.ml_engines.onnx_engine import ONNXInferenceEngine
+from phoenix_ml.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
 
 def _find_root() -> Path:
@@ -228,7 +228,9 @@ class TestRealDriftDetection:
 
     async def test_no_drift_with_same_distribution(self) -> None:
         """Reference data vs itself should show NO drift."""
-        from src.domain.monitoring.services.drift_calculator import DriftCalculator  # noqa: PLC0415
+        from phoenix_ml.domain.monitoring.services.drift_calculator import (
+            DriftCalculator,  # noqa: PLC0415
+        )
 
         ref_path = ROOT / "data" / "reference_data.json"
         if not ref_path.exists():
@@ -254,7 +256,9 @@ class TestRealDriftDetection:
 
     async def test_drift_detected_with_shifted_data(self) -> None:
         """Shifted data should trigger drift detection."""
-        from src.domain.monitoring.services.drift_calculator import DriftCalculator  # noqa: PLC0415
+        from phoenix_ml.domain.monitoring.services.drift_calculator import (
+            DriftCalculator,  # noqa: PLC0415
+        )
 
         ref_path = ROOT / "data" / "reference_data.json"
         if not ref_path.exists():

@@ -4,19 +4,19 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.domain.feature_store.repositories.feature_store import FeatureStore
-from src.domain.inference.entities.model import Model
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.services.batch_manager import BatchManager
-from src.domain.inference.services.inference_engine import InferenceEngine
-from src.domain.inference.services.inference_service import (
+from phoenix_ml.domain.feature_store.repositories.feature_store import FeatureStore
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.inference.services.batch_manager import BatchManager
+from phoenix_ml.domain.inference.services.inference_engine import InferenceEngine
+from phoenix_ml.domain.inference.services.inference_service import (
     InferenceService,
     PredictionRequest,
 )
-from src.domain.inference.services.routing_strategy import RoutingStrategy
-from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.domain.model_registry.repositories.artifact_storage import ArtifactStorage
-from src.domain.model_registry.repositories.model_repository import ModelRepository
+from phoenix_ml.domain.inference.services.routing_strategy import RoutingStrategy
+from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
+from phoenix_ml.domain.model_registry.repositories.artifact_storage import ArtifactStorage
+from phoenix_ml.domain.model_registry.repositories.model_repository import ModelRepository
 
 
 @pytest.fixture

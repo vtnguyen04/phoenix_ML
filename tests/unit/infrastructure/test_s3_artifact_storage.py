@@ -7,12 +7,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError
 
-from src.infrastructure.artifact_storage.s3_artifact_storage import S3ArtifactStorage
+from phoenix_ml.infrastructure.artifact_storage.s3_artifact_storage import S3ArtifactStorage
 
 
 @pytest.fixture
 def mock_boto3_client() -> Generator[MagicMock, None, None]:
-    with patch("src.infrastructure.artifact_storage.s3_artifact_storage.boto3") as mock:
+    with patch("phoenix_ml.infrastructure.artifact_storage.s3_artifact_storage.boto3") as mock:
         client = MagicMock()
         mock.client.return_value = client
         yield client

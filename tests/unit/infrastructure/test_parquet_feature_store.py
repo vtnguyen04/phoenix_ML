@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.infrastructure.feature_store.parquet_feature_store import ParquetFeatureStore
+from phoenix_ml.infrastructure.feature_store.parquet_feature_store import ParquetFeatureStore
 
 
 @pytest.fixture

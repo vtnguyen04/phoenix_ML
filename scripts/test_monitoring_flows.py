@@ -18,13 +18,13 @@ from unittest.mock import AsyncMock
 # Add project root to path
 sys.path.insert(0, ".")
 
-from src.domain.monitoring.services.alert_manager import (
+from phoenix_ml.domain.monitoring.services.alert_manager import (
     AlertManager,
     AlertRule,
     AlertSeverity,
 )
-from src.domain.monitoring.services.anomaly_detector import AnomalyDetector, AnomalyType
-from src.domain.monitoring.services.rollback_manager import (
+from phoenix_ml.domain.monitoring.services.anomaly_detector import AnomalyDetector, AnomalyType
+from phoenix_ml.domain.monitoring.services.rollback_manager import (
     ChallengerMetrics,
     RollbackManager,
 )

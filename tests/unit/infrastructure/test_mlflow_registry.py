@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.domain.inference.entities.model import Model, ModelStage
-from src.infrastructure.persistence.mlflow_model_registry import MlflowModelRegistry
+from phoenix_ml.domain.inference.entities.model import Model, ModelStage
+from phoenix_ml.infrastructure.persistence.mlflow_model_registry import MlflowModelRegistry
 
 
 @pytest.fixture

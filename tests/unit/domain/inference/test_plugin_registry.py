@@ -5,14 +5,14 @@ from typing import Any
 
 import pytest
 
-from src.domain.inference.services.processor_plugin import (
+from phoenix_ml.domain.inference.services.processor_plugin import (
     ClassificationPostprocessor,
     IPostprocessor,
     IPreprocessor,
     PassthroughPreprocessor,
 )
-from src.domain.shared.plugin_registry import PluginRegistry
-from src.domain.training.services.trainer_plugin import ITrainer, TrainResult
+from phoenix_ml.domain.shared.plugin_registry import PluginRegistry
+from phoenix_ml.domain.training.services.trainer_plugin import ITrainer, TrainResult
 
 # ─── Mock Plugins ────────────────────────────────────────────────
 

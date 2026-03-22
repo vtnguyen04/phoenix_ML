@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from src.infrastructure.cache.prediction_cache import PredictionCache
+from phoenix_ml.infrastructure.cache.prediction_cache import PredictionCache
 
 
 @pytest.fixture

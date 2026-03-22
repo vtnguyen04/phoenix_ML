@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.shared.ingestion.api_ingestor import ApiDataIngestor
+from phoenix_ml.shared.ingestion.api_ingestor import ApiDataIngestor
 
 
 class TestApiDataIngestor:

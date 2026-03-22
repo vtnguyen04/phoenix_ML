@@ -1,6 +1,6 @@
 """Tests for shared exception hierarchy."""
 
-from src.shared.exceptions import (
+from phoenix_ml.shared.exceptions import (
     FeatureStoreError,
     InferenceError,
     ModelNotFoundError,

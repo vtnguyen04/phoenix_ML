@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.infrastructure.logging.audit_logger import (
+from phoenix_ml.infrastructure.logging.audit_logger import (
     AuditAction,
     AuditLogger,
 )

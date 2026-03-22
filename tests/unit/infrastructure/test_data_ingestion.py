@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.shared.ingestion.interfaces import IDataIngestor
-from src.shared.ingestion.service import IngestionService
+from phoenix_ml.shared.ingestion.interfaces import IDataIngestor
+from phoenix_ml.shared.ingestion.service import IngestionService
 
 # ─── Mock Ingestor ───────────────────────────────────────────────
 

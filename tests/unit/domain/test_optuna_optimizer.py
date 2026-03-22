@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from src.domain.training.services.optuna_optimizer import OptunaOptimizer
+from phoenix_ml.domain.training.services.optuna_optimizer import OptunaOptimizer
 
 
 @pytest.fixture

@@ -22,7 +22,7 @@ from skl2onnx.common.data_types import FloatTensorType
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-from src.infrastructure.data_loaders.registry import resolve_data_loader
+from phoenix_ml.infrastructure.data_loaders.registry import resolve_data_loader
 
 logger = logging.getLogger(__name__)
 

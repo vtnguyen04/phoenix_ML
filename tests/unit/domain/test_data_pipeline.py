@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from src.domain.training.services.data_pipeline import DataPipeline
+from phoenix_ml.domain.training.services.data_pipeline import DataPipeline
 
 
 @pytest.fixture

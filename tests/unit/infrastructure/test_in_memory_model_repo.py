@@ -1,7 +1,7 @@
 """Tests for InMemoryModelRepository."""
 
-from src.domain.inference.entities.model import Model
-from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
 
 async def test_save_and_get_champion() -> None:

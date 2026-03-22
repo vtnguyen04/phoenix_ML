@@ -2,8 +2,8 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-from src.shared.ingestion.interfaces import IDataIngestor
-from src.shared.ingestion.service import IngestionService
+from phoenix_ml.shared.ingestion.interfaces import IDataIngestor
+from phoenix_ml.shared.ingestion.service import IngestionService
 
 
 async def test_process_raw_data_delegates_to_ingestor() -> None:

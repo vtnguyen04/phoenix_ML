@@ -5,8 +5,8 @@ import logging
 
 import pytest
 
-from src.infrastructure.http.middleware.correlation_middleware import correlation_id_var
-from src.infrastructure.logging.logging_config import JSONFormatter
+from phoenix_ml.infrastructure.http.middleware.correlation_middleware import correlation_id_var
+from phoenix_ml.infrastructure.logging.logging_config import JSONFormatter
 
 
 @pytest.fixture

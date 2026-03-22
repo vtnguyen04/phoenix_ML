@@ -2,17 +2,17 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.application.commands.predict_command import PredictCommand
-from src.application.services.monitoring_service import MonitoringService
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.monitoring.entities.drift_report import DriftReport
-from src.domain.monitoring.repositories.drift_report_repository import (
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.application.services.monitoring_service import MonitoringService
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.monitoring.entities.drift_report import DriftReport
+from phoenix_ml.domain.monitoring.repositories.drift_report_repository import (
     DriftReportRepository,
 )
-from src.domain.monitoring.repositories.prediction_log_repository import (
+from phoenix_ml.domain.monitoring.repositories.prediction_log_repository import (
     PredictionLogRepository,
 )
-from src.domain.monitoring.services.drift_calculator import DriftCalculator
+from phoenix_ml.domain.monitoring.services.drift_calculator import DriftCalculator
 
 
 @pytest.fixture

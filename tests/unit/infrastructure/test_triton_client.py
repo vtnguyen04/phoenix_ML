@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 from httpx import Response
 
-from src.domain.inference.entities.model import Model
-from src.domain.inference.value_objects.feature_vector import FeatureVector
-from src.infrastructure.ml_engines.triton_client import TritonInferenceClient
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.value_objects.feature_vector import FeatureVector
+from phoenix_ml.infrastructure.ml_engines.triton_client import TritonInferenceClient
 
 
 @pytest.fixture

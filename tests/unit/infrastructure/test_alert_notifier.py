@@ -2,12 +2,12 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-from src.domain.monitoring.services.alert_manager import (
+from phoenix_ml.domain.monitoring.services.alert_manager import (
     Alert,
     AlertSeverity,
     AlertStatus,
 )
-from src.infrastructure.monitoring.alert_notifier import AlertNotifier
+from phoenix_ml.infrastructure.monitoring.alert_notifier import AlertNotifier
 
 
 async def test_notify_posts_to_webhook() -> None:

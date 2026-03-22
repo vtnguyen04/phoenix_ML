@@ -37,7 +37,7 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 
 # Copy source code, scripts, and data
-COPY src /app/src
+COPY phoenix_ml /app/phoenix_ml
 COPY scripts /app/scripts
 COPY data /app/data
 
@@ -64,4 +64,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # Start the application
-CMD ["uvicorn", "src.infrastructure.http.fastapi_server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "phoenix_ml.infrastructure.http.fastapi_server:app", "--host", "0.0.0.0", "--port", "8000"]

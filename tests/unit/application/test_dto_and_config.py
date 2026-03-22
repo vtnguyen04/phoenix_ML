@@ -1,7 +1,7 @@
 """Tests for DTOs and config."""
 
-from src.application.dto import PredictionRequestDTO, PredictionResponseDTO
-from src.config import Settings
+from phoenix_ml.application.dto import PredictionRequestDTO, PredictionResponseDTO
+from phoenix_ml.config import Settings
 
 
 class TestPredictionRequestDTO:

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from src.shared.ingestion.data_collector import CreditDataCollector, IDataCollector
+from phoenix_ml.shared.ingestion.data_collector import CreditDataCollector, IDataCollector
 
 
 class TestIDataCollector:
@@ -30,7 +30,7 @@ class TestCreditDataCollector:
         mock_data.frame = mock_df
 
         with patch(
-            "src.shared.ingestion.data_collector.fetch_openml",
+            "phoenix_ml.shared.ingestion.data_collector.fetch_openml",
             return_value=mock_data,
         ):
             collector = CreditDataCollector()

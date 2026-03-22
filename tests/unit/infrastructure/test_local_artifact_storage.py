@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from src.infrastructure.artifact_storage.local_artifact_storage import (
+from phoenix_ml.infrastructure.artifact_storage.local_artifact_storage import (
     LocalArtifactStorage,
 )
 

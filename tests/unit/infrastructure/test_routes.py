@@ -6,12 +6,12 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from src.application.handlers.predict_handler import PredictHandler
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.value_objects.confidence_score import ConfidenceScore
-from src.infrastructure.http.dependencies import get_predict_handler
-from src.infrastructure.http.routes import router
-from src.infrastructure.persistence.database import get_db
+from phoenix_ml.application.handlers.predict_handler import PredictHandler
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
+from phoenix_ml.infrastructure.http.dependencies import get_predict_handler
+from phoenix_ml.infrastructure.http.routes import router
+from phoenix_ml.infrastructure.persistence.database import get_db
 
 
 def _create_test_app() -> FastAPI:

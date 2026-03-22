@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.domain.monitoring.services.ab_test_analyzer import ABTestAnalyzer
+from phoenix_ml.domain.monitoring.services.ab_test_analyzer import ABTestAnalyzer
 
 
 @pytest.fixture
