@@ -1,25 +1,61 @@
 # ADR 001: Adoption of Domain-Driven Design (DDD)
 
 ## Status
-Accepted
+✅ **Accepted** — March 2026
 
 ## Context
-Machine Learning systems often suffer from "Glue Code" anti-patterns where business logic (inference rules, drift thresholds) interacts directly with infrastructure (databases, APIs). This high coupling makes the system fragile, untestable, and difficult to adapt to new requirements (e.g., switching from REST to gRPC, or Redis to Cassandra).
+
+Dự án MLOps platform cần quản lý nhiều domain phức tạp chồng chéo: inference, monitoring, training, feature store, model registry. Mỗi domain có business logic riêng biệt, yêu cầu riêng, và lifecycle riêng.
+
+### Vấn đề
+
+- Code monolithic nhanh chóng trở nên **unmaintainable** khi features tăng
+- Business logic bị trộn lẫn với framework code (FastAPI, SQLAlchemy, Redis)
+- Khó test domain logic vì phụ thuộc infrastructure
+- Thay đổi database/framework ảnh hưởng toàn bộ codebase
 
 ## Decision
-We adopted **Domain-Driven Design (DDD)** to structure the codebase into four distinct layers:
 
-1.  **Domain Layer** (Core): Contains high-level rules, Entities (Model, Prediction), and Value Objects (ConfidenceScore). This layer has **ZERO dependencies** on external frameworks.
-2.  **Application Layer**: Orchestrates use cases using the Command Pattern (e.g., `PredictHandler`, `MonitoringService`). It coordinates the Domain objects but does not contain business rules.
-3.  **Infrastructure Layer**: Implements interfaces defined in the Domain (Adapters). Includes FastAPI, Redis, PostgreSQL, and ONNX Runtime configurations.
-4.  **Shared Kernel**: Utilities and common types shared across layers.
+Áp dụng **Domain-Driven Design (DDD)** kết hợp **Clean Architecture**:
+
+### Bounded Contexts
+- **Inference**: Model, Prediction, InferenceEngine, RoutingStrategy, CircuitBreaker
+- **Monitoring**: DriftReport, DriftCalculator, AlertManager, AnomalyDetector, RollbackManager
+- **Training**: TrainingJob, TrainingService, IDataLoader, ITrainer
+- **Feature Store**: FeatureRegistry, FeatureStore, OfflineFeatureStore
+- **Model Registry**: ModelRepository, ArtifactStorage
+
+### Layer Rules
+```
+Infrastructure → Application → Domain → Shared
+     ↑ depends on      ↑              ↑
+     (implements ABCs)  (orchestrates)  (pure logic)
+```
+
+### Design Patterns Applied
+- **Repository Pattern**: Abstract data access (ABCs in domain, implementations in infrastructure)
+- **Strategy Pattern**: RoutingStrategy (A/B, Canary, Shadow)
+- **Observer Pattern**: DomainEventBus for event-driven decoupling
+- **CQRS**: Separate PredictCommand handlers from Query handlers
+- **Factory Pattern**: Engine factory in container.py
+- **Plugin Pattern**: PluginRegistry for model-specific pre/post processors
 
 ## Consequences
+
 ### Positive
-*   **Testability**: Core logic can be unit-tested in isolation without mocking heavy infrastructure.
-*   **Flexibility**: Infrastructure components can be swapped (e.g., replacing Redis with Memcached) without touching the Domain logic.
-*   **Maintainability**: Clear boundaries prevent "spaghetti code" as the system grows.
+- ✅ Domain logic testable **without** any framework or infrastructure
+- ✅ Infrastructure swap (Redis → Memcached, PostgreSQL → MongoDB) without touching domain
+- ✅ Team có thể work on different bounded contexts independently
+- ✅ Ubiquitous Language: code names match domain concepts
+- ✅ 87% test coverage achieved easily due to testable architecture
 
 ### Negative
-*   **Complexity**: Increased number of files and boilerplate code compared to a simple script-based approach.
-*   **Learning Curve**: Requires team familiarity with DDD concepts (Aggregates, Repositories, Services).
+- ❌ More files và directories (40+ domain files)
+- ❌ Steeper learning curve cho developers mới
+- ❌ Some boilerplate (ABC definitions, dependency injection setup)
+
+## References
+
+- Eric Evans, "Domain-Driven Design", 2003
+- Robert C. Martin, "Clean Architecture", 2017
+- Vaughn Vernon, "Implementing Domain-Driven Design", 2013

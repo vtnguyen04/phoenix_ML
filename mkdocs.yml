@@ -53,6 +53,7 @@ nav:
     - System Design: architecture/system-design.md
     - DDD Overview: architecture/ddd-overview.md
     - Frontend Design: frontend/architecture.md
+    - Project Structure: project-structure.md
   - API Reference: api/reference.md
   - Decisions (ADR):
     - 001 - DDD Architecture: adr/001-use-ddd-architecture.md

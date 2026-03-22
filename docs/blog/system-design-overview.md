@@ -1,125 +1,126 @@
 # System Design Overview: Phoenix ML Platform
 
-*A deep dive into the architecture decisions behind a self-healing, model-agnostic ML inference system.*
+*Phân tích sâu các quyết định kiến trúc đằng sau hệ thống ML inference tự phục hồi.*
 
----
+## Bài toán
 
-## Introduction
+Xây dựng production ML platform cần giải quyết:
 
-The **Phoenix ML Platform** is a production-grade, model-agnostic machine learning inference system designed with Domain-Driven Design (DDD) and SOLID principles at its core. It powers real-time predictions for **any ONNX-exportable model** — from credit risk scoring to image classification — while autonomously monitoring, detecting drift, and self-healing when model performance degrades.
+1. **Model Serving**: Serve nhiều models đồng thời, latency < 10ms
+2. **Model Management**: Champion/Challenger, versioning, A/B testing
+3. **Data Drift Detection**: Tự động phát hiện khi production data thay đổi
+4. **Self-Healing**: Alert → rollback → retrain tự động
+5. **Observability**: Metrics, tracing, dashboards
+6. **Scalability**: Horizontal scaling, batch processing
 
-This post explores the key architectural decisions that make the system resilient, maintainable, and performant.
+## Quyết định thiết kế chính
 
-## Architecture: Domain-Driven Design
+### 1. Domain-Driven Design vs Monolithic
 
-We chose DDD to manage the inherent complexity of ML systems, which span inference, monitoring, training, and feature management — each a distinct bounded context.
+**Vấn đề**: ML platform có nhiều concerns khác nhau (inference, monitoring, training, features) mà monolithic sẽ trộn lẫn.
+
+**Giải pháp**: 5 Bounded Contexts, mỗi context có entities, services, repositories riêng.
 
 ```
-src/
-├── domain/            ← Pure business logic (no framework deps)
-│   ├── inference/     ← Prediction orchestration
-│   ├── monitoring/    ← Drift detection, anomaly detection
-│   ├── training/      ← Training job lifecycle + plugins
-│   ├── feature_store/ ← Feature management
-│   └── model_registry/ ← Model versioning
-├── application/       ← Use cases (handlers, commands, queries)
-│   ├── commands/      ← PredictCommand, BatchPredictCommand
-│   ├── handlers/      ← PredictHandler, BatchPredictHandler
-│   └── services/      ← MonitoringService
-├── infrastructure/    ← Adapters (FastAPI, gRPC, Postgres, Redis, Kafka)
-└── shared/            ← Cross-cutting (exceptions, interfaces, utils)
+Inference → Model, Prediction, InferenceEngine, RoutingStrategy
+Monitoring → DriftReport, DriftCalculator, AlertManager
+Training → TrainingJob, TrainingService
+Feature Store → FeatureRegistry, FeatureStore
+Model Registry → ModelRepository, ArtifactStorage
 ```
 
-### Why DDD?
+**Kết quả**: Domain logic testable 100% without infrastructure. Thay đổi database = thay 1 file, không ảnh hưởng domain.
 
-1. **Bounded Contexts** keep inference, monitoring, and training concerns isolated — changes to drift detection never risk breaking predictions.
-2. **Aggregate Roots** (e.g., `Model`, `DriftReport`, `TrainingJob`) enforce invariants — a training job cannot transition from COMPLETED back to RUNNING.
-3. **Domain Events** (e.g., `PredictionMade`, `DriftDetected`, `TrainingCompleted`) enable loose coupling between contexts without shared mutable state.
+### 2. CQRS — Tách Read và Write
 
-## Model-Agnostic Design
+**Vấn đề**: Prediction (write-heavy) và model queries (read-heavy) có access patterns khác nhau.
 
-The platform is designed to serve any ML model, not just a specific use case:
+**Giải pháp**: 
+- **Commands**: PredictCommand → PredictHandler (write prediction log + publish events)
+- **Queries**: GetModelQuery → GetModelQueryHandler (read from DB)
 
-| Model | Framework | Task | Features |
-|-------|-----------|------|----------|
-| Credit Risk | scikit-learn (GBClassifier) | Binary classification | 30 tabular |
-| House Price | scikit-learn (Ridge) | Regression | 8 tabular |
-| Fraud Detection | XGBoost | Imbalanced classification | 12 tabular |
-| Image Classification | sklearn MLP (256→128) | Multi-class (10 classes) | 784 (28×28) |
+**Benefit**: Commands có thể scale independently, queries có thể cache.
 
-Adding a new model requires only:
-1. A training script in `examples/<name>/train.py`
-2. A YAML config in `model_configs/<name>.yaml`
-3. Run training → ONNX model is exported automatically
+### 3. Event-Driven Architecture — Kafka + EventBus
 
-## SOLID Principles in Practice
+**Vấn đề**: Prediction logging, metrics publishing, drift detection KHÔNG nên block inference path.
 
-### Single Responsibility
-Each service has one job: `InferenceService` orchestrates predictions, `DriftCalculator` computes statistical tests, `BatchManager` handles request batching. None of them know about HTTP or gRPC.
+**Giải pháp**: 2-layer event system:
+- **DomainEventBus** (in-process): publish Prometheus metrics, update counters → zero latency overhead
+- **Kafka** (cross-process): persist events, enable replaying, scale consumers → eventual consistency OK
 
-### Open/Closed
-New routing strategies (Canary, Shadow, A/B) implement the `RoutingStrategy` interface without modifying `InferenceService`. New inference engines (ONNX, TensorRT, Triton) implement `InferenceEngine`. The system gains new behavior by *adding* code, not changing it.
+```
+PredictHandler
+    ├─ EventBus.publish(PredictionCompleted) → Prometheus metrics (sync)
+    └─ KafkaProducer.publish(event) → prediction logging (async)
+```
 
-### Dependency Inversion
-Domain services depend on abstract interfaces (`ModelRepository`, `FeatureStore`, `ArtifactStorage`, `InferenceEngine`). Infrastructure adapters (`PostgresModelRegistry`, `RedisFeatureStore`, `S3ArtifactStorage`, `ONNXInferenceEngine`) are injected at startup via the `Container`.
+### 4. Strategy Pattern — Traffic Routing
 
+**Vấn đề**: Cần A/B test champion vs challenger models an toàn.
+
+**Giải pháp**: RoutingStrategy abstraction với 4 implementations:
+
+| Strategy | Use case | Risk |
+|----------|----------|------|
+| SingleModel | Production stable | None |
+| ABTest | Compare 2 models | Medium (50/50 split) |
+| Canary | Gradual rollout (5%) | Low |
+| Shadow | Mirror traffic, compare offline | None (champion always returned) |
+
+### 5. Circuit Breaker — Fault Tolerance
+
+**Vấn đề**: Model engine crash → cascading failures.
+
+**Giải pháp**: 3-state Circuit Breaker:
+- **CLOSED** (normal): track failures, open if error rate > threshold
+- **OPEN** (blocked): reject all requests, wait timeout
+- **HALF_OPEN** (testing): allow limited requests, close if successful
+
+### 6. Plugin Architecture — Model-Agnostic
+
+**Vấn đề**: Mỗi model type cần pre/post processing khác nhau (classification labels, regression scaling, image normalization).
+
+**Giải pháp**: PluginRegistry — register per-model processors:
 ```python
-# Domain defines the contract
-class InferenceEngine(ABC):
-    @abstractmethod
-    def predict(self, model_id: str, version: str, features: list[float]) -> dict: ...
-
-# Infrastructure provides implementations
-class ONNXInferenceEngine(InferenceEngine):
-    def predict(self, model_id, version, features):
-        session = self._sessions[f"{model_id}:{version}"]
-        return session.run(None, {"input": np.array([features], dtype=np.float32)})
+plugin_registry.register_model(
+    model_id="credit-risk",
+    preprocessor=PassthroughPreprocessor(),
+    postprocessor=ClassificationPostprocessor(labels=["low", "high"]),
+    data_loader=TabularDataLoader(),
+)
 ```
 
-## Dual Transport: FastAPI + gRPC
+**Benefit**: Thêm model mới = thêm 1 YAML config + 1 training script. Zero code changes to core.
 
-The platform exposes both REST (FastAPI) and gRPC interfaces:
+## Performance Architecture
 
-- **FastAPI** for human-facing APIs (dashboards, monitoring endpoints, batch predictions)
-- **gRPC** for high-throughput, low-latency service-to-service inference calls
+### Latency Optimization
 
-Both transports share the same `PredictHandler` → `InferenceService` pipeline, ensuring consistent behavior regardless of protocol.
+| Technique | Implementation | Impact |
+|-----------|---------------|--------|
+| ONNX Runtime | `onnx_engine.py` | 2-5x faster than sklearn predict |
+| Model caching | LRU cache in engine | Load once, predict many |
+| Async I/O | `asyncio.to_thread()` for CPU inference | Non-blocking API |
+| Connection pooling | SQLAlchemy async pool | Reduce DB connection overhead |
 
-## Key Infrastructure Patterns
+### Throughput Optimization
 
-| Pattern | Purpose |
-|---------|---------|
-| **Circuit Breaker** | Prevents cascading failures during model load errors |
-| **Dynamic Batching** | Groups concurrent requests for GPU-efficient batch inference |
-| **Feature Store** | Online (Redis) for real-time, offline (Parquet) for batch |
-| **Event Sourcing** | Kafka-based event log for audit trail and async processing |
-| **Request Pipeline** | Chain of Responsibility for composable request processing |
-| **Plugin Registry** | Model-agnostic plugin resolution for trainers and data loaders |
+| Technique | Implementation | Impact |
+|-----------|---------------|--------|
+| Dynamic batching | `BatchManager` | Collect N requests → 1 batch call |
+| Kafka async publishing | Background task | Don't wait for publish ACK |
+| gRPC | Binary protocol | 3-5x better than REST for high RPS |
 
-## Deployment: Docker Compose + Kubernetes
+## Tradeoffs
 
-### Docker Compose (14+ services)
-Production-ready stack with all infrastructure:
-- **Core**: API, Frontend, PostgreSQL, Redis, Kafka (KRaft)
-- **MLOps**: MLflow, Airflow (webserver + scheduler)
-- **Observability**: Prometheus, Grafana, Jaeger
-- **Storage**: MinIO (S3-compatible)
-
-### Kubernetes (Helm)
-The Helm chart includes:
-- **ConfigMap/Secret** separation for config vs. credentials
-- **StartupProbe** for slow-loading ONNX models
-- **PodDisruptionBudget** ensuring availability during rolling updates
-- **HPA** for auto-scaling based on CPU/memory metrics
-- **Separate gRPC Service** for protocol-specific load balancing
-
-## Lessons Learned
-
-1. **DDD pays off at scale** — the upfront modeling cost prevents "spaghetti ML" where inference, monitoring, and training logic interleave.
-2. **Async-first is essential** — `asyncio` throughout the stack prevents blocking during I/O-heavy operations (model loading, feature retrieval).
-3. **Model-agnostic from day one** — designing the platform around interfaces rather than specific models means adding new ML use cases takes minutes, not days.
-4. **Test the domain, mock the infrastructure** — pure domain logic can be tested without databases, message queues, or ML frameworks.
+| Decision | Benefit | Cost |
+|----------|---------|------|
+| DDD layers | Clean, testable, swappable | More files, learning curve |
+| ONNX standardization | Single runtime, cross-platform | Conversion step required |
+| Kafka | Async, durable, scalable | Extra container, eventual consistency |
+| PostgreSQL | ACID, complex queries | Slower than NoSQL for simple KV |
+| Redis feature store | Sub-ms feature retrieval | Memory cost, data consistency |
 
 ---
-
-*Phoenix ML Platform — built for reliability, designed for evolution.*
+*Published: March 2026 · Author: Võ Thành Nguyễn*

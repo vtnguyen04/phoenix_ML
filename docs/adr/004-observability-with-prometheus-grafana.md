@@ -1,37 +1,85 @@
 # ADR 004: Unified Observability with Prometheus and Grafana
 
 ## Status
-Accepted
+✅ **Accepted** — March 2026
 
 ## Context
-A critical challenge in MLOps is the detection of **"Silent Failures"**. Unlike traditional software where failures are binary (up/down), ML models can silently degrade in quality (Data Drift) while still returning successful HTTP 200 responses. We need a unified system to monitor:
-1.  **System Health**: Latency, CPU/Memory usage, and Throughput.
-2.  **Model Health**: Confidence distributions and Prediction outcomes.
-3.  **Statistical Health**: Feature distribution shifts over time.
+
+ML inference system cần monitoring toàn diện: prediction latency, throughput, model accuracy, data drift, error rates. Cần alert khi metrics vượt ngưỡng.
+
+### Vấn đề
+- Không có visibility vào model performance in production
+- Không biết khi nào data drift xảy ra
+- Không detect được latency spikes hay error rate increases
+- Manual monitoring = human bottleneck
 
 ## Decision
-We have implemented a comprehensive observability stack based on **Prometheus** (Metrics Aggregator) and **Grafana** (Visualization). 
 
-### Key Design Elements:
-*   **Instrumentation**: Custom metrics are exported via the `/metrics` endpoint using the Prometheus ASGI middleware.
-*   **Metric Types**:
-    *   `prediction_count_total` (Counter): Track throughput across different model versions (v1 vs v2).
-    *   `inference_latency_seconds` (Histogram): Track p50, p95, and p99 latencies to ensure SLA compliance.
-    *   `feature_drift_score` (Gauge): Real-time output from the `MonitoringService` statistical tests.
-*   **Dashboard-as-Code**: Grafana is configured using **Provisioning files**. All dashboards and data sources are stored in Git (`grafana/provisioning/`), ensuring the monitoring environment is reproducible and version-controlled.
+Sử dụng **Prometheus** (metrics collection) + **Grafana** (visualization) + **Jaeger** (distributed tracing).
+
+### Observability Stack
+
+```mermaid
+graph LR
+    API["Phoenix API"] -->|"/metrics"| PROM["Prometheus<br/>Scrape every 15s"]
+    API -->|"OTLP export"| JAEG["Jaeger<br/>Distributed Tracing"]
+    PROM -->|"PromQL queries"| GRAF["Grafana<br/>Dashboards + Alerts"]
+```
+
+### Metrics Published
+
+| Metric | Type | Labels | Mục đích |
+|--------|------|--------|----------|
+| `phoenix_prediction_count` | Counter | `model_id`, `version` | Total predictions |
+| `phoenix_inference_latency_ms` | Histogram | `model_id` | Latency distribution (p50/p95/p99) |
+| `phoenix_model_confidence` | Histogram | `model_id` | Confidence score distribution |
+| `phoenix_drift_score` | Gauge | `model_id` | Current drift score |
+| `phoenix_drift_detected_total` | Counter | `model_id` | Drift detection count |
+| `phoenix_model_accuracy` | Gauge | `model_id` | Model accuracy |
+| `phoenix_model_f1_score` | Gauge | `model_id` | Model F1 score |
+| `phoenix_model_rmse` | Gauge | `model_id` | Regression RMSE |
+| `phoenix_model_mae` | Gauge | `model_id` | Regression MAE |
+| `phoenix_model_r2` | Gauge | `model_id` | Regression R² |
+| `phoenix_model_primary_metric` | Gauge | `model_id`, `task_type` | Primary metric per model |
+
+### Implementation
+
+**PrometheusMetricsPublisher** (`prometheus_metrics_publisher.py`):
+- Implement domain `MetricsPublisher` ABC
+- Subscribe to `DomainEventBus` events:
+  - `PredictionCompleted` → increment counter, record latency
+  - `DriftScorePublished` → set drift gauge
+  - `ModelRetrained` → update accuracy/f1 gauges
+
+**OpenTelemetry Tracing** (`tracing.py`):
+- `TracerProvider` with OTLP exporter → Jaeger collector
+- Traces: request → handler → engine → response with span attributes
+
+**AlertNotifier** (`alert_notifier.py`):
+- Webhook-based: POST JSON payload to Slack/Discord/custom URL
+- Slack-compatible blocks format
+
+### Grafana Auto-provisioning
+
+```
+grafana/
+├── provisioning/
+│   ├── datasources/datasource.yml    # Prometheus URL
+│   └── dashboards/provider.yml       # Dashboard file location
+└── dashboards/
+    └── phoenix-ml.json               # Pre-built dashboard panels
+```
 
 ## Consequences
 
 ### Positive
-*   **Sub-second Visibility**: Real-time insight into the behavior of models under production load.
-*   **A/B Test Monitoring**: Instant visual comparison between Champion and Challenger models.
-*   **Proactive Alerting**: Enables the creation of alerts based on statistical drift thresholds before users notice accuracy drops.
-*   **Portability**: The entire stack can be moved from Docker Compose to Kubernetes (Prometheus Operator) with minimal configuration changes.
+- ✅ Real-time visibility: latency, throughput, drift
+- ✅ Auto-provisioned dashboards (zero manual config)
+- ✅ PromQL alerts: Grafana can alert on any metric condition
+- ✅ Distributed tracing: debug slow requests end-to-end
+- ✅ Industry standard: Prometheus + Grafana widely adopted
 
 ### Negative
-*   **Instrumentation Burden**: Developers must manually add metrics logic to new service handlers.
-*   **Storage Management**: High-cardinality metrics (e.g., tracking metrics per unique `entity_id`) can bloat Prometheus storage. We mitigate this by only tracking aggregate-level metrics.
-
-## Alternatives Considered
-*   **ELK Stack (Elasticsearch, Logstash, Kibana)**: Rejected as the primary monitoring tool because log-based monitoring is more expensive and slower than metric-based monitoring for real-time latency/throughput tracking.
-*   **CloudWatch**: Rejected to avoid cloud vendor lock-in and to maintain a local-first development experience.
+- ❌ 3 additional containers (Prometheus, Grafana, Jaeger)
+- ❌ Storage: Prometheus TSDB grows with retention period
+- ❌ Learning curve: PromQL query language
