@@ -15,8 +15,12 @@ from src.domain.inference.value_objects.feature_vector import FeatureVector
 
 class TensorRTExecutor(InferenceEngine):
     """
-    Inference Engine using TensorRT for high-performance GPU inference.
-    Simulates environment by using ONNX Runtime with TensorrtExecutionProvider.
+    Inference Engine adapter for TensorRT acceleration.
+
+    Uses ONNX Runtime with TensorrtExecutionProvider when available
+    (NVIDIA GPU + TensorRT installed). Falls back to CPUExecutionProvider
+    automatically on machines without TensorRT — allowing the same code
+    to run in both GPU-accelerated production and CPU-only development.
     """
 
     def __init__(self, cache_dir: Path | None = None) -> None:

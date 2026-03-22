@@ -9,8 +9,8 @@ Example YAML (model_configs/credit-risk.yaml):
     version: v1
     framework: onnx
     task_type: classification
-    model_path: models/credit_risk/v1/model.onnx
-    train_script: examples/credit_risk/train.py
+    model_path: models/my_model/v1/model.onnx
+    train_script: examples/my_model/train.py
     dataset_name: german-credit-openml
     feature_names:
       - duration

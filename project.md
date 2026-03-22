@@ -976,9 +976,9 @@ class DriftDetector:
 │                  │                                                               │
 ├──────────────────┼──────────────────────────────────────────────────────────────┤
 │                  │                                                               │
-│  INFRASTRUCTURE  │  • Kubernetes (container orchestration)                       │
+│  INFRASTRUCTURE  │  • Docker Compose (container orchestration)                   │
 │                  │  • Docker (containerization)                                  │
-│                  │  • Terraform (IaC)                                            │
+│                  │  • GitHub Actions (CI/CD)                                     │
 │                  │  • GitHub Actions (CI/CD)                                     │
 │                  │                                                               │
 └──────────────────┴──────────────────────────────────────────────────────────────┘
@@ -1038,7 +1038,7 @@ class DriftDetector:
 │  MONTH 4: PRODUCTION-READY & DOCUMENTATION                                      │
 │  ═════════════════════════════════════════                                      │
 │  Week 13-14: ┌───────────────────────────────────────────────────────────────┐  │
-│              │ • Kubernetes deployment (Helm charts)                         │  │
+│              │ • Docker Compose deployment + Helm chart (reference)          │  │
 │              │ • CI/CD pipeline with GitHub Actions                          │  │
 │              │ • Load testing and optimization                               │  │
 │              └───────────────────────────────────────────────────────────────┘  │
@@ -1089,7 +1089,7 @@ class DriftDetector:
 │  ├── Full observability (metrics, traces, logs)                                  │
 │  ├── A/B testing and canary deployments                                          │
 │  ├── Auto-healing with drift detection                                           │
-│  └── Kubernetes-native deployment                                                │
+│  └── Docker Compose + Helm chart deployment                                     │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -1121,9 +1121,9 @@ phoenix-ml-platform/
 │   ├── latency_benchmark.py
 │   └── throughput_benchmark.py
 ├── deployment/
-│   ├── kubernetes/
+│   ├── helm/
 │   ├── docker/
-│   └── terraform/
+│   └── nginx/
 ├── notebooks/                   # Demo notebooks
 ├── .github/
 │   └── workflows/               # CI/CD

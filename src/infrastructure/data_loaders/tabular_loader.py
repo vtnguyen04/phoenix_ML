@@ -12,7 +12,7 @@ Expected data format:
 
 Usage:
     loader = TabularDataLoader()
-    data, info = await loader.load("data/credit_risk/dataset.csv")
+    data, info = await loader.load("data/my_model/dataset.csv")
     train, test = await loader.split(data, test_size=0.2)
 """
 

@@ -63,11 +63,14 @@ nav:
   - Deployment:
     - Docker Stack: deployment/docker-stack.md
   - Guides:
+    - Getting Started: guides/getting-started.md
     - Library API: guides/library-api.md
     - Customization: guides/customization.md
     - Monitoring & Alerting: guides/monitoring.md
     - Troubleshooting: guides/troubleshooting.md
     - Contributing: ../CONTRIBUTING.md
+  - Tutorials:
+    - Sentiment Analysis: tutorials/sentiment-analysis.md
   - Blog:
     - System Design Overview: blog/system-design-overview.md
     - Self-Healing ML: blog/self-healing-ml.md
