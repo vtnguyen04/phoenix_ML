@@ -63,6 +63,7 @@ nav:
   - Deployment:
     - Docker Stack: deployment/docker-stack.md
   - Guides:
+    - Getting Started: guides/getting-started.md
     - Library API: guides/library-api.md
     - Customization: guides/customization.md
     - Monitoring & Alerting: guides/monitoring.md
