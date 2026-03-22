@@ -2,7 +2,6 @@
 
 
 from src.application.commands.predict_command import PredictCommand
-
 from src.infrastructure.http.middleware.input_validator import (
     validate_prediction_input,
 )

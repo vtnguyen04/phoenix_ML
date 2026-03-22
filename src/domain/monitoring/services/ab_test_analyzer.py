@@ -15,9 +15,13 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Effect size thresholds (Cohen's d/h)
-_NEGLIGIBLE_EFFECT = 0.2
-_LARGE_EFFECT = 0.8
+
+def _get_thresholds() -> tuple[float, float]:
+    """Load thresholds from config."""
+    from src.config import get_settings  # noqa: PLC0415
+
+    s = get_settings()
+    return s.AB_TEST_NEGLIGIBLE_EFFECT, s.AB_TEST_LARGE_EFFECT
 
 
 @dataclass
@@ -70,9 +74,16 @@ class ABTestAnalyzer:
     - compare_proportions: compare success rates (accuracy)
     """
 
-    def __init__(self, confidence_level: float = 0.95) -> None:
-        self.confidence_level = confidence_level
-        self._alpha = 1.0 - confidence_level
+    def __init__(self, confidence_level: float | None = None) -> None:
+        from src.config import get_settings  # noqa: PLC0415
+
+        s = get_settings()
+        self.confidence_level = (
+            confidence_level
+            if confidence_level is not None
+            else s.AB_TEST_CONFIDENCE_LEVEL
+        )
+        self._alpha = 1.0 - self.confidence_level
 
     def compare_means(
         self,
@@ -221,14 +232,15 @@ class ABTestAnalyzer:
     def _recommend(
         is_significant: bool, variant_better: bool, effect_size: float
     ) -> str:
+        negligible, large = _get_thresholds()
         if not is_significant:
             return "No significant difference. Continue testing or keep control."
-        if effect_size < _NEGLIGIBLE_EFFECT:
+        if effect_size < negligible:
             return "Statistically significant but negligible effect. Keep control."
         if variant_better:
-            if effect_size > _LARGE_EFFECT:
+            if effect_size > large:
                 return "Strong evidence: promote variant to production."
             return "Moderate evidence: consider promoting variant."
-        if effect_size > _LARGE_EFFECT:
+        if effect_size > large:
             return "Strong evidence: variant is worse. Keep control."
         return "Moderate evidence: variant may be worse. Keep control."

@@ -71,8 +71,12 @@ class AuditLogger:
 
     def __init__(
         self,
-        audit_file: str = "logs/audit.jsonl",
+        audit_file: str | None = None,
     ) -> None:
+        if audit_file is None:
+            from src.config import get_settings  # noqa: PLC0415
+
+            audit_file = get_settings().AUDIT_LOG_FILE
         self._audit_file = Path(audit_file)
         self._audit_logger = logging.getLogger("phoenix.audit")
 
@@ -146,5 +150,5 @@ class AuditLogger:
         return results[-limit:]
 
 
-# Global singleton
+# Global singleton (lazy — reads config on first use)
 audit_logger = AuditLogger()

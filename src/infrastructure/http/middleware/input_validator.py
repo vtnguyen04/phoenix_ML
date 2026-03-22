@@ -16,9 +16,11 @@ from src.application.commands.predict_command import PredictCommand
 
 logger = logging.getLogger(__name__)
 
-# Default max features (safety limit)
-_MAX_FEATURES = 10_000
-_MAX_BODY_SIZE_MB = 10
+
+def _max_features() -> int:
+    from src.config import get_settings  # noqa: PLC0415
+
+    return get_settings().INPUT_MAX_FEATURES
 
 
 class InputValidationError(Exception):
@@ -44,10 +46,11 @@ def validate_prediction_input(
         errors.append("Features list cannot be empty")
         return errors
 
-    if len(command.features) > _MAX_FEATURES:
+    max_f = _max_features()
+    if len(command.features) > max_f:
         errors.append(
             f"Too many features: {len(command.features)} "
-            f"(max: {_MAX_FEATURES})"
+            f"(max: {max_f})"
         )
 
     # 2. Model config validation
