@@ -6,13 +6,22 @@ from prometheus_client import make_asgi_app
 
 from src.config import get_settings
 from src.infrastructure.bootstrap.lifespan import lifespan
+from src.infrastructure.http.auth_routes import auth_router
+from src.infrastructure.http.explain_routes import explain_router
 from src.infrastructure.http.feature_routes import feature_router
+from src.infrastructure.http.middleware.correlation_middleware import CorrelationMiddleware
+from src.infrastructure.http.middleware.rate_limit_middleware import RateLimitMiddleware
 from src.infrastructure.http.routes import router
+from src.infrastructure.logging.logging_config import configure_logging
 from src.infrastructure.monitoring.tracing import init_tracing
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+# ── Structured logging ────────────────────────────────────────────
+configure_logging(level="DEBUG" if settings.DEBUG else "INFO", json_format=not settings.DEBUG)
+
+# ── Tracing ───────────────────────────────────────────────────────
 init_tracing(service_name=settings.APP_NAME, otlp_endpoint=settings.JAEGER_ENDPOINT)
 
 try:
@@ -28,6 +37,8 @@ app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=li
 if _instrument_fastapi:
     FastAPIInstrumentor.instrument_app(app)
 
+# ── Middleware Stack (order matters: first added = outermost) ─────
+# 1. CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,8 +47,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 2. Correlation ID (adds X-Correlation-ID to every request/response)
+app.add_middleware(CorrelationMiddleware)
+
+# 3. Rate Limiting (blocks excessive requests)
+app.add_middleware(RateLimitMiddleware)
+
+# ── Metrics ───────────────────────────────────────────────────────
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
+
+# ── Routes (API v1) ──────────────────────────────────────────────
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(router, prefix="/api/v1")
+app.include_router(feature_router, prefix="/api/v1")
+app.include_router(explain_router, prefix="/api/v1")
+
+# ── Backward-compatible routes (no prefix) ────────────────────────
 app.include_router(router)
 app.include_router(feature_router)
 
