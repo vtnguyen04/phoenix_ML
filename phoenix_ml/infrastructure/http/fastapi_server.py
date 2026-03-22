@@ -121,7 +121,7 @@ def run() -> None:
     import uvicorn  # noqa: PLC0415
 
     uvicorn.run(
-        "src.infrastructure.http.fastapi_server:app",
+        "phoenix_ml.infrastructure.http.fastapi_server:app",
         host=getattr(settings, "HOST", "0.0.0.0"),
         port=getattr(settings, "PORT", 8000),
         reload=settings.DEBUG,

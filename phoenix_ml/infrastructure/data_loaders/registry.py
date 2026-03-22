@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
 # ─── Task-type → Loader mapping (OCP: extend by adding entries) ──
 
 _TASK_TYPE_LOADERS: dict[str, str] = {
-    "classification": "src.infrastructure.data_loaders.tabular_loader.TabularDataLoader",
-    "regression": "src.infrastructure.data_loaders.tabular_loader.TabularDataLoader",
-    "image_classification": "src.infrastructure.data_loaders.image_loader.ImageDataLoader",
+    "classification": "phoenix_ml.infrastructure.data_loaders.tabular_loader.TabularDataLoader",
+    "regression": "phoenix_ml.infrastructure.data_loaders.tabular_loader.TabularDataLoader",
+    "image_classification": "phoenix_ml.infrastructure.data_loaders.image_loader.ImageDataLoader",
 }
 
 

@@ -15,7 +15,7 @@ async def test_start_sets_running() -> None:
         pass
 
     # Patch AIOKafkaConsumer so it doesn't actually connect
-    with patch("src.infrastructure.messaging.kafka_consumer.AIOKafkaConsumer") as MockConsumer:
+    with patch("phoenix_ml.infrastructure.messaging.kafka_consumer.AIOKafkaConsumer") as MockConsumer:
         mock_instance = AsyncMock()
         # Make the consumer iterable but stop immediately
         mock_instance.__aiter__ = AsyncMock(return_value=AsyncMock())
@@ -70,7 +70,7 @@ async def test_noop_fallback_on_connection_failure() -> None:
     async def dummy_handler(msg: dict[str, Any]) -> None:
         pass
 
-    with patch("src.infrastructure.messaging.kafka_consumer.AIOKafkaConsumer") as MockConsumer:
+    with patch("phoenix_ml.infrastructure.messaging.kafka_consumer.AIOKafkaConsumer") as MockConsumer:
         mock_instance = AsyncMock()
         mock_instance.start.side_effect = Exception("Connection refused")
         MockConsumer.return_value = mock_instance

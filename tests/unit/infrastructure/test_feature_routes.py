@@ -28,7 +28,7 @@ async def test_get_features_requires_keys() -> None:
 
 
 async def test_get_features_not_found() -> None:
-    with patch("src.infrastructure.http.feature_routes.feature_store") as mock_store:
+    with patch("phoenix_ml.infrastructure.http.feature_routes.feature_store") as mock_store:
         mock_store.get_online_features = AsyncMock(return_value=None)
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get("/features/entity1?keys=f1,f2")
@@ -36,7 +36,7 @@ async def test_get_features_not_found() -> None:
 
 
 async def test_get_features_success() -> None:
-    with patch("src.infrastructure.http.feature_routes.feature_store") as mock_store:
+    with patch("phoenix_ml.infrastructure.http.feature_routes.feature_store") as mock_store:
         mock_store.get_online_features = AsyncMock(return_value=[1.0, 2.0])
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get("/features/entity1?keys=f1,f2")
@@ -47,7 +47,7 @@ async def test_get_features_success() -> None:
 
 
 async def test_ingest_features() -> None:
-    with patch("src.infrastructure.http.feature_routes.feature_store") as mock_store:
+    with patch("phoenix_ml.infrastructure.http.feature_routes.feature_store") as mock_store:
         mock_store.add_features = AsyncMock()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.post(

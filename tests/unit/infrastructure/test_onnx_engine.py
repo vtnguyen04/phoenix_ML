@@ -40,7 +40,7 @@ async def test_load_creates_session(
     model_dir.mkdir(parents=True)
     (model_dir / "model.onnx").write_bytes(b"fake-onnx")
 
-    with patch("src.infrastructure.ml_engines.onnx_engine.ort") as mock_ort:
+    with patch("phoenix_ml.infrastructure.ml_engines.onnx_engine.ort") as mock_ort:
         mock_session = MagicMock()
         mock_ort.InferenceSession.return_value = mock_session
 

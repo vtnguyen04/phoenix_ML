@@ -30,7 +30,7 @@ class TestCreditDataCollector:
         mock_data.frame = mock_df
 
         with patch(
-            "src.shared.ingestion.data_collector.fetch_openml",
+            "phoenix_ml.shared.ingestion.data_collector.fetch_openml",
             return_value=mock_data,
         ):
             collector = CreditDataCollector()

@@ -12,7 +12,7 @@ from phoenix_ml.infrastructure.artifact_storage.s3_artifact_storage import S3Art
 
 @pytest.fixture
 def mock_boto3_client() -> Generator[MagicMock, None, None]:
-    with patch("src.infrastructure.artifact_storage.s3_artifact_storage.boto3") as mock:
+    with patch("phoenix_ml.infrastructure.artifact_storage.s3_artifact_storage.boto3") as mock:
         client = MagicMock()
         mock.client.return_value = client
         yield client

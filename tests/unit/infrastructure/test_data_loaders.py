@@ -227,7 +227,7 @@ class TestResolveDataLoader:
     def test_resolve_fallback_tabular(self) -> None:
         """Should fall back to TabularDataLoader for unknown models."""
         with patch(
-            "src.infrastructure.data_loaders.registry._load_config_fields",
+            "phoenix_ml.infrastructure.data_loaders.registry._load_config_fields",
             return_value=("classification", ""),
         ):
             loader = resolve_data_loader("unknown-model")
@@ -236,7 +236,7 @@ class TestResolveDataLoader:
     def test_resolve_by_task_type_regression(self) -> None:
         """Should resolve TabularDataLoader for regression tasks."""
         with patch(
-            "src.infrastructure.data_loaders.registry._load_config_fields",
+            "phoenix_ml.infrastructure.data_loaders.registry._load_config_fields",
             return_value=("regression", ""),
         ):
             loader = resolve_data_loader("any-regression")
@@ -245,7 +245,7 @@ class TestResolveDataLoader:
     def test_resolve_by_task_type_image(self) -> None:
         """Should resolve ImageDataLoader for image_classification tasks."""
         with patch(
-            "src.infrastructure.data_loaders.registry._load_config_fields",
+            "phoenix_ml.infrastructure.data_loaders.registry._load_config_fields",
             return_value=("image_classification", ""),
         ):
             loader = resolve_data_loader("any-image")

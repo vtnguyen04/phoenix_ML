@@ -13,7 +13,7 @@ def producer() -> KafkaProducer:
 
 
 async def test_start_creates_producer(producer: KafkaProducer) -> None:
-    with patch("src.infrastructure.messaging.kafka_producer.AIOKafkaProducer") as mock_cls:
+    with patch("phoenix_ml.infrastructure.messaging.kafka_producer.AIOKafkaProducer") as mock_cls:
         mock_instance = MagicMock()
         mock_instance.start = AsyncMock()
         mock_cls.return_value = mock_instance
@@ -24,7 +24,7 @@ async def test_start_creates_producer(producer: KafkaProducer) -> None:
 
 
 async def test_start_falls_back_to_noop_on_error(producer: KafkaProducer) -> None:
-    with patch("src.infrastructure.messaging.kafka_producer.AIOKafkaProducer") as mock_cls:
+    with patch("phoenix_ml.infrastructure.messaging.kafka_producer.AIOKafkaProducer") as mock_cls:
         mock_instance = MagicMock()
         mock_instance.start = AsyncMock(side_effect=ConnectionError("refused"))
         mock_cls.return_value = mock_instance

@@ -10,7 +10,7 @@ from phoenix_ml.infrastructure.bootstrap.container import (
     find_project_root,
 )
 
-_MOD = "src.infrastructure.bootstrap.container"
+_MOD = "phoenix_ml.infrastructure.bootstrap.container"
 
 
 class TestFindProjectRoot:

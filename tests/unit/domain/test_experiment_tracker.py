@@ -15,14 +15,14 @@ from phoenix_ml.domain.training.services.experiment_tracker import ExperimentTra
 @pytest.fixture
 def tracker() -> ExperimentTracker:
     # Patch _HAS_MLFLOW to False to avoid real MLflow calls
-    with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+    with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
         t = ExperimentTracker(tracking_uri="http://nonexistent:5000")
         yield t  # type: ignore[misc]
 
 
 class TestExperimentTracker:
     def test_start_and_end_run(self, tracker: ExperimentTracker) -> None:
-        with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+        with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
             run = tracker.start_run(
                 run_name="test-run",
                 model_type="xgboost",
@@ -41,7 +41,7 @@ class TestExperimentTracker:
             assert result.duration_seconds >= 0
 
     def test_compare_runs(self, tracker: ExperimentTracker) -> None:
-        with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+        with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
             run1 = tracker.start_run("r1", "xgb", {"lr": 0.1})
             tracker.log_metrics(run1, {"accuracy": 0.9})
             tracker.end_run(run1)
@@ -55,7 +55,7 @@ class TestExperimentTracker:
             assert comparison[0]["metric"] == 0.95  # Best first
 
     def test_get_best_run(self, tracker: ExperimentTracker) -> None:
-        with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+        with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
             run1 = tracker.start_run("r1", "xgb", {"lr": 0.1})
             tracker.log_metrics(run1, {"accuracy": 0.85})
             tracker.end_run(run1)
@@ -70,21 +70,21 @@ class TestExperimentTracker:
             assert best.model_type == "rf"
 
     def test_system_info_captured(self, tracker: ExperimentTracker) -> None:
-        with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+        with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
             run = tracker.start_run("sys-test", "test", {})
             assert "python_version" in run.system_info
             assert "os" in run.system_info
             tracker.end_run(run)
 
     def test_data_lineage(self, tracker: ExperimentTracker) -> None:
-        with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+        with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
             lineage = {"source": "credit_risk.csv", "rows": 1000, "version": "v2"}
             run = tracker.start_run("lineage-test", "xgb", {}, data_lineage=lineage)
             assert run.data_lineage["source"] == "credit_risk.csv"
             tracker.end_run(run)
 
     def test_save_local_log(self, tracker: ExperimentTracker, tmp_path: Path) -> None:
-        with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+        with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
             run = tracker.start_run("save-test", "xgb", {"a": 1})
             tracker.log_metrics(run, {"loss": 0.1})
             tracker.end_run(run)
@@ -105,5 +105,5 @@ class TestExperimentTracker:
         assert flat["b.d.e"] == "3"
 
     def test_no_runs_best_returns_none(self, tracker: ExperimentTracker) -> None:
-        with patch("src.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
+        with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
             assert tracker.get_best_run() is None
