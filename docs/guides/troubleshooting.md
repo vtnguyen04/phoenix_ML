@@ -1,254 +1,221 @@
 # Troubleshooting Guide
 
-Common issues and solutions for the Phoenix ML Platform.
+## Lỗi thường gặp
 
----
+### 1. `mlService.getModels is not a function`
 
-## Startup Issues
+**Nguyên nhân**: Frontend import sai hoặc MLService chưa được instantiate.
 
-### API container won't start
+**Fix**:
+```typescript
+// ❌ Wrong
+import mlService from './api/mlService';
+mlService.getModels();
 
-```bash
-docker compose logs api
+// ✅ Correct
+import { MLService } from './api/mlService';
+const service = new MLService();
+service.getModels();
 ```
 
-**Common causes**:
+### 2. `ModelNotFoundError: Model 'credit-risk' not found`
 
-| Error | Solution |
-|-------|----------|
-| `ModuleNotFoundError` | Rebuild: `docker compose build api` |
-| `Connection refused` to DB | Wait for Postgres: `docker compose up -d db && sleep 5` |
-| `ONNX model not found` | Train models first: `uv run python examples/credit_risk/train.py` |
-| Port 8001 in use | `lsof -i :8001` and kill the process |
+**Nguyên nhân**: Model chưa được train hoặc chưa register.
 
-### Airflow webserver not accessible
-
+**Fix**:
 ```bash
-docker compose -f docker-compose.airflow.yaml logs airflow-webserver
-```
+# Generate datasets and train models
+uv run python scripts/generate_datasets.py
+uv run dvc repro
 
-- **DB not initialized**: Run `docker compose -f docker-compose.airflow.yaml up -d airflow-init` first
-- **Default credentials**: admin/admin
-
-### Grafana shows "No data"
-
-1. Check Prometheus is running: `curl http://localhost:9091/-/healthy`
-2. Check Prometheus targets: http://localhost:9091/targets
-3. Verify API is being scraped: look for `api:8000` target
-4. Ensure API has handled some predictions first
-
----
-
-## Prediction Errors
-
-### `"Model not found"`
-
-```bash
-# Check registered models
-curl http://localhost:8001/models
-
-# If empty, train a model:
+# Hoặc train specific model
 uv run python examples/credit_risk/train.py
-docker compose restart api
 ```
 
-### `"INVALID_ARGUMENT: Got invalid dimensions for input"`
+### 3. `ConnectionRefusedError: Kafka not available`
 
-Your feature vector length doesn't match the model:
+**Nguyên nhân**: Kafka container chưa start hoặc port sai.
 
-| Model | Expected Features |
-|-------|------------------|
-| credit-risk | 30 |
-| fraud-detection | 12 |
-| house-price | 8 |
-| image-class | 784 |
+**Fix**:
+```bash
+# Check Kafka status
+docker compose ps kafka
 
-### `"Circuit breaker is open"`
+# Restart Kafka
+docker compose restart kafka
 
-The model engine hit too many errors and tripped the circuit breaker.
+# Verify
+docker compose logs kafka | tail -20
+```
+
+**Note**: Platform works **without Kafka** — producer/consumer fallback to no-op mode.
+
+### 4. `ConnectionRefusedError: Redis` hoặc `PostgreSQL`
+
+**Fix**:
+```bash
+# Check all services
+docker compose ps
+
+# Restart specific service
+docker compose restart redis
+docker compose restart postgres
+
+# Check logs
+docker compose logs redis
+docker compose logs postgres
+```
+
+### 5. `onnxruntime.InferenceSession` fails
+
+**Nguyên nhân**: model.onnx file corrupt hoặc chưa tồn tại.
+
+**Fix**:
+```bash
+# Check model exists
+ls -la models/credit_risk/v1/model.onnx
+
+# Regenerate
+uv run python examples/credit_risk/train.py
+
+# Hoặc generate mock model (CI/testing)
+uv run python -c "from src.shared.utils.model_generator import generate_simple_onnx; generate_simple_onnx('models/credit_risk/v1/model.onnx', 7)"
+```
+
+### 6. `alembic` migration errors
 
 ```bash
-# Wait 30 seconds for half-open recovery, or restart API
-docker compose restart api
+# Check current state
+uv run alembic current
+
+# Reset (drop all + recreate)
+uv run alembic downgrade base
+uv run alembic upgrade head
 ```
 
-### Prediction returns `NaN` or unexpected values
-
-- Input features may contain `NaN`, `Inf`, or out-of-range values
-- ONNX models trained on positive features may fail with negative inputs
-- Validate input data before sending
-
----
-
-## Monitoring Issues
-
-### Drift detection returns `400`
-
-```json
-{"detail": "Not enough prediction data for drift detection"}
-```
-
-**Solution**: Send more predictions first. Drift detection requires at least ~30 data points.
+### 7. Frontend build errors
 
 ```bash
-uv run python scripts/simulate_traffic.py
+# Clear cache
+cd frontend
+rm -rf node_modules dist
+npm install
+npm run dev
 ```
 
-### Self-healing pipeline not triggering
-
-1. Check Airflow DAG is unpaused:
-   ```bash
-   curl http://localhost:8080/api/v1/dags/self_healing_pipeline \
-     -u admin:admin | python3 -c "import json,sys; print(json.load(sys.stdin)['is_paused'])"
-   ```
-   If `true`, unpause in Airflow UI.
-
-2. Check `max_active_runs=1` — if a run is already in progress, new triggers are deduped.
-
-3. Check monitoring service is running: look for `Drift detected` in API logs:
-   ```bash
-   docker compose logs api | grep "Drift detected"
-   ```
-
-### Alerts not firing
-
-- Check cooldown period — alerts won't re-fire within `ALERT_COOLDOWN_SECONDS` (default: 300s)
-- Check alert rules are registered (they're set up in the monitoring service initialization)
-- Check `ALERT_WEBHOOK_URL` is set if expecting Slack notifications
-
----
-
-## Infrastructure Issues
-
-### PostgreSQL connection errors
+### 8. `ruff check` hoặc `mypy` errors
 
 ```bash
-# Check if Postgres is running
-docker exec phoenix-postgres pg_isready
-
-# Check connection
-docker exec phoenix-postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT 1"
-
-# Reset database (⚠️ destroys data)
-docker compose down -v
-docker compose up -d
-```
-
-### Redis connection errors
-
-```bash
-# Check if Redis is running
-docker exec phoenix-redis redis-cli PING   # Should return PONG
-
-# Check key count
-docker exec phoenix-redis redis-cli DBSIZE
-
-# Feature store empty?
-uv run python scripts/seed_features.py
-```
-
-### Kafka consumer lag
-
-```bash
-# Check Kafka broker status
-docker exec phoenix-kafka kafka-broker-api-versions.sh --bootstrap-server localhost:9092
-```
-
-### MinIO / DVC issues
-
-```bash
-# Check MinIO console
-open http://localhost:9001   # Login: minioadmin/minioadmin
-
-# Check DVC remote
-uv run dvc remote list
-uv run dvc push
-```
-
----
-
-## Frontend Issues
-
-### Dashboard shows blank or errors
-
-1. Check API is healthy: `curl http://localhost:8001/health`
-2. Check Vite proxy target matches API port
-3. Check browser console for CORS or network errors
-4. Restart frontend: `cd frontend && npm run dev`
-
-### Model selector shows duplicates
-
-This was fixed — model selector now shows only champion (unique) models. If you see duplicates:
-
-```bash
-cd frontend && npm run build  # Rebuild
-```
-
-### Grafana embed not loading in dashboard
-
-Check Grafana environment variables in `compose.yaml`:
-
-```yaml
-GF_SECURITY_ALLOW_EMBEDDING: "true"
-GF_AUTH_ANONYMOUS_ENABLED: "true"
-GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
-```
-
----
-
-## Development Issues
-
-### Ruff/Mypy/Pytest failures
-
-```bash
-# Run all quality gates
-uv run ruff check src/ tests/ scripts/ dags/    # Lint
-uv run mypy src/ --ignore-missing-imports        # Type check
-uv run pytest tests/ -q                          # Tests
-
-# Auto-fix ruff issues
-uv run ruff check --fix .
+# Auto-fix ruff
+uv run ruff check . --fix
 uv run ruff format .
+
+# Check specific file
+uv run mypy src/infrastructure/bootstrap/container.py
 ```
 
-### Import errors
-
-- Domain layer must NOT import from infrastructure
-- Always use absolute imports: `from src.domain.xxx import ...`
-- Check `__init__.py` exports
-
-### Docker build cache issues
+### 9. Docker "port already in use"
 
 ```bash
-docker compose build --no-cache api
-docker compose up -d
+# Find process on port
+lsof -i :8001  # or whatever port
+
+# Kill process
+kill -9 <PID>
+
+# Or change port in .env
+API_PORT=8002
 ```
 
+### 10. gRPC connection refused
+
+```bash
+# Verify gRPC server started
+docker compose logs phoenix-api | grep gRPC
+
+# Test with grpcurl
+grpcurl -plaintext localhost:50051 list
+```
+
+## Port Mapping Reference
+
+| Port | Service | Internal | Protocol |
+|------|---------|----------|----------|
+| **5174** | Frontend | 5173 | HTTP |
+| **8001** | API | 8000 | HTTP |
+| **50051** | gRPC | 50051 | gRPC |
+| **5433** | PostgreSQL | 5432 | TCP |
+| **6380** | Redis | 6379 | TCP |
+| **9094** | Kafka | 9092 | TCP |
+| **8082** | Kafka UI | 8080 | HTTP |
+| **5001** | MLflow | 5000 | HTTP |
+| **9091** | Prometheus | 9090 | HTTP |
+| **3001** | Grafana | 3000 | HTTP |
+| **16686** | Jaeger | 16686 | HTTP |
+| **9000** | MinIO API | 9000 | HTTP |
+| **9001** | MinIO Console | 9001 | HTTP |
+| **8080** | Airflow | 8080 | HTTP |
+
+## Debug Commands
+
+```bash
+# Check all services
+docker compose ps
+
+# View API logs (live)
+docker compose logs -f phoenix-api
+
+# Enter API container shell
+docker compose exec phoenix-api bash
+
+# Run pytest inside container
+docker compose exec phoenix-api uv run pytest tests/ -v
+
+# Check database
+docker compose exec postgres psql -U phoenix -d phoenix -c "SELECT * FROM models;"
+
+# Check Redis
+docker compose exec redis redis-cli keys "features:*"
+
+# Check Kafka topics
+docker compose exec kafka kafka-topics.sh --list --bootstrap-server localhost:9092
+
+# Check endpoint health
+curl -s http://localhost:8001/health | python -m json.tool
+
+# Test prediction
+curl -s -X POST http://localhost:8001/predict \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "credit-risk", "features": [0.5, 1.2, 0.8, 3.4, 0.1, 2.5, 1.0]}' \
+  | python -m json.tool
+```
+
+## Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `postgresql+asyncpg://phoenix:phoenix@postgres:5432/phoenix` | PostgreSQL connection |
+| `REDIS_URL` | `redis://redis:6379` | Redis connection |
+| `KAFKA_URL` | `kafka:9092` | Kafka bootstrap servers |
+| `MLFLOW_TRACKING_URI` | `http://mlflow:5000` | MLflow server |
+| `DEFAULT_MODEL_ID` | `credit-risk` | Default model to load |
+| `DEFAULT_MODEL_VERSION` | `v1` | Default model version |
+| `MODEL_CONFIG_DIR` | `model_configs` | YAML config directory |
+| `INFERENCE_ENGINE` | `onnx` | Engine: onnx, tensorrt, triton |
+| `MONITORING_INTERVAL_SECONDS` | `30` | Drift check interval |
+| `DRIFT_THRESHOLD` | `0.3` | Default drift threshold |
+| `ARTIFACT_STORAGE_DIR` | `./artifacts` | Local artifact storage path |
+| `USE_REDIS` | `true` | Use Redis for feature store |
+
+## Known Limitations
+
+| Limitation | Workaround |
+|-----------|-----------|
+| gRPC health check may timeout on cold start | Wait 5s after API start |
+| Kafka consumer rebalance on restart | Consumer group auto-rebalances |
+| MLflow concurrent writes | Use separate experiment names |
+| Large batch size may OOM | Set `BATCH_MAX_SIZE` appropriately |
+| ONNX Runtime GPU requires CUDA | Falls back to CPU automatically |
+
 ---
-
-## Port Reference
-
-| Service | Internal Port | External Port |
-|---------|--------------|---------------|
-| API (FastAPI) | 8000 | **8001** |
-| Frontend (Vite) | 5173 | **5174** |
-| PostgreSQL | 5432 | **5433** |
-| Redis | 6379 | **6380** |
-| Kafka | 9092 | **9094** |
-| Prometheus | 9090 | **9091** |
-| Grafana | 3000 | **3001** |
-| MinIO API | 9000 | **9000** |
-| MinIO Console | 9001 | **9001** |
-| Jaeger | 16686 | **16686** |
-| MLflow | 5000 | **5000** |
-| Airflow | 8080 | **8080** |
-| gRPC | 50051 | **50051** |
-
----
-
-## Getting Help
-
-1. Check API logs: `docker compose logs -f api`
-2. Check Airflow logs: `docker compose -f docker-compose.airflow.yaml logs -f`
-3. Open Swagger docs: http://localhost:8001/docs
-4. Open GitHub Issues: https://github.com/vtnguyen04/phoenix_ML/issues
+*Document Status: v4.0 — Updated March 2026*

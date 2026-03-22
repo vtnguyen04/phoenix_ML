@@ -1,400 +1,301 @@
 # Customization Guide
 
-This guide explains how to add your own models, configure the platform, and customize every aspect of Phoenix ML.
+Hướng dẫn tùy chỉnh Phoenix ML Platform: thêm model mới, custom engines, data loaders, plugins, alert notifiers.
 
----
+## Thêm Model Mới
 
-## 1. Adding a New Model
+### Bước 1: Tạo Model Config (YAML)
 
-### Step 1: Create Training Script
-
-Create a file at `examples/<problem_name>/train.py` with a `train_and_export` function:
-
-```python
-# examples/sentiment_analysis/train.py
-import json
-from pathlib import Path
-
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import SGDClassifier
-from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType
-
-
-def train_and_export(
-    output_path: str,
-    metrics_path: str = "",
-    reference_path: str = "",
-) -> None:
-    """Train model, export to ONNX, save metrics + reference data."""
-    # 1. Load data (your dataset)
-    X_train, y_train, X_test, y_test = load_my_data()
-
-    # 2. Train
-    model = SGDClassifier()
-    model.fit(X_train, y_train)
-
-    # 3. Evaluate
-    accuracy = model.score(X_test, y_test)
-
-    # 4. Export to ONNX
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    onnx_model = convert_sklearn(
-        model,
-        initial_types=[("float_input", FloatTensorType([None, X_train.shape[1]]))],
-    )
-    with open(output_path, "wb") as f:
-        f.write(onnx_model.SerializeToString())
-
-    # 5. Save metrics JSON
-    if metrics_path:
-        Path(metrics_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(metrics_path, "w") as f:
-            json.dump({
-                "accuracy": accuracy,
-                "n_features": X_train.shape[1],
-                "n_samples": len(X_train),
-                "model_type": "SGDClassifier",
-                "task_type": "classification",
-            }, f, indent=2)
-
-    # 6. Save reference features (for drift detection)
-    if reference_path:
-        Path(reference_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(reference_path, "w") as f:
-            json.dump(X_test[:100].tolist(), f)
-```
-
-**Key requirements**:
-
-- Function must be named `train_and_export` (primary) or `train`, `train_model`, `main` (fallbacks)
-- First argument: `output_path` — where to save the ONNX file
-- Optional: `metrics_path`, `reference_path` for metrics and drift baseline
-- The function is called automatically by the Airflow self-healing pipeline
-
-### Step 2: Create Model Config
-
-Create `model_configs/<model-id>.yaml`:
+Tạo file `model_configs/<model-id>.yaml`:
 
 ```yaml
 # model_configs/sentiment-analysis.yaml
 model_id: sentiment-analysis
 version: v1
-framework: onnx
-task_type: classification          # classification | regression
-model_path: models/sentiment_analysis/v1/model.onnx
-train_script: examples/sentiment_analysis/train.py
-
-# Feature names (used by frontend inference panel)
 feature_names:
   - text_length
-  - word_count
+  - avg_word_length
   - sentiment_score
-  - capital_ratio
-
-# Reference data for drift detection
-reference_path: models/sentiment_analysis/v1/reference_features.json
-
-# Dataset source (used by DVC)
-dataset_name: sentiment-reviews
-
-metadata:
-  role: champion
-  description: "Sentiment analysis on product reviews"
+  - exclamation_count
+  - question_count
+data_loader: tabular              # hoặc "image" cho image models
+train_script: examples/sentiment/train.py
+monitoring:
+  drift_test: psi                 # ks, psi, hoặc chi2
+  drift_threshold: 0.25           # Custom threshold (default: 0.3)
 ```
 
-**Fields explained**:
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `model_id` | Yes | Unique ID, used in API calls (`/predict`) |
-| `version` | Yes | Semantic version for initial deployment |
-| `framework` | Yes | Always `onnx` (models exported via ONNX) |
-| `task_type` | Yes | `classification` or `regression` (affects metrics display) |
-| `model_path` | Yes | Path to the ONNX file |
-| `train_script` | Yes | Path to training script (used by Airflow DAG) |
-| `feature_names` | No | Feature names for frontend display |
-| `reference_path` | No | Baseline data for drift detection |
-| `metadata.role` | No | `champion` (default) or `challenger` |
-
-### Step 3: Add DVC Stage (Optional)
-
-In `dvc.yaml`, add a stage for reproducible training:
-
-```yaml
-stages:
-  train_sentiment:
-    cmd: uv run python examples/sentiment_analysis/train.py
-         models/sentiment_analysis/v1/model.onnx
-         --metrics-path models/sentiment_analysis/v1/metrics.json
-         --reference-path models/sentiment_analysis/v1/reference_features.json
-    deps:
-      - examples/sentiment_analysis/train.py
-      - data/sentiment/
-    outs:
-      - models/sentiment_analysis/v1/model.onnx
-    metrics:
-      - models/sentiment_analysis/v1/metrics.json:
-          cache: false
-```
-
-### Step 4: Train and Deploy
-
-```bash
-# Train
-uv run python examples/sentiment_analysis/train.py \
-  models/sentiment_analysis/v1/model.onnx \
-  --metrics-path models/sentiment_analysis/v1/metrics.json
-
-# Restart API to auto-discover new model
-docker compose restart api
-
-# Verify
-curl http://localhost:8001/models/sentiment-analysis
-```
-
----
-
-## 2. Configuring Monitoring Thresholds
-
-Edit `src/config/monitoring.py` or set environment variables:
+### Bước 2: Tạo Training Script
 
 ```python
-# src/config/monitoring.py
-MONITORING_INTERVAL_SECONDS = 30       # How often drift checks run
-DRIFT_THRESHOLD = 0.05                 # p-value threshold for KS test
-ANOMALY_Z_SCORE_THRESHOLD = 3.0        # Z-score for confidence anomalies
-ANOMALY_LATENCY_MULTIPLIER = 3.0       # Multiplier for latency spike detection
-ANOMALY_ERROR_RATE_THRESHOLD = 0.05    # Error rate above 5% = anomaly
+# examples/sentiment/train.py
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType
+import json
+from pathlib import Path
 
-# Rollback thresholds
-ROLLBACK_ERROR_RATE_THRESHOLD = 0.10   # Archive challenger if >10% error rate
-ROLLBACK_LATENCY_THRESHOLD_MS = 500.0  # Archive if avg latency >500ms
-ROLLBACK_MIN_REQUESTS = 50             # Minimum requests before evaluating
+def train():
+    # Load data
+    df = pd.read_csv("data/sentiment/dataset.csv")
+    X = df.drop("label", axis=1).values.astype(np.float32)
+    y = df["label"].values
+    
+    # Train
+    model = GradientBoostingClassifier(n_estimators=100)
+    model.fit(X, y)
+    
+    # Convert to ONNX
+    onnx_model = convert_sklearn(
+        model,
+        initial_types=[("input", FloatTensorType([None, X.shape[1]]))],
+    )
+    
+    # Save
+    output_dir = Path("models/sentiment_analysis/v1")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    with open(output_dir / "model.onnx", "wb") as f:
+        f.write(onnx_model.SerializeToString())
+    
+    # Save metrics
+    from sklearn.metrics import accuracy_score, f1_score
+    from sklearn.model_selection import train_test_split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    model.fit(X_train, y_train)
+    preds = model.predict(X_test)
+    
+    metrics = {
+        "accuracy": float(accuracy_score(y_test, preds)),
+        "f1_score": float(f1_score(y_test, preds, average="weighted")),
+        "num_features": X.shape[1],
+        "feature_names": list(df.drop("label", axis=1).columns),
+    }
+    with open(output_dir / "metrics.json", "w") as f:
+        json.dump(metrics, f, indent=2)
 
-# Alert cooldown
-ALERT_COOLDOWN_SECONDS = 300           # Don't re-fire same alert for 5 min
+if __name__ == "__main__":
+    train()
 ```
 
-**Environment variable overrides** (in `.env` or `docker-compose.yaml`):
+### Bước 3: Add to DVC Pipeline
+
+```yaml
+# Thêm vào dvc.yaml:
+  train_sentiment:
+    cmd: uv run python examples/sentiment/train.py
+    deps:
+      - data/sentiment/dataset.csv
+      - examples/sentiment/train.py
+    outs:
+      - models/sentiment_analysis/v1/
+```
+
+### Bước 4: Train & Run
 
 ```bash
-MONITORING_INTERVAL=30
-DRIFT_THRESHOLD=0.05
-ROLLBACK_ERROR_RATE=0.10
-ROLLBACK_LATENCY_MS=500
-ALERT_COOLDOWN=300
+uv run python examples/sentiment/train.py
+# Model sẽ tự động load khi API start (lifespan.py scan model_configs/)
 ```
 
----
+## Custom Inference Engine
 
-## 3. Configuring the Frontend
+Implement `InferenceEngine` ABC:
 
-### API Target
+```python
+# src/infrastructure/ml_engines/custom_engine.py
+from src.domain.inference.services.inference_engine import InferenceEngine
+from src.domain.inference.entities.model import Model
+from src.domain.inference.entities.prediction import Prediction
+from src.domain.inference.value_objects.feature_vector import FeatureVector
+from src.domain.inference.value_objects.confidence_score import ConfidenceScore
 
-Edit `frontend/vite.config.ts` to change the backend URL:
-
-```ts
-// For local development (default)
-target: process.env.VITE_API_TARGET ?? 'http://localhost:8001'
-
-// For Docker
-target: 'http://api:8000'
+class CustomEngine(InferenceEngine):
+    async def load(self, model: Model) -> None:
+        """Load model into memory."""
+        self._model = load_custom_model(model.uri)
+    
+    async def predict(self, model: Model, features: FeatureVector) -> Prediction:
+        """Run inference."""
+        result = self._model.predict(features.values)
+        return Prediction(
+            model_id=model.id,
+            model_version=model.version,
+            result=float(result),
+            confidence=ConfidenceScore(value=0.95),
+            latency_ms=1.5,
+        )
+    
+    async def batch_predict(self, model: Model, features_list: list[FeatureVector]) -> list[Prediction]:
+        """Batch inference."""
+        return [await self.predict(model, f) for f in features_list]
+    
+    async def optimize(self, model: Model) -> None:
+        """Optimize model (optional)."""
+        pass
 ```
 
-### Adding Dashboard Panels
+Đăng ký trong `container.py`:
 
-All dashboard components are in `frontend/src/components/dashboard/`. To add a new panel:
-
-```tsx
-// frontend/src/components/dashboard/MyPanel.tsx
-import { useEffect, useState } from 'react';
-import { Card } from './Card';
-import { mlService } from '../../api/mlService';
-
-export function MyPanel({ modelId }: { modelId: string }) {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    mlService.get(`/my-endpoint/${modelId}`).then(setData);
-  }, [modelId]);
-
-  return (
-    <Card title="My Custom Panel">
-      {/* your content */}
-    </Card>
-  );
+```python
+# Thêm vào _ENGINE_FACTORIES:
+_ENGINE_FACTORIES = {
+    "onnx": lambda: ONNXInferenceEngine(...),
+    "tensorrt": lambda: TensorRTExecutor(...),
+    "triton": lambda: TritonInferenceClient(...),
+    "custom": lambda: CustomEngine(),  # ← NEW
 }
 ```
 
-Then add it to `frontend/src/App.tsx`.
-
-### Adding Services to Health Check
-
-Edit `frontend/src/config.ts`:
-
-```ts
-export const SERVICES = [
-  { name: 'API',        url: '/health',          port: 8001 },
-  { name: 'My Service', url: 'http://my-svc:80', port: 80   },
-];
+```bash
+# Sử dụng:
+INFERENCE_ENGINE=custom uv run uvicorn ...
 ```
 
----
+## Custom Data Loader
 
-## 4. Custom Inference Engine
-
-To use a runtime other than ONNX Runtime (e.g., TensorRT, Triton):
+Implement `IDataLoader` ABC:
 
 ```python
-# src/infrastructure/ml_engines/my_engine.py
-from src.domain.inference.services.inference_engine import InferenceEngine
+# src/infrastructure/data_loaders/text_loader.py
+from src.domain.training.services.data_loader_plugin import IDataLoader, DatasetInfo
+import numpy as np
 
-class MyCustomEngine(InferenceEngine):
-    def load(self, model_id: str, version: str, artifact_uri: str) -> None:
-        # Load model from artifact_uri
-        ...
-
-    def predict(
-        self, model_id: str, version: str, features: list[float]
-    ) -> dict[str, Any]:
-        # Run inference
-        return {"output": [...], "probabilities": [...]}
-
-    def is_loaded(self, model_id: str, version: str) -> bool:
-        return True
+class TextDataLoader(IDataLoader):
+    async def load(self, data_path: str) -> tuple[np.ndarray, DatasetInfo]:
+        """Load text dataset."""
+        # Load and tokenize text data
+        texts, labels = load_texts(data_path)
+        features = vectorize(texts)  # TF-IDF, embeddings, etc.
+        
+        info = DatasetInfo(
+            num_samples=len(texts),
+            num_features=features.shape[1],
+            feature_names=[f"feature_{i}" for i in range(features.shape[1])],
+            data_format="text",
+        )
+        return features, info
+    
+    async def split(self, data, test_size: float = 0.2):
+        """Train/test split."""
+        from sklearn.model_selection import train_test_split
+        return train_test_split(data, test_size=test_size)
 ```
 
-Register in `src/infrastructure/http/container.py`:
+Đăng ký trong `registry.py`:
 
 ```python
-engine = MyCustomEngine()
-# Replace or add alongside ONNXInferenceEngine
+# src/infrastructure/data_loaders/registry.py
+_LOADER_REGISTRY = {
+    "tabular": TabularDataLoader,
+    "image": ImageDataLoader,
+    "text": TextDataLoader,  # ← NEW
+}
 ```
 
----
-
-## 5. Custom Alert Notifications
-
-Create a new notifier by implementing `AlertNotifier`:
+## Custom Pre/Post Processor Plugins
 
 ```python
-# src/infrastructure/monitoring/slack_notifier.py
-from src.domain.monitoring.services.alert_notifier import AlertNotifier
+# Custom preprocessor cho model cụ thể
+from src.domain.inference.services.processor_plugin import IPreprocessor, IPostprocessor
+import numpy as np
 
-class SlackNotifier(AlertNotifier):
+class NormalizationPreprocessor(IPreprocessor):
+    def __init__(self, mean: np.ndarray, std: np.ndarray):
+        self.mean = mean
+        self.std = std
+    
+    def transform(self, raw_input: dict) -> np.ndarray:
+        features = np.array(raw_input["features"], dtype=np.float32)
+        return (features - self.mean) / self.std
+
+class MultiLabelPostprocessor(IPostprocessor):
+    def __init__(self, labels: list[str], threshold: float = 0.5):
+        self.labels = labels
+        self.threshold = threshold
+    
+    def transform(self, model_output: np.ndarray, labels: list[str]) -> dict:
+        active = [l for l, p in zip(self.labels, model_output) if p > self.threshold]
+        return {"labels": active, "probabilities": model_output.tolist()}
+```
+
+Đăng ký trong `container.py` (hoặc `lifespan.py`):
+
+```python
+plugin_registry.register_model(
+    model_id="sentiment-analysis",
+    preprocessor=NormalizationPreprocessor(mean=train_mean, std=train_std),
+    postprocessor=MultiLabelPostprocessor(labels=["positive", "negative", "neutral"]),
+    data_loader=TextDataLoader(),
+)
+```
+
+## Custom Alert Notifier
+
+```python
+# src/infrastructure/monitoring/teams_notifier.py
+from src.domain.monitoring.services.alert_notifier import IAlertNotifier
+import httpx
+
+class TeamsNotifier(IAlertNotifier):
     def __init__(self, webhook_url: str):
         self.webhook_url = webhook_url
-
-    async def send(self, alert) -> None:
-        import httpx
+    
+    async def notify(self, alert) -> bool:
         payload = {
-            "text": f"*{alert.severity}* — {alert.message}",
-            "channel": "#ml-alerts",
+            "@type": "MessageCard",
+            "summary": f"Phoenix Alert: {alert.name}",
+            "sections": [{
+                "facts": [
+                    {"name": "Alert", "value": alert.name},
+                    {"name": "Severity", "value": alert.severity},
+                    {"name": "Value", "value": str(alert.actual_value)},
+                ]
+            }]
         }
         async with httpx.AsyncClient() as client:
-            await client.post(self.webhook_url, json=payload)
+            resp = await client.post(self.webhook_url, json=payload)
+            return resp.status_code == 200
 ```
 
-Configure via environment variable:
+## Cấu hình Monitoring Thresholds
+
+Trong `model_configs/<model>.yaml`:
+
+```yaml
+monitoring:
+  drift_test: ks              # Algorithm: ks, psi, chi2
+  drift_threshold: 0.25       # Khi nào coi là drifted
+```
+
+Trong `.env`:
 
 ```bash
-ALERT_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
+MONITORING_INTERVAL_SECONDS=30   # Check drift mỗi 30s
+DRIFT_THRESHOLD=0.3              # Default threshold (override bằng YAML)
 ```
 
----
-
-## 6. Custom Routing Strategy
-
-Create a new routing strategy for A/B testing, canary, or shadow traffic:
+## Thêm Routing Strategy
 
 ```python
 from src.domain.inference.services.routing_strategy import RoutingStrategy
+from src.domain.inference.entities.model import Model
 
-class MyRoutingStrategy(RoutingStrategy):
-    def select_version(
-        self, model_id: str, versions: list[str]
-    ) -> str:
-        # Your logic (e.g., geo-based, user segment)
-        return versions[0]
+class WeightedStrategy(RoutingStrategy):
+    """Route based on model performance weights."""
+    
+    def __init__(self, weights: dict[str, float]):
+        self.weights = weights  # {version: weight}
+    
+    def select(self, champion: Model, challengers: list[Model]) -> Model:
+        import random
+        all_models = [champion] + challengers
+        versions = [m.version for m in all_models]
+        weights = [self.weights.get(v, 0.1) for v in versions]
+        return random.choices(all_models, weights=weights, k=1)[0]
 ```
 
 ---
-
-## 7. Database Configuration
-
-### PostgreSQL
-
-```bash
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/phoenix
-```
-
-### Alembic Migrations
-
-```bash
-# Create a new migration
-uv run alembic revision --autogenerate -m "add my_table"
-
-# Apply
-uv run alembic upgrade head
-
-# Rollback
-uv run alembic downgrade -1
-```
-
-### Redis (Feature Store)
-
-```bash
-REDIS_URL=redis://localhost:6379
-USE_REDIS=true    # Set to false to use in-memory store
-```
-
----
-
-## 8. Grafana Dashboard Customization
-
-Dashboard JSON is in `grafana/provisioning/dashboards/`:
-
-```bash
-# Edit existing dashboard
-grafana/provisioning/dashboards/phoenix-ml-dashboard.json
-
-# Add new dashboard — drop a JSON file in the same directory
-# Grafana auto-provisions on restart
-docker compose restart grafana
-```
-
-**Datasource**: Prometheus at `http://prometheus:9090` (pre-configured).
-
----
-
-## Summary: Minimal Steps to Add a New Model
-
-```bash
-# 1. Create training script
-mkdir -p examples/my_problem
-# Implement train_and_export() in train.py
-
-# 2. Create config
-cat > model_configs/my-model.yaml << 'EOF'
-model_id: my-model
-version: v1
-framework: onnx
-task_type: classification
-model_path: models/my_model/v1/model.onnx
-train_script: examples/my_problem/train.py
-feature_names: [f1, f2, f3]
-EOF
-
-# 3. Train
-uv run python examples/my_problem/train.py models/my_model/v1/model.onnx
-
-# 4. Deploy
-docker compose restart api
-
-# 5. Test
-curl -X POST http://localhost:8001/predict \
-  -H "Content-Type: application/json" \
-  -d '{"model_id": "my-model", "features": [1.0, 2.0, 3.0]}'
-```
+*Document Status: v4.0 — Updated March 2026*

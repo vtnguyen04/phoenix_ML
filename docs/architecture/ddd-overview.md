@@ -1,178 +1,393 @@
 # DDD Architecture Overview: Phoenix ML Platform
 
+## Tổng quan
+
+Phoenix ML được xây dựng theo **Domain-Driven Design (DDD)** kết hợp **Clean Architecture** và **CQRS** (Command Query Responsibility Segregation).
+
+### Tại sao DDD?
+
+| Lý do | Giải thích |
+|-------|-----------|
+| **Complexity Management** | ML platform có nhiều bounded contexts phức tạp (Inference, Monitoring, Training, Feature Store) |
+| **Framework Independence** | Domain logic KHÔNG phụ thuộc FastAPI, SQLAlchemy, hay bất kỳ framework nào — dễ test, dễ thay thế |
+| **Ubiquitous Language** | Tên class/method phản ánh ngôn ngữ domain: `Model`, `Prediction`, `DriftReport`, `RoutingStrategy` |
+| **Modularity** | Mỗi bounded context có thể phát triển, test, deploy độc lập |
+
 ## Bounded Contexts
 
+Phoenix ML có **5 Bounded Contexts**, mỗi context quản lý 1 subdomain:
+
 ```mermaid
-graph LR
+graph TB
     subgraph "Inference Context"
-        Model[Model Entity]
-        Prediction[Prediction Entity]
-        ConfScore[ConfidenceScore VO]
-        ModelVer[ModelVersion VO]
-        LatBudget[LatencyBudget VO]
-        FeatVec[FeatureVector VO]
-        InfEngine[InferenceEngine Interface]
-        BatchMgr[BatchManager]
-        Router[RoutingStrategy]
+        M[Model]
+        P[Prediction]
+        IE[InferenceEngine]
+        IS[InferenceService]
+        RS[RoutingStrategy]
         CB[CircuitBreaker]
-        Pipeline[RequestPipeline]
+        BM[BatchManager]
     end
-
-    subgraph "Feature Store Context"
-        FeatReg[FeatureRegistry Entity]
-        FeatStore[FeatureStore Interface]
-        OfflineStore[OfflineFeatureStore Interface]
-    end
-
-    subgraph "Model Registry Context"
-        ModelRepo[ModelRepository Interface]
-        ArtifactStore[ArtifactStorage Interface]
-    end
-
-    subgraph "Training Context"
-        TrainJob[TrainingJob Entity]
-        TrainerPlugin[TrainerPlugin Interface]
-        DataLoaderPlugin[DataLoaderPlugin Interface]
-    end
-
+    
     subgraph "Monitoring Context"
-        DriftReport[DriftReport Entity]
-        DriftCalc[DriftCalculator]
-        AnomalyDet[AnomalyDetector]
-        AlertMgr[AlertManager]
-        RollbackMgr[RollbackManager]
-        ModelEval[ModelEvaluator]
+        DR[DriftReport]
+        DC[DriftCalculator]
+        AM[AlertManager]
+        AD[AnomalyDetector]
+        RM[RollbackManager]
+        ME[ModelEvaluator]
     end
-
-    Inference --> FeatureStore
-    Inference --> ModelRegistry
-    Monitoring --> Inference
-    Training --> ModelRegistry
+    
+    subgraph "Training Context"
+        TJ[TrainingJob]
+        TC[TrainingConfig]
+        TS[TrainingService]
+        DL[IDataLoader]
+    end
+    
+    subgraph "Feature Store Context"
+        FR[FeatureRegistry]
+        FS[FeatureStore]
+        OFS[OfflineFeatureStore]
+    end
+    
+    subgraph "Model Registry Context"
+        MR[ModelRepository]
+        AS[ArtifactStorage]
+    end
+    
+    IS --> RS
+    IS --> CB
+    IS --> IE
+    DC --> DR
+    AM --> RM
 ```
 
-## Domain Layer (Zero Dependencies)
+### Context Map
+
+| Bounded Context | Nhiệm vụ | Entities | Key Services |
+|----------------|-----------|----------|-------------|
+| **Inference** | Real-time ML prediction | Model, Prediction | InferenceService, BatchManager, RoutingStrategy, CircuitBreaker, RequestPipeline |
+| **Monitoring** | Drift detection + alerting | DriftReport | DriftCalculator, AlertManager, AnomalyDetector, RollbackManager, ModelEvaluator |
+| **Training** | Model training management | TrainingJob, TrainingConfig | TrainingService, IDataLoader, ITrainer, HyperparameterOptimizer |
+| **Feature Store** | Feature management | FeatureRegistry | FeatureStore (online), OfflineFeatureStore (batch) |
+| **Model Registry** | Model versioning + artifacts | — | ModelRepository, ArtifactStorage |
+
+## Tactical Patterns
 
 ### Entities
-| Entity | Location | Aggregate Root | Purpose |
-|--------|----------|---------------|---------|
-| `Model` | `domain/inference/entities/model.py` | Yes | ML model metadata, version, framework, stage |
-| `Prediction` | `domain/inference/entities/prediction.py` | No | Single prediction result + confidence + latency |
-| `DriftReport` | `domain/monitoring/entities/drift_report.py` | Yes | Drift detection results (p-value, statistic, method) |
-| `FeatureRegistry` | `domain/feature_store/entities/feature_registry.py` | Yes | Feature definitions + metadata |
-| `TrainingJob` | `domain/training/entities/training_job.py` | Yes | Training lifecycle (PENDING → RUNNING → COMPLETED) |
 
-### Value Objects (Immutable)
-| Value Object | Location | Invariant |
-|-------------|----------|-----------|
-| `ModelVersion` | `domain/inference/value_objects/model_version.py` | Semantic version string |
-| `ConfidenceScore` | `domain/inference/value_objects/confidence_score.py` | Float in [0.0, 1.0] |
-| `LatencyBudget` | `domain/inference/value_objects/latency_budget.py` | Positive milliseconds |
-| `FeatureVector` | `domain/inference/value_objects/feature_vector.py` | Non-empty float array |
+Entities có **identity** (unique ID) và **lifecycle** (mutable state).
 
-### Domain Events
-| Event | Trigger | Consumers |
-|-------|---------|-----------|
-| `PredictionMade` | After successful inference | Kafka logger, Prometheus metrics |
-| `ModelLoaded` | After model initialization | Health check, monitoring |
-| `TrainingCompleted` | After training job finishes | Model registry, deployment |
-| `DriftDetected` | When statistical drift is confirmed | Airflow self-healing pipeline |
+```python
+# src/domain/inference/entities/model.py
+@dataclass
+class Model:
+    id: str              # "credit-risk"
+    version: str         # "v1"
+    uri: str             # "local:///models/credit_risk/v1/model.onnx"
+    framework: str       # "onnx"
+    metadata: dict       # {"role": "champion", "metrics": {...}}
+    is_active: bool      # True (champion/challenger) / False (archived)
+    created_at: datetime
+    
+    @property
+    def unique_key(self) -> str:
+        return f"{self.id}:{self.version}"
+    
+    @property
+    def stage(self) -> ModelStage:
+        role = self.metadata.get("role", "development")
+        return ModelStage(role)
+```
+
+```python
+# src/domain/monitoring/entities/drift_report.py
+@dataclass
+class DriftReport:
+    model_id: str
+    feature_name: str
+    method: str          # "ks", "psi", "chi2"
+    score: float         # 0.0 - 1.0
+    is_drifted: bool     # score > threshold
+    threshold: float
+    timestamp: datetime
+```
+
+```python
+# src/domain/training/entities/training_job.py
+@dataclass
+class TrainingJob:
+    job_id: str
+    model_id: str
+    status: str          # PENDING → RUNNING → COMPLETED/FAILED
+    started_at: datetime | None
+    finished_at: datetime | None
+    metrics: dict        # {"accuracy": 0.95, "f1_score": 0.93}
+```
+
+### Value Objects
+
+Value Objects **immutable**, so sánh by value (không by reference).
+
+```python
+# src/domain/inference/value_objects/confidence_score.py
+@dataclass(frozen=True)
+class ConfidenceScore:
+    value: float  # Must be in [0.0, 1.0]
+    
+    def __post_init__(self):
+        if not 0.0 <= self.value <= 1.0:
+            raise ValueError(f"Confidence must be 0-1, got {self.value}")
+
+# src/domain/inference/value_objects/feature_vector.py
+@dataclass(frozen=True)
+class FeatureVector:
+    values: np.ndarray  # float32 array
+    
+    @property
+    def dimension(self) -> int:
+        return len(self.values)
+
+# src/domain/inference/value_objects/model_version.py
+@dataclass(frozen=True)
+class ModelVersion:
+    major: int
+    minor: int = 0
+    
+    @classmethod
+    def parse(cls, version_str: str) -> "ModelVersion":
+        # "v1" → ModelVersion(1, 0)
+        # "v2.1" → ModelVersion(2, 1)
+```
 
 ### Domain Services
-| Service | Pattern | Purpose |
-|---------|---------|---------|
-| `InferenceEngine` | Strategy | Abstract interface → ONNX, TensorRT, Triton |
-| `InferenceService` | Facade | Orchestrates routing → engine → feature store |
-| `RoutingStrategy` | Strategy | A/B Testing, Canary, Shadow, ChampionOnly routing |
-| `CircuitBreaker` | Circuit Breaker | Fault tolerance (Closed → Open → Half-Open) |
-| `RequestPipeline` | Chain of Responsibility | Validation → Cache → Feature → Inference |
-| `BatchManager` | — | Dynamic request batching for GPU efficiency |
-| `DriftCalculator` | Strategy | KS, PSI, Chi², Wasserstein statistical tests |
-| `AnomalyDetector` | — | Prediction anomaly, latency spike, error rate |
-| `AlertManager` | Observer | Alert routing + webhook notification |
-| `RollbackManager` | — | Auto-rollback with history tracking |
-| `ModelEvaluator` | Strategy | Online model performance (Classification/Regression) |
-| `PluginRegistry` | Plugin | Model-agnostic plugin resolution for trainers/loaders |
 
-### Repository Interfaces (Domain defines, Infrastructure implements)
-| Interface | Implementations |
-|-----------|----------------|
-| `FeatureStore` | `RedisFeatureStore`, `InMemoryFeatureStore` |
-| `OfflineFeatureStore` | `ParquetFeatureStore` |
-| `ModelRepository` | `PostgresModelRegistry`, `MLflowModelRegistry`, `InMemoryModelRepo` |
-| `ArtifactStorage` | `S3ArtifactStorage`, `LocalArtifactStorage` |
-| `DriftReportRepository` | `PostgresDriftReportRepository` |
-| `PredictionLogRepository` | `PostgresPredictionLogRepository` |
-| `InferenceEngine` | `ONNXInferenceEngine`, `TensorRTExecutor`, `TritonInferenceClient` |
+Domain services chứa business logic **không thuộc về entity nào**.
 
-## Application Layer (Use-Case Orchestration)
-
-### CQRS Pattern
-```
-Commands (Write)                    Queries (Read)
-├── PredictCommand                  ├── GetModelQuery
-├── BatchPredictCommand             ├── GetDriftReportQuery
-├── LoadModelCommand                └── GetModelPerformanceQuery
-├── TriggerRetrainCommand
-└── SubmitFeedbackCommand
-```
-
-### Handlers
-| Handler | Input | Output | Orchestrates |
-|---------|-------|--------|-------------|
-| `PredictHandler` | `PredictCommand` | `Prediction` | InferenceService → Engine → Prometheus |
-| `BatchPredictHandler` | `BatchPredictCommand` | `dict` (aggregated results) | asyncio.gather → PredictHandler × N |
-| `MonitoringService` | Model ID | `DriftReport` | DriftCalculator → AlertManager → RollbackManager |
-| `GetModelQueryHandler` | `GetModelQuery` | `Model` | ModelRepository lookup |
-| `GetDriftReportQueryHandler` | `GetDriftReportQuery` | `list[DriftReport]` | DriftReportRepository lookup |
-| `GetModelPerformanceQueryHandler` | `GetModelPerformanceQuery` | `dict` | PredictionLogRepository + ModelEvaluator |
-
-## Infrastructure Layer (Adapters)
-
-### Dependency Inversion
 ```python
-# Domain defines interface:
-class FeatureStore(ABC):
-    async def get_features(self, entity_id: str) -> list[float]: ...
+# src/domain/inference/services/inference_service.py
+class InferenceService:
+    """Orchestrates the prediction flow."""
+    
+    async def predict(self, model: Model, features: FeatureVector) -> Prediction:
+        # 1. Check circuit breaker
+        # 2. Load model if needed
+        # 3. Run inference
+        # 4. Record latency
+        return Prediction(...)
 
-# Infrastructure implements:
-class RedisFeatureStore(FeatureStore):
-    async def get_features(self, entity_id: str) -> list[float]:
-        raw = await self.redis.lrange(f"features:{entity_id}", 0, -1)
-        return [float(v) for v in raw]
-
-# Container wires at startup:
-feature_store: FeatureStore
-if settings.USE_REDIS:
-    feature_store = RedisFeatureStore(redis_url=settings.REDIS_URL)
-else:
-    feature_store = InMemoryFeatureStore()
+# src/domain/monitoring/services/drift_calculator.py
+class DriftCalculator:
+    """Calculates statistical drift between distributions."""
+    
+    def calculate_ks(self, reference: list[float], current: list[float]) -> DriftResult:
+        """Kolmogorov-Smirnov test."""
+        stat, p_value = ks_2samp(reference, current)
+        return DriftResult(score=stat, is_drifted=stat > threshold)
+    
+    def calculate_psi(self, reference, current) -> DriftResult:
+        """Population Stability Index."""
+    
+    def calculate_chi2(self, reference, current) -> DriftResult:
+        """Chi-squared test for categorical features."""
 ```
 
-### Infrastructure Adapters
-| Adapter | Technology | Interface |
-|---------|-----------|-----------|
-| `ONNXInferenceEngine` | ONNX Runtime | `InferenceEngine` |
-| `TensorRTExecutor` | TensorRT | `InferenceEngine` |
-| `TritonInferenceClient` | Triton Inference Server (gRPC) | `InferenceEngine` |
-| `RedisFeatureStore` | Redis (async) | `FeatureStore` |
-| `InMemoryFeatureStore` | Python dict | `FeatureStore` |
-| `PostgresModelRegistry` | SQLAlchemy 2.0 + asyncpg | `ModelRepository` |
-| `MLflowModelRegistry` | MLflow client | `ModelRepository` |
-| `S3ArtifactStorage` | boto3 (MinIO/AWS S3) | `ArtifactStorage` |
-| `LocalArtifactStorage` | Local filesystem | `ArtifactStorage` |
-| `KafkaProducer` | aiokafka | Event publishing |
-| `PrometheusMetrics` | prometheus-client | `prediction_count`, `inference_latency`, `model_confidence` |
-| `JaegerTracing` | OpenTelemetry SDK + OTLP | Distributed tracing |
-| `AlertNotifier` | HTTP webhooks | Alert delivery |
+### Repository Interfaces (ABCs)
 
-## Shared Layer
+Repositories là abstract interfaces trong domain — implementations ở infrastructure.
 
-| Module | Purpose |
-|--------|---------|
-| `exceptions/` | `PhoenixBaseError` → `ModelNotFoundError`, `InferenceError`, `FeatureStoreError`, `ValidationError` |
-| `interfaces/` | `EventPublisher`, `CacheBackend` |
-| `ingestion/` | `DataCollector`, `IngestionService`, `RedisIngestor` |
-| `utils/` | `ModelGenerator` (CI/test ONNX model generation) |
+```python
+# src/domain/model_registry/repositories/model_repository.py
+class ModelRepository(ABC):
+    @abstractmethod
+    async def save(self, model: Model) -> None: ...
+    
+    @abstractmethod
+    async def get_by_id(self, model_id: str, version: str) -> Model | None: ...
+    
+    @abstractmethod
+    async def get_champion(self, model_id: str) -> Model | None: ...
+    
+    @abstractmethod
+    async def update_stage(self, model_id: str, version: str, stage: str) -> None: ...
+    
+    @abstractmethod
+    async def list_all(self) -> list[Model]: ...
+
+# Implementations (infrastructure layer):
+# - PostgresModelRegistry  → PostgreSQL
+# - MlflowModelRegistry    → MLflow API
+# - InMemoryModelRepository → dict (testing)
+```
+
+```python
+# src/domain/feature_store/repositories/feature_store.py
+class FeatureStore(ABC):
+    @abstractmethod
+    async def get_online_features(self, entity_id: str, feature_names: list[str]) -> list[float]: ...
+    
+    @abstractmethod
+    async def add_features(self, entity_id: str, features: dict[str, float]) -> None: ...
+
+# Implementations:
+# - RedisFeatureStore       → Redis HMGET/HSET
+# - InMemoryFeatureStore    → dict
+```
+
+## CQRS Pattern
+
+Commands (write) và Queries (read) được tách riêng:
+
+### Commands (Write Side)
+
+```python
+# src/application/commands/predict_command.py
+@dataclass
+class PredictCommand:
+    model_id: str
+    model_version: str | None = None
+    entity_id: str | None = None
+    features: list[float] | None = None
+
+# src/application/commands/batch_predict_command.py
+@dataclass
+class BatchPredictCommand:
+    model_id: str
+    batch: list[list[float]]
+    model_version: str | None = None
+```
+
+### Command Handlers
+
+```python
+# src/application/handlers/predict_handler.py
+class PredictHandler:
+    def __init__(self, model_repo, inference_engine, feature_store, ...):
+        ...
+    
+    async def handle(self, command: PredictCommand) -> Prediction:
+        # 1. Resolve model (champion or specific version)
+        model = await self._model_repo.get_champion(command.model_id)
+        
+        # 2. Get features
+        if command.entity_id:
+            features = await self._feature_store.get_online_features(...)
+        else:
+            features = FeatureVector(values=np.array(command.features))
+        
+        # 3. Run inference
+        prediction = await self._inference_engine.predict(model, features)
+        
+        # 4. Publish events
+        self._event_bus.publish(PredictionCompleted(...))
+        
+        return prediction
+```
+
+### Query Handlers (Read Side)
+
+```python
+# src/application/handlers/query_handlers.py
+class GetModelQueryHandler:
+    async def handle(self, query: GetModelQuery) -> Model | None:
+        return await self._model_repo.get_by_id(query.model_id, query.version)
+
+class GetDriftReportQueryHandler:
+    async def handle(self, query: GetDriftReportQuery) -> list[DriftReport]:
+        return await self._drift_repo.get_by_model(query.model_id, query.limit)
+
+class GetModelPerformanceQueryHandler:
+    async def handle(self, query: GetModelPerformanceQuery) -> dict:
+        logs = await self._log_repo.get_recent(query.model_id, limit=100)
+        return self._evaluator.evaluate(logs)
+```
+
+## Domain Events
+
+Events decouple modules — publisher không biết subscriber là ai.
+
+```python
+# src/domain/shared/domain_events.py
+@dataclass
+class PredictionCompleted:
+    model_id: str
+    version: str
+    status: str          # "success" / "error"
+    latency_ms: float
+    confidence: float
+
+@dataclass
+class DriftDetected:
+    model_id: str
+    drift_score: float
+    method: str
+
+@dataclass
+class ModelRetrained:
+    model_id: str
+    version: str
+    metrics: dict
+    promoted: bool
+```
+
+### Event Bus (Observer Pattern)
+
+```python
+# src/domain/shared/event_bus.py
+class DomainEventBus:
+    def subscribe(self, event_type: type, handler: Callable):
+        self._subscribers[event_type].append(handler)
+    
+    def publish(self, event):
+        for handler in self._subscribers[type(event)]:
+            handler(event)
+
+# Wiring (container.py):
+event_bus = DomainEventBus()
+event_bus.subscribe(PredictionCompleted, metrics_publisher.on_prediction)
+event_bus.subscribe(DriftScorePublished, metrics_publisher.on_drift_score)
+event_bus.subscribe(ModelRetrained, metrics_publisher.on_model_retrained)
+```
+
+## Plugin System
+
+Mỗi model có thể có custom preprocessor/postprocessor:
+
+```python
+# src/domain/shared/plugin_registry.py
+class PluginRegistry:
+    def register_model(self, model_id, preprocessor, postprocessor, data_loader): ...
+    def resolve(self, model_id) -> PluginSet: ...
+
+# src/domain/inference/services/processor_plugin.py
+class IPreprocessor(ABC):
+    @abstractmethod
+    def transform(self, raw_input: dict) -> np.ndarray: ...
+
+class IPostprocessor(ABC):
+    @abstractmethod
+    def transform(self, model_output: np.ndarray, labels: list[str]) -> dict: ...
+
+# Built-in:
+# - PassthroughPreprocessor: no-op
+# - ClassificationPostprocessor: argmax + class label + probability
+```
+
+## Dependency Rule Enforcement
+
+```
+✅ domain/ CHỈA import: python stdlib, numpy, dataclasses
+✅ application/ import: domain/
+✅ infrastructure/ import: domain/, application/, third-party libs
+❌ domain/ KHÔNG import: fastapi, sqlalchemy, redis, kafka, onnxruntime
+❌ application/ KHÔNG import: infrastructure/
+```
+
+Điều này đảm bảo:
+- Domain logic có thể test **không cần** database/Kafka/Redis
+- Infrastructure có thể thay thế (Redis → Memcached, PostgreSQL → MongoDB) mà **không** sửa domain
+- Application layer là nơi duy nhất orchestrate domain entities + infrastructure adapters
 
 ---
-*Updated March 2026*
+*Document Status: v4.0 — Updated March 2026*

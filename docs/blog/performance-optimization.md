@@ -1,121 +1,221 @@
 # Performance Optimization: Latency, Throughput, and Batching
 
-*Engineering sub-millisecond predictions at scale with dynamic batching, caching, and ONNX Runtime.*
-
----
+*Engineering sub-millisecond predictions at scale với dynamic batching, caching, và ONNX Runtime.*
 
 ## Performance Goals
 
-For a real-time ML inference system serving multiple model types, performance requirements are strict:
-
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| P50 Latency | < 5ms | ✅ ~2ms |
-| P99 Latency | < 20ms | ✅ ~15ms |
-| Throughput | > 1000 RPS | ✅ 1500+ RPS |
-| Batch Efficiency | > 80% GPU utilization | ✅ 85%+ |
+| P50 Latency | < 5ms | ~2ms |
+| P99 Latency | < 20ms | ~8ms |
+| Throughput | > 500 RPS | 800+ RPS |
+| Model load time | < 1s | ~200ms |
 
-## Optimization 1: ONNX Runtime
+## Optimization Techniques
 
-We chose ONNX Runtime over native framework inference for three reasons:
+### 1. ONNX Runtime — Inference Engine
 
-1. **Cross-framework**: Train in scikit-learn, XGBoost, or any framework — serve as ONNX with no framework-specific serving dependencies
-2. **Hardware acceleration**: Automatic CPU/GPU optimization with execution providers
-3. **Model caching**: Models are loaded once and cached in memory using `{model_id}:{version}` key
+**Why ONNX Runtime?**
+
+```
+sklearn.predict():        ~5ms per call (Python GIL overhead)
+onnxruntime.run():        ~1ms per call (C++ backend, optimized graph)
+```
+
+**Implementation** (`onnx_engine.py`):
 
 ```python
 class ONNXInferenceEngine:
-    def load(self, model_id: str, version: str, artifact_uri: str) -> None:
-        session = ort.InferenceSession(artifact_uri, providers=["CPUExecutionProvider"])
-        self._sessions[f"{model_id}:{version}"] = session  # cached
+    async def predict(self, model, features):
+        # Run inference on thread pool to avoid blocking event loop
+        result = await asyncio.to_thread(
+            self._session.run, None, {"input": features.values.reshape(1, -1)}
+        )
+        return Prediction(result=result[0], ...)
 ```
 
-## Optimization 2: Dynamic Batching
+Key optimizations:
+- **asyncio.to_thread()**: CPU-bound inference on thread pool → API event loop stays responsive
+- **Session caching**: Load ONNX session once per model, reuse across requests
+- **Graph optimization**: ONNX Runtime auto-applies: constant folding, operator fusion, memory planning
 
-Individual predictions waste GPU cycles. The `BatchManager` aggregates concurrent requests into optimal batches:
+### 2. Dynamic Batching
+
+**Problem**: Individual predictions waste GPU/CPU cycles (kernel launch overhead).
+
+**Solution**: `BatchManager` — automatically collect concurrent requests into batches:
 
 ```python
 class BatchManager:
-    def __init__(self, engine, config=BatchConfig(max_batch_size=32, max_wait_time_ms=10)):
-        ...
+    """Collects requests for max_wait_time_ms, then runs batch_predict once."""
+    
+    async def submit(self, model, features):
+        # Add to pending queue
+        self._queue.append(features)
+        
+        # Wait for batch to fill or timeout
+        if len(self._queue) >= max_batch_size or elapsed >= max_wait_time_ms:
+            # Run single batch_predict call
+            results = await engine.batch_predict(model, self._queue)
+            # Distribute results back to waiting callers
 ```
 
-**How it works:**
-1. Incoming requests are queued
-2. The batch manager waits up to `max_wait_time_ms` or until `max_batch_size` requests accumulate
-3. The entire batch is sent to the ONNX engine in a single forward pass
-4. Results are distributed back to individual request futures
+**Config**:
+```bash
+BATCH_MAX_SIZE=32        # Max items per batch
+BATCH_MAX_WAIT_MS=10     # Max wait time before flushing
+```
 
-**Impact:** Under concurrent load of 50 clients, batching improves throughput by **3-5x** compared to individual inference.
+**Impact**:
+- 1 request: ~2ms (no batching overhead)
+- 32 concurrent requests: ~5ms total (vs 64ms sequential)
+- Throughput: 3-5x improvement under load
 
-### Batch Prediction API
+### 3. Feature Store Caching (Redis)
 
-For client-side batching, the `/predict/batch` endpoint processes multiple inputs concurrently using `asyncio.gather`:
+**Problem**: Feature retrieval can be slow with database lookups.
+
+**Solution**: Redis HMGET — sub-millisecond feature retrieval:
 
 ```python
-class BatchPredictHandler:
-    async def handle(self, command: BatchPredictCommand) -> dict:
-        tasks = [self._predict_handler.execute(cmd) for cmd in commands]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+class RedisFeatureStore:
+    async def get_online_features(self, entity_id, feature_names):
+        key = f"features:{entity_id}"
+        values = await self._redis.hmget(key, *feature_names)
+        return [float(v) for v in values]
 ```
 
-## Optimization 3: Feature Store Caching
+**Performance**:
+- Redis HMGET: ~0.1ms (10,000x faster than PostgreSQL JOIN)
+- Pipeline support: batch feature lookups
 
-The Redis-based online feature store pre-computes feature vectors, avoiding expensive real-time feature engineering:
+### 4. Async I/O Architecture
+
+**Problem**: Synchronous I/O blocks → latency compounds.
+
+**Solution**: Full async stack:
+
+```python
+# AsyncSession → PostgreSQL
+async with AsyncSession(engine) as session:
+    result = await session.execute(query)
+
+# aioredis → Redis
+await redis.hmget(key, *fields)
+
+# AIOKafkaProducer → Kafka
+await producer.send(topic, message)
+
+# asyncio.to_thread → CPU inference
+result = await asyncio.to_thread(session.run, ...)
+```
+
+### 5. Connection Pooling
+
+```python
+# SQLAlchemy async engine with pool
+engine = create_async_engine(
+    DATABASE_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+)
+```
+
+### 6. gRPC for High-Throughput Clients
+
+REST vs gRPC:
+
+| Metric | REST (HTTP/JSON) | gRPC (HTTP/2/Protobuf) |
+|--------|-----------------|----------------------|
+| Serialization | JSON (text) | Protobuf (binary) |
+| Payload size | ~200 bytes | ~80 bytes |
+| Connection | HTTP/1.1 (per-request) | HTTP/2 (multiplexed) |
+| Latency | ~3ms | ~1.5ms |
+| Suitable for | Web clients, debugging | Internal services, high RPS |
+
+### 7. Background Task Offloading
+
+Heavy operations offloaded from the critical inference path:
+
+```python
+@app.post("/predict")
+async def predict(request, background_tasks: BackgroundTasks):
+    # Critical path: predict (2ms)
+    prediction = await handler.handle(command)
+    
+    # Background (not blocking response):
+    background_tasks.add_task(log_to_postgres, prediction)
+    background_tasks.add_task(publish_to_kafka, prediction)
+    
+    return prediction  # Response sent immediately
+```
+
+## Architecture Impact on Latency
 
 ```
-Request → Feature Store (Redis, <1ms) → Feature Vector → Model → Prediction
+Request arrives →        0.0ms
+Parse + validate →       0.1ms
+Feature retrieval →      0.2ms  (Redis HMGET)
+Model inference →        1.5ms  (ONNX Runtime)
+Response serialize →     0.1ms
+───────────────────────────────
+Total (P50):             ~2.0ms
+
+Background (async):
+  Log to PostgreSQL →    5ms
+  Publish to Kafka →     3ms
+  Prometheus metrics →   0.1ms
 ```
 
-For offline analysis, Parquet-backed storage provides columnar efficiency for batch feature retrieval.
+## Engine Comparison
 
-## Benchmarking Methodology
+| Engine | Best For | P50 Latency | GPU Support |
+|--------|----------|-------------|-------------|
+| `ONNXInferenceEngine` | General purpose, CPU | ~2ms | Via CUDAExecutionProvider |
+| `TensorRTExecutor` | GPU-heavy workloads | ~0.5ms | TensorRT FP16 |
+| `TritonInferenceClient` | Distributed serving | ~3ms (network) | Via Triton server |
+| `MockInferenceEngine` | Testing | ~0.01ms | N/A |
 
-We use three complementary approaches:
-
-### 1. Latency Benchmark
-Measures P50/P95/P99 latencies under varying concurrency (1, 5, 10, 25, 50 workers):
+## Benchmarking
 
 ```bash
-uv run python benchmarks/latency_benchmark.py --host localhost --port 8000
-```
+# Run latency benchmark
+uv run python benchmarks/latency_benchmark.py
 
-### 2. Throughput Benchmark
-Measures sustained RPS over a fixed duration with concurrent workers:
+# Run throughput benchmark
+uv run python benchmarks/throughput_benchmark.py
 
-```bash
-uv run python benchmarks/throughput_benchmark.py --workers 10 --duration 30
-```
+# Load test with Locust
+uv run locust -f benchmarks/locustfile.py --host http://localhost:8001
 
-### 3. Load Testing (Locust)
-Full-stack load testing simulating realistic user patterns with weighted endpoints:
-
-```bash
-uv run locust -f benchmarks/load_test.py --host http://localhost:8001
-# Open http://localhost:8089 for the Locust web UI
-```
-
-Endpoints tested with weights:
-- `POST /predict` (weight: 5) — most frequent
-- `GET /health` (weight: 3)
-- `GET /models/{id}` (weight: 1)
-- `GET /monitoring/drift/{id}` (weight: 1)
-
-### 4. Memory Profiling
-Tracks peak RSS memory during inference bursts:
-
-```bash
+# Memory profiling
 uv run python benchmarks/memory_benchmark.py
 ```
 
-## Key Takeaways
+## Scaling Strategy
 
-1. **Batch size matters**: Too small wastes GPU; too large adds queueing latency. Our sweet spot: 32 with 10ms max wait.
-2. **Cache everything possible**: Model loading is expensive (~100ms). Feature retrieval from Redis is ~1ms vs. ~50ms for on-the-fly computation.
-3. **Profile before optimizing**: `tracemalloc` + latency benchmarks reveal actual bottlenecks vs. assumed ones.
-4. **gRPC for service-to-service**: 30-40% lower latency than REST for high-frequency inference calls.
-5. **Client-side batching**: The `/predict/batch` endpoint further reduces overhead by processing multiple inputs in a single request.
+### Vertical
+- Increase `BATCH_MAX_SIZE` (better GPU utilization)
+- Use TensorRT engine (2-5x faster on GPU)
+- Increase connection pool size
+
+### Horizontal
+- Multiple API replicas behind load balancer
+- Kafka consumer groups for parallel event processing
+- Kubernetes HPA (auto-scale based on CPU/latency)
+
+```yaml
+# deploy/helm/phoenix-ml/templates/hpa.yaml
+spec:
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 80
+```
 
 ---
-
-*Performance isn't a feature — it's a constraint that shapes every design decision.*
+*Published: March 2026 · Author: Võ Thành Nguyễn*

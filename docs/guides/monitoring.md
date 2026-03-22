@@ -1,327 +1,367 @@
 # Monitoring & Alerting Guide
 
-This guide covers how Phoenix ML's monitoring stack works end-to-end and how to configure it.
+Hướng dẫn chi tiết hệ thống monitoring, drift detection, anomaly detection, alerting, và self-healing.
 
----
+## Tổng quan
 
-## Architecture Overview
-
+```mermaid
+graph TD
+    subgraph "Data Collection"
+        API["Phoenix API"] -->|"/metrics"| PROM["Prometheus"]
+        API -->|logs| PG["PostgreSQL<br/>(prediction_logs)"]
+    end
+    
+    subgraph "Analysis"
+        LOOP["Monitoring Loop<br/>(every 30s)"] --> DC["DriftCalculator"]
+        LOOP --> AD["AnomalyDetector"]
+        LOOP --> ME["ModelEvaluator"]
+    end
+    
+    subgraph "Response"
+        DC --> AM["AlertManager<br/>(Rules + Cooldown)"]
+        AD --> AM
+        AM --> AN["AlertNotifier<br/>(Slack/Discord)"]
+        AM --> RM["RollbackManager"]
+    end
+    
+    subgraph "Visualization"
+        PROM --> GRAF["Grafana<br/>Dashboards"]
+        API --> JAEG["Jaeger<br/>Tracing"]
+    end
+    
+    PG --> LOOP
 ```
-Predictions → Prometheus Metrics → Grafana Dashboards
-     ↓
-Redis (prediction logs) → Drift Detection (every 30s)
-     ↓                           ↓
-AnomalyDetector              DriftCalculator
-     ↓                           ↓
-AlertManager ← rules ←   MonitoringService
-     ↓                           ↓
-AlertNotifier             Airflow Self-Healing
-(Slack/PagerDuty)        (alert → rollback → retrain → deploy)
-```
 
----
+## Drift Detection
 
-## 1. Drift Detection
+### Algorithms
 
-Drift detection compares current prediction feature distributions against a reference baseline using statistical tests.
+Phoenix ML supports 3 drift detection algorithms, configurable per model:
 
-### How It Works
+#### 1. Kolmogorov-Smirnov Test (`ks`)
 
-1. **Reference data** is saved during training (`reference_features.json`)
-2. **Monitoring loop** runs every `MONITORING_INTERVAL_SECONDS` (default: 30s)
-3. **KS test** (Kolmogorov-Smirnov) compares distributions
-4. If `p-value < DRIFT_THRESHOLD` (default: 0.05) → drift detected
-5. Drift triggers the Airflow `self_healing_pipeline`
-
-### Configuration
+**Khi nào dùng**: Continuous features, general purpose
 
 ```python
-# src/config/monitoring.py
-MONITORING_INTERVAL_SECONDS = 30     # Check frequency
-DRIFT_THRESHOLD = 0.05               # KS test p-value threshold
+from src.domain.monitoring.services.drift_calculator import DriftCalculator
+
+calc = DriftCalculator()
+result = calc.calculate_ks(
+    reference=[0.1, 0.2, 0.15, 0.3, 0.25],   # training data distribution
+    current=[0.5, 0.6, 0.55, 0.7, 0.65]       # production data distribution
+)
+# DriftResult(score=1.0, is_drifted=True)
 ```
 
-### Manual Drift Check
+**Nguyên lý**: So sánh 2 cumulative distribution functions. Score = max distance giữa 2 CDFs.
 
-```bash
-# Trigger drift detection for a specific model
-curl http://localhost:8001/monitoring/drift/credit-risk
+| Score | Interpretation |
+|-------|---------------|
+| 0.0 - 0.1 | No drift |
+| 0.1 - 0.3 | Moderate drift |
+| > 0.3 | Significant drift (default threshold) |
 
-# Response:
-# {
-#   "drift_detected": true,
-#   "method": "ks_2samp",
-#   "p_value": 0.00001,
-#   "statistic": 0.875,
-#   "threshold": 0.05,
-#   "sample_size": 100
-# }
+#### 2. Population Stability Index (`psi`)
 
-# View historical drift reports
-curl http://localhost:8001/monitoring/reports/credit-risk?limit=10
-```
-
-### Simulating Drift
-
-```bash
-# Send drifted data (shifted features) to trigger detection
-uv run python scripts/simulate_drift.py
-```
-
----
-
-## 2. Anomaly Detection
-
-The `AnomalyDetector` monitors three types of anomalies in real-time:
-
-| Type | Method | Threshold |
-|------|--------|-----------|
-| **Prediction Anomaly** | Z-score on confidence | `z_score > 3.0` |
-| **Latency Spike** | P99 vs baseline × multiplier | `p99 > baseline × 3.0` |
-| **Error Rate** | Error count / total | `rate > 5%` |
-
-### Configuration
+**Khi nào dùng**: Binned distributions, fraud detection
 
 ```python
-# src/config/monitoring.py
-ANOMALY_Z_SCORE_THRESHOLD = 3.0      # For confidence score anomalies
-ANOMALY_LATENCY_MULTIPLIER = 3.0     # P99 latency spike multiplier
-ANOMALY_ERROR_RATE_THRESHOLD = 0.05  # 5% error rate threshold
+result = calc.calculate_psi(reference, current)
 ```
 
-### Usage in Code
+**Nguyên lý**: Chia data thành bins, so sánh tỷ lệ của mỗi bin giữa reference và current.
+
+| PSI | Interpretation |
+|-----|---------------|
+| < 0.1 | No shift |
+| 0.1 - 0.25 | Moderate shift |
+| > 0.25 | Significant shift |
+
+#### 3. Chi-squared Test (`chi2`)
+
+**Khi nào dùng**: Categorical features
+
+```python
+result = calc.calculate_chi2(reference, current)
+```
+
+**Nguyên lý**: So sánh observed vs expected frequencies. High chi2 = significant difference.
+
+### Cấu hình Drift Detection
+
+Per-model trong `model_configs/<model>.yaml`:
+
+```yaml
+# model_configs/credit-risk.yaml
+monitoring:
+  drift_test: ks           # Algorithm
+  drift_threshold: 0.3     # Threshold cho alert
+```
+
+Global trong `.env`:
+
+```bash
+MONITORING_INTERVAL_SECONDS=30   # Check frequency
+DRIFT_THRESHOLD=0.3              # Default threshold
+```
+
+### Monitoring Loop
+
+`MonitoringService` chạy background loop trong `lifespan.py`:
+
+```python
+# Mỗi MONITORING_INTERVAL_SECONDS:
+for model_id in all_models:
+    # 1. Get recent prediction logs
+    logs = await log_repo.get_recent(model_id, limit=100)
+    
+    # 2. Get reference data
+    reference = load_reference_data(model_id)
+    
+    # 3. Calculate drift
+    drift = calculator.calculate(reference, current_features)
+    
+    # 4. Save report
+    await drift_repo.save(DriftReport(...))
+    
+    # 5. Publish metrics
+    metrics_publisher.publish_drift_score(model_id, drift.score)
+    
+    # 6. Check alerts
+    if drift.is_drifted:
+        event_bus.publish(DriftDetected(model_id, drift.score))
+```
+
+## Anomaly Detection
+
+### Z-Score Method
 
 ```python
 from src.domain.monitoring.services.anomaly_detector import AnomalyDetector
 
-detector = AnomalyDetector(z_score_threshold=3.0)
-
-# Check prediction confidence for anomalies
-report = detector.detect_prediction_anomaly(
-    confidence_scores=[0.85, 0.87, 0.02, 0.84, ...]
-)
-# report.is_anomalous, report.score, report.detail
-
-# Check latency spikes
-report = detector.detect_latency_spike(
-    latencies=[2.0, 3.0, 150.0, 2.5, ...],
-    baseline_p99_ms=5.0
-)
-
-# Check error rate
-report = detector.detect_error_rate(
-    total_requests=1000,
-    error_count=80
-)
+detector = AnomalyDetector()
+values = [10, 12, 11, 13, 100, 12, 11]  # 100 is anomaly
+anomalies = detector.detect_zscore(values, threshold=2.0)
+# Returns indices: [4]
 ```
 
----
-
-## 3. Alert System
-
-The `AlertManager` evaluates configurable rules and fires alerts with severity levels.
-
-### Alert Severity Levels
-
-| Level | When |
-|-------|------|
-| `CRITICAL` | Severe drift, system failures |
-| `WARNING` | Degraded accuracy, latency issues |
-| `INFO` | Informational (non-actionable) |
-
-### Creating Alert Rules
+### IQR Method
 
 ```python
-from src.domain.monitoring.services.alert_manager import (
-    AlertManager, AlertRule, AlertSeverity
-)
-
-manager = AlertManager()
-
-# Fire when drift score exceeds 0.3
-manager.register_rule(AlertRule(
-    name="high_drift",
-    metric="drift_score",
-    threshold=0.3,
-    severity=AlertSeverity.CRITICAL,
-    comparison="gt",           # gt (>), lt (<), gte (>=), lte (<=)
-    cooldown_seconds=300,      # Don't re-fire for 5 minutes
-    description="Drift score exceeds 0.3",
-))
-
-# Fire when accuracy drops below 70%
-manager.register_rule(AlertRule(
-    name="low_accuracy",
-    metric="accuracy",
-    threshold=0.7,
-    severity=AlertSeverity.WARNING,
-    comparison="lt",
-    cooldown_seconds=600,
-))
+anomalies = detector.detect_iqr(values)
+# Uses Interquartile Range: Q1 - 1.5*IQR to Q3 + 1.5*IQR
 ```
 
-### Alert Lifecycle
+## Alerting System
 
-1. Metric value evaluated against all matching rules
-2. If threshold breached → alert created with severity
-3. Alert stored in active list
-4. **Cooldown** prevents duplicate alerts for the same rule
-5. Alert can be sent via `AlertNotifier` (Slack, PagerDuty, webhook)
-
-### Notification Channels
-
-Set the `ALERT_WEBHOOK_URL` environment variable to receive Slack-compatible notifications:
-
-```bash
-# In .env or docker-compose.yaml
-ALERT_WEBHOOK_URL=https://hooks.slack.com/services/T00/B00/xxx
-```
-
----
-
-## 4. Rollback System
-
-The `RollbackManager` automatically archives challenger models that perform poorly.
-
-### Rollback Criteria
-
-| Metric | Threshold | What Happens |
-|--------|-----------|-------------|
-| Error Rate | > 10% | Challenger → `archived` |
-| Avg Latency | > 500ms | Challenger → `archived` |
-| Insufficient Data | < 50 requests | No action (wait for more data) |
-
-### Configuration
+### Alert Rules
 
 ```python
-# src/config/monitoring.py
-ROLLBACK_ERROR_RATE_THRESHOLD = 0.10   # 10%
-ROLLBACK_LATENCY_THRESHOLD_MS = 500.0  # 500 ms
-ROLLBACK_MIN_REQUESTS = 50             # Minimum before evaluation
+from src.domain.monitoring.services.alert_manager import AlertManager, AlertRule
+
+rules = [
+    AlertRule(
+        name="high_drift_score",
+        metric="drift_score",
+        threshold=0.3,
+        severity="CRITICAL",       # INFO, WARNING, CRITICAL
+        comparison="gt",           # gt (greater than), lt (less than)
+        cooldown_seconds=300,      # Don't re-alert for 5 minutes
+    ),
+    AlertRule(
+        name="low_model_accuracy",
+        metric="accuracy",
+        threshold=0.85,
+        severity="WARNING",
+        comparison="lt",
+        cooldown_seconds=600,
+    ),
+    AlertRule(
+        name="high_latency",
+        metric="latency_p99",
+        threshold=100,             # ms
+        severity="WARNING",
+        comparison="gt",
+    ),
+]
 ```
 
-### Manual Rollback
+### Alert Notifier (Webhooks)
 
-```bash
-# Archive all challengers for a model
-curl -X POST http://localhost:8001/models/rollback \
-  -H "Content-Type: application/json" \
-  -d '{"model_id": "credit-risk"}'
+```python
+from src.infrastructure.monitoring.alert_notifier import AlertNotifier
 
-# Response:
-# {"model_id": "credit-risk", "champion": "v1", "archived_challengers": ["v3"]}
+notifier = AlertNotifier(webhook_url="https://hooks.slack.com/services/xxx")
+await notifier.notify(alert)
 ```
 
-### Automatic Rollback (via Airflow)
+Payload format (Slack-compatible):
 
-The self-healing DAG runs rollback as step 2 of 5:
-
-```
-send_alert → rollback_challenger → train_model → log_mlflow → register_model
-```
-
----
-
-## 5. Airflow Self-Healing Pipeline
-
-When drift is detected, the platform automatically triggers an Airflow DAG that heals the system.
-
-### Pipeline Tasks
-
-| Step | Task | Action |
-|------|------|--------|
-| 1 | `send_alert` | Sends Slack/webhook notification |
-| 2 | `rollback_challenger` | Archives poor-performing challengers via API |
-| 3 | `train_model` | Retrains model using `model_configs/*.yaml` |
-| 4 | `log_mlflow` | Logs metrics + params to MLflow |
-| 5 | `register_model` | Registers new challenger via API |
-
-### Configuration
-
-- **DAG location**: `dags/retrain_pipeline.py`
-- **Schedule**: `None` (triggered by API, not scheduled)
-- **Max active runs**: `1` (deduplicates concurrent triggers)
-- **Airflow UI**: http://localhost:8080 (admin/admin)
-
-### Manually Trigger
-
-```bash
-# Via Airflow API
-curl -X POST http://localhost:8080/api/v1/dags/self_healing_pipeline/dagRuns \
-  -u admin:admin \
-  -H "Content-Type: application/json" \
-  -d '{
-    "conf": {
-      "model_id": "credit-risk",
-      "drift_score": 0.9,
-      "reason": "Manual trigger for testing"
+```json
+{
+  "blocks": [
+    {
+      "type": "header",
+      "text": {"type": "plain_text", "text": "🚨 Phoenix ML Alert"}
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Alert:* high_drift_score"},
+        {"type": "mrkdwn", "text": "*Severity:* CRITICAL"},
+        {"type": "mrkdwn", "text": "*Model:* credit-risk"},
+        {"type": "mrkdwn", "text": "*Value:* 0.45"}
+      ]
     }
-  }'
+  ]
+}
 ```
 
----
+## Model Evaluation
 
-## 6. Prometheus Metrics
-
-Phoenix ML exposes these metrics at `GET /metrics`:
-
-| Metric | Type | Labels | Description |
-|--------|------|--------|-------------|
-| `prediction_count_total` | Counter | model_id, version | Total predictions served |
-| `inference_latency_seconds` | Histogram | model_id, version | P50/P95/P99 latency |
-| `model_confidence` | Gauge | model_id | Current confidence score |
-| `feature_drift_score` | Gauge | model_id, feature | Drift score per feature |
-| `drift_detected_events_total` | Counter | model_id | Number of drift events |
-
-### Custom Metrics
-
-Add in `src/infrastructure/monitoring/prometheus_metrics.py`:
+### Classification Metrics
 
 ```python
-from prometheus_client import Counter, Histogram
+from src.domain.monitoring.services.model_evaluator import get_evaluator
 
-MY_METRIC = Counter(
-    "my_custom_metric_total",
-    "Description of my metric",
-    ["label1", "label2"],
-)
-
-# Use in code:
-MY_METRIC.labels(label1="value", label2="value").inc()
+evaluator = get_evaluator("classification")
+metrics = evaluator.evaluate(predictions, ground_truth)
+# Returns: {"accuracy": 0.95, "f1_score": 0.93, "precision": 0.94, "recall": 0.92}
 ```
 
----
+### Regression Metrics
 
-## 7. Grafana Dashboards
+```python
+evaluator = get_evaluator("regression")
+metrics = evaluator.evaluate(predictions, ground_truth)
+# Returns: {"rmse": 0.15, "mae": 0.12, "r2": 0.95}
+```
 
-Pre-provisioned dashboard at http://localhost:3001:
+## Auto-Rollback
 
-- **Throughput (RPS)** per model
-- **P99 Latency** over time
-- **Feature Drift Scores**
+```python
+from src.domain.monitoring.services.rollback_manager import RollbackManager
 
-### Customizing
+rollback_manager = RollbackManager()
+decision = rollback_manager.evaluate_rollback(
+    model_id="credit-risk",
+    current_accuracy=0.72,      # Below threshold
+    threshold=0.85,
+    champion_version="v1",
+    challenger_versions=["v2", "v3"]
+)
+# decision.should_rollback = True
+# Action: archive v2, v3 → keep v1 as champion
+```
 
-1. Edit dashboard in Grafana UI
-2. Export JSON via Grafana → Dashboard Settings → JSON Model
-3. Save to `grafana/provisioning/dashboards/`
-4. Restart: `docker compose restart grafana`
+## Prometheus Metrics
 
----
+### Available Metrics
 
-## 8. Performance Monitoring
+| Metric | Type | Prometheus Query Example |
+|--------|------|------------------------|
+| `phoenix_prediction_count` | Counter | `rate(phoenix_prediction_count[5m])` |
+| `phoenix_inference_latency_ms` | Histogram | `histogram_quantile(0.99, phoenix_inference_latency_ms_bucket)` |
+| `phoenix_drift_score` | Gauge | `phoenix_drift_score{model_id="credit-risk"}` |
+| `phoenix_model_accuracy` | Gauge | `phoenix_model_accuracy{model_id="credit-risk"}` |
+| `phoenix_drift_detected_total` | Counter | `increase(phoenix_drift_detected_total[1h])` |
 
-Real-time performance data via API:
+### PromQL Examples
+
+```promql
+# P99 latency over last 5 minutes
+histogram_quantile(0.99, rate(phoenix_inference_latency_ms_bucket[5m]))
+
+# Requests per second
+rate(phoenix_prediction_count[1m])
+
+# Drift trend
+phoenix_drift_score{model_id="credit-risk"}
+
+# Error rate
+rate(phoenix_prediction_count{status="error"}[5m]) / rate(phoenix_prediction_count[5m])
+```
+
+## Grafana Dashboards
+
+Access: `http://localhost:3001` (admin/admin)
+
+### Auto-provisioned Dashboard
+
+Dashboard `phoenix-ml.json` bao gồm:
+
+| Panel | Type | Query |
+|-------|------|-------|
+| Prediction Rate | Time series | `rate(phoenix_prediction_count[5m])` |
+| Latency Distribution | Histogram | `phoenix_inference_latency_ms` |
+| Drift Score | Gauge + Time series | `phoenix_drift_score` |
+| Model Accuracy | Gauge | `phoenix_model_accuracy` |
+| F1 Score | Gauge | `phoenix_model_f1_score` |
+| Active Models | Stat | Count of models |
+
+## Distributed Tracing (Jaeger)
+
+Access: `http://localhost:16686`
+
+### Setup
+
+```python
+# Tự động initialize trong lifespan.py
+from src.infrastructure.monitoring.tracing import init_tracing
+init_tracing()  # OTLP exporter → Jaeger
+```
+
+### Trace Attributes
+
+Mỗi prediction request tạo trace với spans:
+
+```
+[predict] 5.2ms
+  ├── [resolve_model] 0.1ms
+  ├── [get_features] 0.8ms
+  ├── [inference] 3.5ms
+  └── [publish_events] 0.5ms
+```
+
+## Self-Healing Pipeline
+
+### Full Flow
+
+```mermaid
+sequenceDiagram
+    participant Monitor as Monitoring Loop
+    participant Drift as DriftCalculator
+    participant Alert as AlertManager
+    participant Notify as Slack/Discord
+    participant Rollback as RollbackManager
+    participant Airflow as Airflow DAG
+    
+    loop Every 30 seconds
+        Monitor->>Drift: calculate_drift(reference, current)
+        Drift-->>Monitor: DriftReport
+        
+        alt drift_score > 0.3
+            Monitor->>Alert: evaluate(rules)
+            Alert->>Notify: webhook POST
+            Alert->>Rollback: evaluate_rollback()
+            Rollback->>Rollback: archive challengers
+            Monitor->>Airflow: trigger retrain DAG
+        end
+    end
+```
+
+### Manual Trigger
 
 ```bash
-curl http://localhost:8001/monitoring/performance/credit-risk
+# Trigger drift check manually
+curl http://localhost:8001/monitoring/drift/credit-risk
 
-# {
-#   "model_id": "credit-risk",
-#   "total_predictions": 204,
-#   "metrics": {
-#     "avg_latency_ms": 2.2,
-#     "avg_confidence": 0.67
-#   }
-# }
+# View drift history
+curl http://localhost:8001/monitoring/reports/credit-risk?limit=20
+
+# Rollback model
+curl -X POST http://localhost:8001/models/rollback -d '{"model_id": "credit-risk"}'
 ```
+
+---
+*Document Status: v4.0 — Updated March 2026*
