@@ -22,7 +22,9 @@
 
 ## 📌 What is Phoenix ML?
 
-Phoenix ML is a **production-grade, model-agnostic ML inference platform** that goes beyond simple model serving. It combines real-time inference with autonomous monitoring, drift detection, and self-healing capabilities — all built with **Domain-Driven Design (DDD)** and **Clean Architecture** principles.
+Phoenix ML is a **production-grade, model-agnostic ML inference framework** (Python library) that goes beyond simple model serving. Install it, define your model config, and get real-time inference with autonomous monitoring, drift detection, and self-healing — all built with **Domain-Driven Design (DDD)** and **Clean Architecture** principles.
+
+> **Framework + Reference Deployment**: The `src/` package is the installable library. Everything else (docker-compose, examples, Grafana dashboards) is reference deployment for demo and learning.
 
 <div align="center">
 
@@ -34,16 +36,15 @@ Phoenix ML is a **production-grade, model-agnostic ML inference platform** that 
 
 | Capability | Description |
 |-----------|-------------|
-| ⚡ **Real-time Inference** | Sub-50ms p99 latency with ONNX Runtime, TensorRT, and Triton support |
+| ⚡ **Real-time Inference** | Sub-50ms p99 latency with ONNX Runtime (TensorRT/Triton adapters included) |
 | 🔄 **Self-Healing** | Drift detection → Airflow pipeline: alert → rollback → retrain → log → deploy |
 | 🎯 **A/B Testing** | Dynamic model routing with Champion/Challenger traffic splitting |
 | 🛡️ **Circuit Breaker** | Fault tolerance with automatic failover and recovery |
-| 📊 **Full Observability** | Prometheus metrics, Grafana dashboards, Jaeger distributed tracing |
-| 🔬 **Anomaly Detection** | Real-time monitoring for prediction anomalies, latency spikes, error rates |
-| 📦 **Airflow Pipelines** | Reproducible model training with versioned data and artifacts |
-| 🌀 **Airflow Orchestration** | 5-task self-healing DAG with max_active_runs=1 deduplication |
+| 📊 **Full Observability** | Pluggable monitoring: Prometheus, Grafana, Jaeger integrations |
+| 🔬 **Drift Detection** | KS, PSI, Chi², Wasserstein tests — configurable per model |
+| 🌀 **Flexible Retrain** | Triggers: drift / manual / data-change (DVC) / scheduled |
 | 📦 **Batch Prediction** | `/predict/batch` endpoint with concurrent processing |
-| 🧩 **Model-Agnostic** | Supports scikit-learn, XGBoost, MLP — any ONNX-exportable framework |
+| 🧩 **Model-Agnostic** | Any ONNX-exportable framework — scikit-learn, XGBoost, PyTorch, etc. |
 
 ---
 
@@ -156,17 +157,24 @@ graph TD
 
 ## 🛠️ Tech Stack
 
+### 🔧 Framework Core (the library)
+
 | Layer | Technologies |
 |-------|-------------|
-| **Inference** | ONNX Runtime · TensorRT · Triton Inference Server |
+| **Inference** | ONNX Runtime · TensorRT adapter · Triton client |
 | **Backend** | Python 3.11+ · FastAPI · gRPC · Pydantic v2 · SQLAlchemy 2.0 Async |
-| **Data** | Redis (features) · PostgreSQL (metadata) · Apache Kafka (events) · MinIO/S3 (artifacts) |
 | **ML Frameworks** | Scikit-Learn · XGBoost · ONNX · skl2onnx · onnxmltools |
-| **MLOps** | MLflow (experiment tracking) · Apache Airflow (orchestration) · MinIO/S3 (artifact storage) |
-| **Observability** | Prometheus · Grafana · Jaeger (OpenTelemetry) |
-| **Frontend** | React 18 · TypeScript · Vite · Vanilla CSS · Vitest |
-| **Infrastructure** | Docker Compose (14+ services) · GitHub Actions CI · `uv` package manager · Alembic migrations |
-| **Testing** | Pytest (87% coverage) · Vitest (104 tests) · ESLint · Ruff · Mypy (142 source files, 0 errors) |
+| **MLOps** | MLflow integration · Airflow DAG templates · DVC integration |
+| **Data** | Redis (features) · PostgreSQL (metadata) · Kafka (events) · S3/MinIO (artifacts) |
+| **Observability** | Prometheus · OpenTelemetry/Jaeger · Pluggable alerting |
+
+### 🚀 Reference Deployment (demo stack)
+
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 18 · TypeScript · Vite · Vanilla CSS |
+| **Infrastructure** | Docker Compose (14+ services) · Grafana dashboards · Prometheus config |
+| **CI/CD** | GitHub Actions · Ruff · Mypy · Pytest (87% coverage) |
 
 ---
 
@@ -331,29 +339,36 @@ uv run locust -f benchmarks/load_test.py --host http://localhost:8001
 
 ```
 phoenix-ml-platform/
-├── src/                         # Backend (DDD layers, 131 files, 7k LOC)
-│   ├── domain/                  # Business logic + interfaces
-│   ├── application/             # Commands, handlers, DTOs
-│   ├── infrastructure/          # FastAPI, ONNX, Postgres, Redis, Kafka
-│   └── shared/                  # Exceptions, interfaces, utils
-├── examples/                    # ML training examples
-│   ├── credit_risk/             # GBClassifier (30 features)
-│   ├── house_price/             # Ridge regression (8 features)
-│   ├── fraud_detection/         # XGBoost (12 features)
-│   └── image_classification/    # MLP 256→128 (784 features)
+│
+│  ── 🔧 FRAMEWORK CORE (pip install phoenix-ml) ──────────
+├── src/                         # Core library (DDD layers)
+│   ├── domain/                  #   Business logic + interfaces
+│   ├── application/             #   Commands, handlers, DTOs
+│   ├── infrastructure/          #   FastAPI, ONNX, Postgres, Redis, Kafka
+│   └── shared/                  #   Exceptions, interfaces, utils
+├── pyproject.toml               # Package definition
+│
+│  ── 📚 EXAMPLES & TEMPLATES ─────────────────────────────
+├── examples/                    # Training scripts (credit_risk, house_price, ...)
 ├── model_configs/               # YAML configs per model
-├── frontend/                    # React + TypeScript dashboard
-├── dags/                        # Airflow DAGs (self_healing_pipeline)
-├── tests/                       # Unit / Integration / E2E
-├── scripts/                     # Simulation, seeding, E2E test scripts
+├── dags/                        # Airflow DAG templates
+├── notebooks/                   # Demo notebooks
+├── scripts/                     # Simulation, seeding, utilities
 ├── benchmarks/                  # Locust load tests
-├── docs/                        # Architecture, ADRs, API ref, customization, monitoring, troubleshooting
-├── grafana/                     # Provisioned dashboards
-├── .github/workflows/           # CI/CD pipelines
-├── docker-compose.yaml          # Core services (14+ containers)
-├── compose.yaml                 # Core services (14+ containers)
-├── docker-compose.airflow.yaml  # Airflow orchestration stack
-└── pyproject.toml               # Python dependencies + packaging
+│
+│  ── 🚀 REFERENCE DEPLOYMENT (docker-compose demo) ──────
+├── docker-compose.yaml          # Dev stack (14+ services)
+├── docker-compose.airflow.yaml  # Airflow orchestration
+├── Dockerfile*                  # Container definitions
+├── frontend/                    # React dashboard
+├── grafana/                     # Dashboard templates
+├── deploy/                      # Helm chart (reference)
+├── prometheus.yml               # Metrics config
+│
+│  ── 📖 DOCS & TESTS ─────────────────────────────────────
+├── docs/                        # Architecture, ADRs, guides
+├── tests/                       # Unit / Integration / E2E
+└── .github/workflows/           # CI/CD pipelines
 ```
 
 ---

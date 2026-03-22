@@ -976,9 +976,9 @@ class DriftDetector:
 │                  │                                                               │
 ├──────────────────┼──────────────────────────────────────────────────────────────┤
 │                  │                                                               │
-│  INFRASTRUCTURE  │  • Kubernetes (container orchestration)                       │
+│  INFRASTRUCTURE  │  • Docker Compose (container orchestration)                   │
 │                  │  • Docker (containerization)                                  │
-│                  │  • Terraform (IaC)                                            │
+│                  │  • GitHub Actions (CI/CD)                                     │
 │                  │  • GitHub Actions (CI/CD)                                     │
 │                  │                                                               │
 └──────────────────┴──────────────────────────────────────────────────────────────┘
