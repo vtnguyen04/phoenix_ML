@@ -3,10 +3,7 @@ from typing import Any
 
 
 class IDataIngestor(ABC):
-    """
-    Interface for data ingestion following Clean Architecture.
-    Allows swappable implementations (API, Kafka, Direct DB).
-    """
+    """Abstract interface for data ingestion backends."""
 
     @abstractmethod
     async def ingest(self, entity_id: str, data: dict[str, float]) -> bool:

@@ -1,9 +1,7 @@
-"""
-Drift Calculator — Strategy Pattern.
+"""Feature drift detection via pluggable strategies.
 
-Each drift detection algorithm is a DriftStrategy.
-Adding a new test = 1 new class + 1 dict entry.
-All thresholds read from config.py (zero magic numbers).
+Compares reference and current feature distributions using KS-test,
+PSI, or chi-squared. Thresholds are read from ``config.py``.
 """
 
 from abc import ABC, abstractmethod

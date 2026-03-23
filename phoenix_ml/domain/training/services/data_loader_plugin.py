@@ -1,11 +1,11 @@
-"""
-IDataLoader — Plugin Interface for Dataset Loading.
+"""Abstract interface for dataset loading.
 
-Enables loading any data format: tabular CSV, images with annotations,
-text corpora, time series, audio files, etc.
+Implementations handle loading and splitting data from a specific format
+(CSV, COCO, JSON-lines, etc.) and are registered in ``PluginRegistry``.
 
-Each ML problem type implements this interface to load its specific
-data format into a standardized structure the framework can manage.
+Methods:
+    load(data_path, **kwargs) -> tuple[Any, DatasetInfo]
+    split(data, test_size, random_seed) -> tuple[Any, Any]
 """
 
 from abc import ABC, abstractmethod

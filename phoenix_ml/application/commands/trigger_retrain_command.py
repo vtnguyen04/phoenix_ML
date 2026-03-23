@@ -2,9 +2,7 @@ from pydantic import BaseModel
 
 
 class TriggerRetrainCommand(BaseModel):
-    """
-    Command to trigger a model retraining pipeline.
-    """
+    """Input DTO for triggering a model retraining pipeline."""
 
     model_id: str
     reason: str

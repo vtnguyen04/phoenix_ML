@@ -1,9 +1,7 @@
 """Model explainability via SHAP and perturbation-based feature importance.
 
-Supports:
-- SHAP TreeExplainer (for tree-based models: XGBoost, LightGBM, Random Forest)
-- SHAP KernelExplainer (for any model, slower)
-- Perturbation-based (fallback for ONNX models without SHAP support)
+Supports SHAP TreeExplainer (tree-based models), KernelExplainer
+(generic), and perturbation-based importance (ONNX fallback).
 """
 
 from __future__ import annotations

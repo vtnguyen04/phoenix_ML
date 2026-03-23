@@ -11,10 +11,7 @@ SUCCESS_STATUS = 200
 
 
 class ApiDataIngestor(IDataIngestor):
-    """
-    Infrastructure implementation of IDataIngestor using HTTP API.
-    Points to the running FastAPI server.
-    """
+    """Ingests feature data via HTTP POST to the running FastAPI server."""
 
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url

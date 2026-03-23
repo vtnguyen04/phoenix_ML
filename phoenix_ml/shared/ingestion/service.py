@@ -7,18 +7,13 @@ logger = logging.getLogger(__name__)
 
 
 class IngestionService:
-    """
-    Application Service that orchestrates the ingestion process.
-    Adheres to Clean Architecture by using the IDataIngestor abstraction.
-    """
+    """Orchestrates data ingestion via an ``IDataIngestor`` backend."""
 
     def __init__(self, ingestor: IDataIngestor):
         self._ingestor = ingestor
 
     async def process_raw_data(self, entity_id: str, raw_features: dict[str, Any]) -> bool:
-        """
-        Processes and cleans raw data before ingestion.
-        """
+        """Clean raw features and forward to the ingestor backend."""
         logger.info("Processing data for entity: %s", entity_id)
 
         cleaned_data = {k: float(v) for k, v in raw_features.items()}

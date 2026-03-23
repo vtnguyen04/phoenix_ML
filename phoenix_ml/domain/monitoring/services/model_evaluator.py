@@ -1,14 +1,7 @@
-"""
-Model Evaluator Plugin — Task-Agnostic Evaluation Interface.
+"""Abstract interface for task-specific model evaluation.
 
-Provides IModelEvaluator interface and task-specific implementations.
-Each ML problem type computes its own metrics.
-
-Examples:
-    - Classification: accuracy, precision, recall, F1
-    - Regression: RMSE, MAE, R²
-    - Detection: mAP, mAP50
-    - Recommendation: NDCG, MRR
+Implementations compute metrics appropriate for the task type
+(classification → accuracy/F1, regression → RMSE/MAE, detection → mAP).
 """
 
 from abc import ABC, abstractmethod
@@ -20,11 +13,10 @@ import numpy as np
 
 
 class IModelEvaluator(ABC):
-    """
-    Interface for model performance evaluation.
+    """Abstract base for model performance evaluation.
 
-    Each ML problem type should implement this to compute
-    task-appropriate metrics and comparison logic.
+    Subclasses implement ``evaluate()`` and ``primary_metric()`` for
+    a specific task type. ``is_better()`` defaults to higher-is-better.
     """
 
     @abstractmethod
@@ -73,9 +65,9 @@ class IModelEvaluator(ABC):
 
 
 class ClassificationEvaluator(IModelEvaluator):
-    """
-    Evaluator for classification tasks (binary and multiclass).
-    Metrics: accuracy, precision, recall, F1-score.
+    """Evaluator for binary/multiclass classification.
+
+    Computes accuracy, precision, recall, F1-score. Primary metric: ``f1_score``.
     """
 
     def evaluate(
@@ -117,9 +109,9 @@ class ClassificationEvaluator(IModelEvaluator):
 
 
 class RegressionEvaluator(IModelEvaluator):
-    """
-    Evaluator for regression tasks.
-    Metrics: RMSE, MAE, R², MAPE.
+    """Evaluator for regression tasks.
+
+    Computes RMSE, MAE, R², MAPE. Primary metric: ``rmse`` (lower-is-better).
     """
 
     def evaluate(
@@ -190,10 +182,15 @@ _EVALUATOR_MAP: dict[str, type[IModelEvaluator]] = {
 
 
 def get_evaluator(task_type: str) -> IModelEvaluator:
-    """
-    Factory: returns the appropriate evaluator for a task type.
+    """Return an evaluator for the given task type.
 
-    Falls back to ClassificationEvaluator for unknown types.
+    Args:
+        task_type: One of ``classification``, ``binary_classification``,
+            ``regression``, ``timeseries``. Unknown types fall back to
+            ``ClassificationEvaluator``.
+
+    Returns:
+        An ``IModelEvaluator`` instance.
     """
     evaluator_cls = _EVALUATOR_MAP.get(task_type, ClassificationEvaluator)
     return evaluator_cls()

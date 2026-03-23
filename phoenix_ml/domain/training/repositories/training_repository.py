@@ -1,9 +1,4 @@
-"""
-Training Repository — Abstract Interface.
-
-Defines the contract for persisting and retrieving training jobs.
-Concrete implementations live in the infrastructure layer.
-"""
+"""Abstract repository interface for training job persistence."""
 
 from abc import ABC, abstractmethod
 

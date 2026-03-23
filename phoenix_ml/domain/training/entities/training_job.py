@@ -1,8 +1,4 @@
-"""
-Training Job Entity — Aggregate Root for the Training Bounded Context.
-
-Represents a single training job with its lifecycle states.
-"""
+"""Training job entity with lifecycle state machine."""
 
 import uuid
 from dataclasses import dataclass, field

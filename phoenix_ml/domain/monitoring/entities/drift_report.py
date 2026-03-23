@@ -4,9 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DriftReport(BaseModel):
-    """
-    Value Object representing the result of a drift detection check.
-    """
+    """Immutable result of a single-feature drift detection check."""
 
     model_config = ConfigDict(frozen=True)
 

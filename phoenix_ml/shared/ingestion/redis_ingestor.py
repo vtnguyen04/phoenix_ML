@@ -6,10 +6,7 @@ from phoenix_ml.shared.ingestion.interfaces import IDataIngestor
 
 
 class RedisDataIngestor(IDataIngestor):
-    """
-    Infrastructure implementation of IDataIngestor using Redis directly.
-    Best for high-throughput low-latency ingestion.
-    """
+    """Ingests feature data directly into Redis hash keys."""
 
     def __init__(self, redis_url: str = "redis://localhost:6380"):
         self.redis = redis.from_url(redis_url, decode_responses=True)

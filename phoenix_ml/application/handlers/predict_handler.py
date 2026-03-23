@@ -11,12 +11,10 @@ from phoenix_ml.domain.shared.event_bus import DomainEventBus
 
 
 class PredictHandler:
-    """
-    Application Service that handles prediction commands.
-    Delegates orchestration to InferenceService.
+    """Application service for prediction requests.
 
-    Uses Observer Pattern: emits PredictionCompleted event.
-    Subscribers (MetricsPublisher, KafkaProducer, etc.) react independently.
+    Delegates to ``InferenceService`` and emits ``PredictionCompleted``
+    events via the domain event bus.
     """
 
     def __init__(

@@ -1,8 +1,7 @@
-"""
-Domain Event Bus — Observer Pattern Implementation.
+"""In-process event bus implementing the observer pattern.
 
-Decouples event producers (handlers) from consumers (metrics, logging, Kafka).
-Adding a new side-effect = register a new subscriber. Zero handler code changes.
+Subscribers register callbacks per event type. When an event is
+published, all matching subscribers are invoked synchronously.
 """
 
 import logging

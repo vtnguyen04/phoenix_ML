@@ -1,8 +1,6 @@
-"""
-Batch Prediction Handler — processes multiple predictions efficiently.
+"""Handler for batch prediction requests.
 
-Uses the existing PredictHandler internally but collects results
-without making separate HTTP calls.
+Delegates to ``PredictHandler`` for each item and aggregates results.
 """
 
 import asyncio

@@ -1,9 +1,4 @@
-"""
-Training Configuration Value Object.
-
-Immutable configuration for a training run including hyperparameters,
-data sources, and resource constraints.
-"""
+"""Immutable configuration value object for training runs."""
 
 from dataclasses import dataclass
 

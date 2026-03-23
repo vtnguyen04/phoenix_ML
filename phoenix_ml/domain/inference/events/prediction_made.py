@@ -5,9 +5,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class PredictionMade:
-    """
-    Domain Event triggered when a prediction is successfully generated.
-    """
+    """Domain event emitted when a prediction is generated."""
 
     prediction_id: str
     model_id: str

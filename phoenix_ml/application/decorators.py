@@ -1,8 +1,7 @@
-"""
-Application Decorators — Cross-Cutting Concerns via Decorator Pattern.
+"""Cross-cutting concern decorators for handler methods.
 
-Stack these decorators on handler methods to add timing, logging,
-error-counting etc. without polluting business logic.
+Provides timing, logging, and error-counting wrappers that can be
+stacked on handler methods without modifying business logic.
 """
 
 import functools
