@@ -1,10 +1,10 @@
 # Troubleshooting Guide
 
-## Lỗi thường gặp
+## Common Errors
 
 ### 1. `mlService.getModels is not a function`
 
-**Nguyên nhân**: Frontend import sai hoặc MLService chưa được instantiate.
+**Cause**: Frontend import error or MLService not instantiated.
 
 **Fix**:
 ```typescript
@@ -20,7 +20,7 @@ service.getModels();
 
 ### 2. `ModelNotFoundError: Model 'credit-risk' not found`
 
-**Nguyên nhân**: Model chưa được train hoặc chưa register.
+**Cause**: Model not trained or not registered.
 
 **Fix**:
 ```bash
@@ -33,7 +33,7 @@ uv run python examples/credit_risk/train.py
 
 ### 3. `ConnectionRefusedError: Kafka not available`
 
-**Nguyên nhân**: Kafka container chưa start hoặc port sai.
+**Cause**: Kafka container not started or wrong port.
 
 **Fix**:
 ```bash
@@ -49,7 +49,7 @@ docker compose logs kafka | tail -20
 
 **Note**: Platform works **without Kafka** — producer/consumer fallback to no-op mode.
 
-### 4. `ConnectionRefusedError: Redis` hoặc `PostgreSQL`
+### 4. `ConnectionRefusedError: Redis` or `PostgreSQL`
 
 **Fix**:
 ```bash
@@ -67,7 +67,7 @@ docker compose logs postgres
 
 ### 5. `onnxruntime.InferenceSession` fails
 
-**Nguyên nhân**: model.onnx file corrupt hoặc chưa tồn tại.
+**Cause**: model.onnx file corrupt or does not exist.
 
 **Fix**:
 ```bash
@@ -77,8 +77,8 @@ ls -la models/credit_risk/v1/model.onnx
 # Regenerate
 uv run python examples/credit_risk/train.py
 
-# Hoặc generate mock model (CI/testing)
-uv run python -c "from src.shared.utils.model_generator import generate_simple_onnx; generate_simple_onnx('models/credit_risk/v1/model.onnx', 7)"
+# Or generate mock model (CI/testing)
+uv run python -c "from phoenix_ml.shared.utils.model_generator import generate_simple_onnx; generate_simple_onnx('models/credit_risk/v1/model.onnx', 7)"
 ```
 
 ### 6. `alembic` migration errors
@@ -102,7 +102,7 @@ npm install
 npm run dev
 ```
 
-### 8. `ruff check` hoặc `mypy` errors
+### 8. `ruff check` or `mypy` errors
 
 ```bash
 # Auto-fix ruff
@@ -110,7 +110,7 @@ uv run ruff check . --fix
 uv run ruff format .
 
 # Check specific file
-uv run mypy src/infrastructure/bootstrap/container.py
+uv run mypy phoenix_ml/infrastructure/bootstrap/container.py
 ```
 
 ### 9. Docker "port already in use"

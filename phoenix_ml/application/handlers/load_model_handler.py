@@ -4,10 +4,7 @@ from phoenix_ml.domain.model_registry.repositories.model_repository import Model
 
 
 class LoadModelHandler:
-    """
-    Application Service that handles model loading requests.
-    Initializes the engine with the requested model.
-    """
+    """Application service for loading models into the inference engine."""
 
     def __init__(self, model_repo: ModelRepository, inference_engine: InferenceEngine) -> None:
         self._model_repo = model_repo

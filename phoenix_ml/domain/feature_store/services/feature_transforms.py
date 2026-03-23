@@ -1,12 +1,7 @@
-"""Feature transforms & pipeline — chained feature engineering steps.
+"""Chained feature engineering transforms.
 
-Transform types:
-- StandardScaler: (x - mean) / std
-- MinMaxScaler: (x - min) / (max - min)
-- LogTransform: log1p(x)
-- OneHotEncoder: categorical → binary columns
-- Imputer: fill missing values (mean, median, constant)
-- FeaturePipeline: chain transforms in order
+Includes StandardScaler, MinMaxScaler, LogTransform, OneHotEncoder,
+Imputer, and FeaturePipeline for composing transforms in order.
 """
 
 from __future__ import annotations

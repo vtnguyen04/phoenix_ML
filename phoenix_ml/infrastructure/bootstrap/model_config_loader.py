@@ -1,21 +1,7 @@
-"""
-ModelConfigLoader — Load model configurations from YAML files.
+"""YAML-based model configuration loader.
 
-Reads model config YAML files from MODEL_CONFIG_DIR, enabling users to
-define models for any ML problem type without modifying framework code.
-
-Example YAML (model_configs/credit-risk.yaml):
-    model_id: credit-risk
-    version: v1
-    framework: onnx
-    task_type: classification
-    model_path: models/my_model/v1/model.onnx
-    train_script: examples/my_model/train.py
-    dataset_name: german-credit-openml
-    feature_names:
-      - duration
-      - credit_amount
-      - ...
+Reads ``model_configs/<model_id>.yaml`` files and returns a list of
+``ModelConfig`` objects. Invalid or missing files are logged and skipped.
 """
 
 import json

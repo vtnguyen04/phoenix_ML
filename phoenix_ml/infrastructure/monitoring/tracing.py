@@ -1,7 +1,7 @@
-"""
-OpenTelemetry Distributed Tracing Setup.
-Configures a tracer provider with OTLP/Jaeger exporter for end-to-end
-request tracing across the Phoenix ML Platform.
+"""OpenTelemetry tracing setup.
+
+Configures a tracer provider with OTLP exporter for distributed
+request tracing. No-op if ``opentelemetry`` is not installed.
 """
 
 import logging

@@ -8,9 +8,7 @@ from phoenix_ml.domain.inference.value_objects.confidence_score import Confidenc
 
 
 class Prediction(BaseModel):
-    """
-    Entity representing a single prediction result.
-    """
+    """Immutable entity representing a single prediction result."""
 
     model_config = ConfigDict(frozen=True)
 

@@ -4,15 +4,15 @@ Technical documentation for the **Phoenix ML Platform** — a self-healing, mode
 
 ## What is Phoenix ML?
 
-Phoenix ML là một nền tảng **MLOps end-to-end** cho phép:
+Phoenix ML is an **end-to-end MLOps** platform that provides:
 
-- **Real-time Inference**: Serving ML models qua REST API và gRPC với latency < 10ms
-- **Model-Agnostic**: Hỗ trợ bất kỳ model nào export sang ONNX (classification, regression, image, NLP)
-- **Self-Healing**: Tự động phát hiện data drift, anomaly → alert → rollback model
+- **Real-time Inference**: Model serving via REST API and gRPC with latency < 10 ms
+- **Model-Agnostic**: Supports any model exported to ONNX (classification, regression, image, NLP)
+- **Self-Healing**: Automatic data drift detection → alert → rollback → export fresh data → retrain
 - **Multi-Model Management**: Champion/Challenger, A/B Testing, Canary Deployment, Shadow Mode
 - **Full Observability**: Prometheus metrics, Grafana dashboards, Jaeger distributed tracing
-- **Event-Driven**: Kafka for async event streaming, real-time prediction logging
-- **Automated Retraining**: Airflow DAGs tự động retrain khi phát hiện drift
+- **Event-Driven**: Kafka for async event streaming and real-time prediction logging
+- **Automated Retraining**: Export labeled prediction logs → merge with baseline → retrain on fresh distribution
 
 ## Tech Stack
 
@@ -121,9 +121,15 @@ docker compose -f docker-compose.airflow.yaml up -d
 uv run python scripts/generate_datasets.py
 uv run python examples/credit_risk/train.py
 uv run python examples/house_price/train.py
+uv run python examples/fraud_detection/train.py
+uv run python examples/image_classification/train.py
+uv run python examples/sentiment/train.py
+
+# Run full simulation
+uv run python scripts/simulate_pipeline.py --fast
 
 # Access
-# API:       http://localhost:8000/docs
+# API:       http://localhost:8001/docs
 # Frontend:  http://localhost:5174
 # MLflow:    http://localhost:5001
 # Grafana:   http://localhost:3001
@@ -139,7 +145,7 @@ uv run python examples/house_price/train.py
 | Test coverage | 87% backend |
 | Lint/Type check | Ruff 0 errors, Mypy 0 errors, ESLint 0 errors, TSC 0 errors |
 | Docker services | 14 containers |
-| Models supported | 4 (credit-risk, fraud-detection, house-price, image-classification) |
+| Models supported | 5 (credit-risk, fraud-detection, house-price, image-classification, sentiment) |
 
 ---
-*Repository: [phoenix_ML](https://github.com/vtnguyen04/phoenix_ML) · Author: Võ Thành Nguyễn*
+*Repository: [phoenix_ML](https://github.com/vtnguyen04/phoenix_ML)*

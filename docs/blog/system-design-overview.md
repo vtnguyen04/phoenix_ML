@@ -1,25 +1,25 @@
 # System Design Overview: Phoenix ML Platform
 
-*Phân tích sâu các quyết định kiến trúc đằng sau hệ thống ML inference tự phục hồi.*
+*Deep analysis of the architecture decisions behind the self-healing ML inference system.*
 
-## Bài toán
+## Problem Statement
 
-Xây dựng production ML platform cần giải quyết:
+Building a production ML platform requires solving:
 
-1. **Model Serving**: Serve nhiều models đồng thời, latency < 10ms
+1. **Model Serving**: Serve multiple models concurrently with latency < 10 ms
 2. **Model Management**: Champion/Challenger, versioning, A/B testing
-3. **Data Drift Detection**: Tự động phát hiện khi production data thay đổi
-4. **Self-Healing**: Alert → rollback → retrain tự động
+3. **Data Drift Detection**: Automatically detect when production data changes
+4. **Self-Healing**: Alert → rollback → auto-retrain
 5. **Observability**: Metrics, tracing, dashboards
 6. **Scalability**: Horizontal scaling, batch processing
 
-## Quyết định thiết kế chính
+## Key Design Decisions
 
 ### 1. Domain-Driven Design vs Monolithic
 
-**Vấn đề**: ML platform có nhiều concerns khác nhau (inference, monitoring, training, features) mà monolithic sẽ trộn lẫn.
+**Problem**: ML platform has many different concerns (inference, monitoring, training, features) that a monolithic approach would mix.
 
-**Giải pháp**: 5 Bounded Contexts, mỗi context có entities, services, repositories riêng.
+**Solution**: 5 Bounded Contexts, each with its own entities, services, and repositories.
 
 ```
 Inference → Model, Prediction, InferenceEngine, RoutingStrategy
@@ -29,23 +29,23 @@ Feature Store → FeatureRegistry, FeatureStore
 Model Registry → ModelRepository, ArtifactStorage
 ```
 
-**Kết quả**: Domain logic testable 100% without infrastructure. Thay đổi database = thay 1 file, không ảnh hưởng domain.
+**Result**: Domain logic 100% testable without infrastructure. Changing database = changing 1 file, no domain impact.
 
-### 2. CQRS — Tách Read và Write
+### 2. CQRS — Separating Read and Write
 
-**Vấn đề**: Prediction (write-heavy) và model queries (read-heavy) có access patterns khác nhau.
+**Problem**: Prediction (write-heavy) and model queries (read-heavy) have different access patterns.
 
-**Giải pháp**: 
+**Solution**: 
 - **Commands**: PredictCommand → PredictHandler (write prediction log + publish events)
 - **Queries**: GetModelQuery → GetModelQueryHandler (read from DB)
 
-**Benefit**: Commands có thể scale independently, queries có thể cache.
+**Benefit**: Commands can scale independently, queries can be cached.
 
 ### 3. Event-Driven Architecture — Kafka + EventBus
 
-**Vấn đề**: Prediction logging, metrics publishing, drift detection KHÔNG nên block inference path.
+**Problem**: Prediction logging, metrics publishing, drift detection should NOT block the inference path.
 
-**Giải pháp**: 2-layer event system:
+**Solution**: 2-layer event system:
 - **DomainEventBus** (in-process): publish Prometheus metrics, update counters → zero latency overhead
 - **Kafka** (cross-process): persist events, enable replaying, scale consumers → eventual consistency OK
 
@@ -57,9 +57,9 @@ PredictHandler
 
 ### 4. Strategy Pattern — Traffic Routing
 
-**Vấn đề**: Cần A/B test champion vs challenger models an toàn.
+**Problem**: Need to A/B test champion vs challenger models safely.
 
-**Giải pháp**: RoutingStrategy abstraction với 4 implementations:
+**Solution**: RoutingStrategy abstraction with 4 implementations:
 
 | Strategy | Use case | Risk |
 |----------|----------|------|
@@ -70,18 +70,18 @@ PredictHandler
 
 ### 5. Circuit Breaker — Fault Tolerance
 
-**Vấn đề**: Model engine crash → cascading failures.
+**Problem**: Model engine crash → cascading failures.
 
-**Giải pháp**: 3-state Circuit Breaker:
+**Solution**: 3-state Circuit Breaker:
 - **CLOSED** (normal): track failures, open if error rate > threshold
 - **OPEN** (blocked): reject all requests, wait timeout
 - **HALF_OPEN** (testing): allow limited requests, close if successful
 
 ### 6. Plugin Architecture — Model-Agnostic
 
-**Vấn đề**: Mỗi model type cần pre/post processing khác nhau (classification labels, regression scaling, image normalization).
+**Problem**: Each model type needs different pre/post processing (classification labels, regression scaling, image normalization).
 
-**Giải pháp**: PluginRegistry — register per-model processors:
+**Solution**: PluginRegistry — register per-model processors:
 ```python
 plugin_registry.register_model(
     model_id="credit-risk",
@@ -91,7 +91,7 @@ plugin_registry.register_model(
 )
 ```
 
-**Benefit**: Thêm model mới = thêm 1 YAML config + 1 training script. Zero code changes to core.
+**Benefit**: Adding a new model = 1 YAML config + 1 training script. Zero code changes to core.
 
 ## Performance Architecture
 
@@ -123,4 +123,4 @@ plugin_registry.register_model(
 | Redis feature store | Sub-ms feature retrieval | Memory cost, data consistency |
 
 ---
-*Published: March 2026 · Author: Võ Thành Nguyễn*
+*Published: March 2026*

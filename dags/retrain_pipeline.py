@@ -163,13 +163,61 @@ def _rollback_challenger(**kwargs: Any) -> None:
     )
 
 
+def _export_fresh_data(**kwargs: Any) -> None:
+    """Export fresh labeled data from prediction logs for retraining.
+
+    Calls POST /data/export-training to query prediction_logs where
+    ground_truth IS NOT NULL, merge with baseline data, and write
+    a timestamped CSV. Passes the export_path via XCom to train_model.
+
+    If export fails (e.g., insufficient labeled data), falls back to
+    the baseline data path from model config — ensuring the pipeline
+    doesn't fail completely.
+    """
+    conf = kwargs.get("dag_run", {}).conf or {}
+    model_id = conf.get("model_id", os.environ.get("DEFAULT_MODEL_ID", "credit-risk"))
+    ti = kwargs["ti"]
+
+    try:
+        resp = httpx.post(
+            f"{_API_URL}/data/export-training",
+            json={
+                "model_id": model_id,
+                "min_samples": 100,
+                "include_baseline": True,
+                "max_fresh_samples": 10000,
+            },
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+
+        export_path = result["export_path"]
+        ti.xcom_push(key="export_data_path", value=export_path)
+
+        logger.info(
+            "Fresh data exported: %d total (%d fresh + %d baseline) → %s",
+            result["total_samples"],
+            result["fresh_samples"],
+            result["baseline_samples"],
+            export_path,
+        )
+    except Exception as e:
+        logger.warning(
+            "Export fresh data failed for %s: %s. "
+            "Train will fall back to baseline data.",
+            model_id,
+            e,
+        )
+        ti.xcom_push(key="export_data_path", value=None)
+
+
 def _train_model(**kwargs: Any) -> None:
     """
     Train a new ML model version — model-agnostic.
 
-    Resolves training function AND data_path from model_configs/{model_id}.yaml.
-    The framework auto-detects the user's config to find the correct
-    training script and dataset location.
+    Uses fresh exported data from export_fresh_data step (via XCom)
+    if available. Falls back to baseline data_path from model config.
     """
     conf = kwargs.get("dag_run", {}).conf or {}
     model_id = conf.get("model_id", os.environ.get("DEFAULT_MODEL_ID", "credit-risk"))
@@ -184,22 +232,30 @@ def _train_model(**kwargs: Any) -> None:
         _PROJECT_ROOT / "models" / fs_model_id / version / "reference_features.json"
     )
 
-    # Resolve data_path from model config via ModelConfigLoader
-    data_path: str | None = None
-    config_path = _PROJECT_ROOT / "model_configs" / f"{model_id}.yaml"
-    if config_path.exists():
-        try:
-            from phoenix_ml.infrastructure.bootstrap.model_config_loader import (
-                load_model_config,
-            )
+    ti = kwargs["ti"]
 
-            model_config = load_model_config(config_path)
-            if model_config.data_path:
-                resolved = _PROJECT_ROOT / model_config.data_path
-                data_path = str(resolved)
-                logger.info("Resolved data_path: %s", data_path)
-        except Exception as e:
-            logger.warning("Failed to read config for %s: %s", model_id, e)
+    # Priority 1: fresh exported data from export_fresh_data step
+    data_path: str | None = ti.xcom_pull(
+        task_ids="export_fresh_data", key="export_data_path"
+    )
+    if data_path:
+        data_path = str(_PROJECT_ROOT / data_path)
+        logger.info("Using FRESH exported data: %s", data_path)
+    else:
+        # Priority 2: baseline data from model config
+        config_path = _PROJECT_ROOT / "model_configs" / f"{model_id}.yaml"
+        if config_path.exists():
+            try:
+                from phoenix_ml.infrastructure.bootstrap.model_config_loader import (
+                    load_model_config,
+                )
+
+                model_config = load_model_config(config_path)
+                if model_config.data_path:
+                    data_path = str(_PROJECT_ROOT / model_config.data_path)
+                    logger.info("Fallback to BASELINE data: %s", data_path)
+            except Exception as e:
+                logger.warning("Failed to read config for %s: %s", model_id, e)
 
     # Dynamically resolve training function
     train_fn = _resolve_train_function(model_id)
@@ -333,6 +389,10 @@ with DAG(
         task_id="rollback_challenger",
         python_callable=_rollback_challenger,
     )
+    export_task = PythonOperator(
+        task_id="export_fresh_data",
+        python_callable=_export_fresh_data,
+    )
     train_task = PythonOperator(
         task_id="train_model",
         python_callable=_train_model,
@@ -346,4 +406,4 @@ with DAG(
         python_callable=_register_model,
     )
 
-    alert_task >> rollback_task >> train_task >> mlflow_task >> register_task
+    alert_task >> rollback_task >> export_task >> train_task >> mlflow_task >> register_task

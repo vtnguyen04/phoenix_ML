@@ -3,9 +3,7 @@ from phoenix_ml.domain.model_registry.repositories.model_repository import Model
 
 
 class InMemoryModelRepository(ModelRepository):
-    """
-    In-memory implementation of ModelRepository for testing and rapid prototyping.
-    """
+    """In-memory model repository for testing."""
 
     def __init__(self) -> None:
         self._models: dict[str, Model] = {}

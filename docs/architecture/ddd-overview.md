@@ -1,21 +1,21 @@
 # DDD Architecture Overview: Phoenix ML Platform
 
-## Tổng quan
+## Overview
 
-Phoenix ML được xây dựng theo **Domain-Driven Design (DDD)** kết hợp **Clean Architecture** và **CQRS** (Command Query Responsibility Segregation).
+Phoenix ML is built with **Domain-Driven Design (DDD)** combined with **Clean Architecture** and **CQRS** (Command Query Responsibility Segregation).
 
-### Tại sao DDD?
+### Why DDD?
 
-| Lý do | Giải thích |
-|-------|-----------|
-| **Complexity Management** | ML platform có nhiều bounded contexts phức tạp (Inference, Monitoring, Training, Feature Store) |
-| **Framework Independence** | Domain logic KHÔNG phụ thuộc FastAPI, SQLAlchemy, hay bất kỳ framework nào — dễ test, dễ thay thế |
-| **Ubiquitous Language** | Tên class/method phản ánh ngôn ngữ domain: `Model`, `Prediction`, `DriftReport`, `RoutingStrategy` |
-| **Modularity** | Mỗi bounded context có thể phát triển, test, deploy độc lập |
+| Reason | Explanation |
+|--------|-------------|
+| **Complexity Management** | ML platform has many complex bounded contexts (Inference, Monitoring, Training, Feature Store) |
+| **Framework Independence** | Domain logic does NOT depend on FastAPI, SQLAlchemy, or any framework — easy to test and replace |
+| **Ubiquitous Language** | Class and method names reflect domain language: `Model`, `Prediction`, `DriftReport`, `RoutingStrategy` |
+| **Modularity** | Each bounded context can be developed, tested, and deployed independently |
 
 ## Bounded Contexts
 
-Phoenix ML có **5 Bounded Contexts**, mỗi context quản lý 1 subdomain:
+Phoenix ML has **5 Bounded Contexts**, each managing a specific subdomain:
 
 ```mermaid
 graph TB
@@ -65,8 +65,8 @@ graph TB
 
 ### Context Map
 
-| Bounded Context | Nhiệm vụ | Entities | Key Services |
-|----------------|-----------|----------|-------------|
+| Bounded Context | Responsibility | Entities | Key Services |
+|----------------|----------------|----------|-------------|
 | **Inference** | Real-time ML prediction | Model, Prediction | InferenceService, BatchManager, RoutingStrategy, CircuitBreaker, RequestPipeline |
 | **Monitoring** | Drift detection + alerting | DriftReport | DriftCalculator, AlertManager, AnomalyDetector, RollbackManager, ModelEvaluator |
 | **Training** | Model training management | TrainingJob, TrainingConfig | TrainingService, IDataLoader, ITrainer, HyperparameterOptimizer |
@@ -77,10 +77,10 @@ graph TB
 
 ### Entities
 
-Entities có **identity** (unique ID) và **lifecycle** (mutable state).
+Entities have a **unique identity** (ID) and a **lifecycle** (mutable state).
 
 ```python
-# src/domain/inference/entities/model.py
+# phoenix_ml/domain/inference/entities/model.py
 @dataclass
 class Model:
     id: str              # "credit-risk"
@@ -102,7 +102,7 @@ class Model:
 ```
 
 ```python
-# src/domain/monitoring/entities/drift_report.py
+# phoenix_ml/domain/monitoring/entities/drift_report.py
 @dataclass
 class DriftReport:
     model_id: str
@@ -115,7 +115,7 @@ class DriftReport:
 ```
 
 ```python
-# src/domain/training/entities/training_job.py
+# phoenix_ml/domain/training/entities/training_job.py
 @dataclass
 class TrainingJob:
     job_id: str
@@ -128,10 +128,10 @@ class TrainingJob:
 
 ### Value Objects
 
-Value Objects **immutable**, so sánh by value (không by reference).
+Value Objects are **immutable** and compared by value (not by reference).
 
 ```python
-# src/domain/inference/value_objects/confidence_score.py
+# phoenix_ml/domain/inference/value_objects/confidence_score.py
 @dataclass(frozen=True)
 class ConfidenceScore:
     value: float  # Must be in [0.0, 1.0]
@@ -140,7 +140,7 @@ class ConfidenceScore:
         if not 0.0 <= self.value <= 1.0:
             raise ValueError(f"Confidence must be 0-1, got {self.value}")
 
-# src/domain/inference/value_objects/feature_vector.py
+# phoenix_ml/domain/inference/value_objects/feature_vector.py
 @dataclass(frozen=True)
 class FeatureVector:
     values: np.ndarray  # float32 array
@@ -149,7 +149,7 @@ class FeatureVector:
     def dimension(self) -> int:
         return len(self.values)
 
-# src/domain/inference/value_objects/model_version.py
+# phoenix_ml/domain/inference/value_objects/model_version.py
 @dataclass(frozen=True)
 class ModelVersion:
     major: int
@@ -163,10 +163,10 @@ class ModelVersion:
 
 ### Domain Services
 
-Domain services chứa business logic **không thuộc về entity nào**.
+Domain services contain business logic that **does not belong to any single entity**.
 
 ```python
-# src/domain/inference/services/inference_service.py
+# phoenix_ml/domain/inference/services/inference_service.py
 class InferenceService:
     """Orchestrates the prediction flow."""
     
@@ -177,7 +177,7 @@ class InferenceService:
         # 4. Record latency
         return Prediction(...)
 
-# src/domain/monitoring/services/drift_calculator.py
+# phoenix_ml/domain/monitoring/services/drift_calculator.py
 class DriftCalculator:
     """Calculates statistical drift between distributions."""
     
@@ -195,10 +195,10 @@ class DriftCalculator:
 
 ### Repository Interfaces (ABCs)
 
-Repositories là abstract interfaces trong domain — implementations ở infrastructure.
+Repositories are abstract interfaces defined in the domain layer — concrete implementations live in infrastructure.
 
 ```python
-# src/domain/model_registry/repositories/model_repository.py
+# phoenix_ml/domain/model_registry/repositories/model_repository.py
 class ModelRepository(ABC):
     @abstractmethod
     async def save(self, model: Model) -> None: ...
@@ -222,7 +222,7 @@ class ModelRepository(ABC):
 ```
 
 ```python
-# src/domain/feature_store/repositories/feature_store.py
+# phoenix_ml/domain/feature_store/repositories/feature_store.py
 class FeatureStore(ABC):
     @abstractmethod
     async def get_online_features(self, entity_id: str, feature_names: list[str]) -> list[float]: ...
@@ -237,12 +237,12 @@ class FeatureStore(ABC):
 
 ## CQRS Pattern
 
-Commands (write) và Queries (read) được tách riêng:
+Commands (write) and Queries (read) are separated:
 
 ### Commands (Write Side)
 
 ```python
-# src/application/commands/predict_command.py
+# phoenix_ml/application/commands/predict_command.py
 @dataclass
 class PredictCommand:
     model_id: str
@@ -250,7 +250,7 @@ class PredictCommand:
     entity_id: str | None = None
     features: list[float] | None = None
 
-# src/application/commands/batch_predict_command.py
+# phoenix_ml/application/commands/batch_predict_command.py
 @dataclass
 class BatchPredictCommand:
     model_id: str
@@ -261,7 +261,7 @@ class BatchPredictCommand:
 ### Command Handlers
 
 ```python
-# src/application/handlers/predict_handler.py
+# phoenix_ml/application/handlers/predict_handler.py
 class PredictHandler:
     def __init__(self, model_repo, inference_engine, feature_store, ...):
         ...
@@ -288,7 +288,7 @@ class PredictHandler:
 ### Query Handlers (Read Side)
 
 ```python
-# src/application/handlers/query_handlers.py
+# phoenix_ml/application/handlers/query_handlers.py
 class GetModelQueryHandler:
     async def handle(self, query: GetModelQuery) -> Model | None:
         return await self._model_repo.get_by_id(query.model_id, query.version)
@@ -305,10 +305,10 @@ class GetModelPerformanceQueryHandler:
 
 ## Domain Events
 
-Events decouple modules — publisher không biết subscriber là ai.
+Events decouple modules — publishers do not know who the subscribers are.
 
 ```python
-# src/domain/shared/domain_events.py
+# phoenix_ml/domain/shared/domain_events.py
 @dataclass
 class PredictionCompleted:
     model_id: str
@@ -334,7 +334,7 @@ class ModelRetrained:
 ### Event Bus (Observer Pattern)
 
 ```python
-# src/domain/shared/event_bus.py
+# phoenix_ml/domain/shared/event_bus.py
 class DomainEventBus:
     def subscribe(self, event_type: type, handler: Callable):
         self._subscribers[event_type].append(handler)
@@ -352,15 +352,15 @@ event_bus.subscribe(ModelRetrained, metrics_publisher.on_model_retrained)
 
 ## Plugin System
 
-Mỗi model có thể có custom preprocessor/postprocessor:
+Each model can have custom preprocessor/postprocessor:
 
 ```python
-# src/domain/shared/plugin_registry.py
+# phoenix_ml/domain/shared/plugin_registry.py
 class PluginRegistry:
     def register_model(self, model_id, preprocessor, postprocessor, data_loader): ...
     def resolve(self, model_id) -> PluginSet: ...
 
-# src/domain/inference/services/processor_plugin.py
+# phoenix_ml/domain/inference/services/processor_plugin.py
 class IPreprocessor(ABC):
     @abstractmethod
     def transform(self, raw_input: dict) -> np.ndarray: ...
@@ -377,17 +377,17 @@ class IPostprocessor(ABC):
 ## Dependency Rule Enforcement
 
 ```
-✅ domain/ CHỈA import: python stdlib, numpy, dataclasses
-✅ application/ import: domain/
-✅ infrastructure/ import: domain/, application/, third-party libs
-❌ domain/ KHÔNG import: fastapi, sqlalchemy, redis, kafka, onnxruntime
-❌ application/ KHÔNG import: infrastructure/
+✅ domain/        imports only: python stdlib, numpy, dataclasses
+✅ application/   imports: domain/
+✅ infrastructure/ imports: domain/, application/, third-party libs
+❌ domain/        NEVER imports: fastapi, sqlalchemy, redis, kafka, onnxruntime
+❌ application/   NEVER imports: infrastructure/
 ```
 
-Điều này đảm bảo:
-- Domain logic có thể test **không cần** database/Kafka/Redis
-- Infrastructure có thể thay thế (Redis → Memcached, PostgreSQL → MongoDB) mà **không** sửa domain
-- Application layer là nơi duy nhất orchestrate domain entities + infrastructure adapters
+This ensures:
+- Domain logic can be tested **without** database/Kafka/Redis
+- Infrastructure can be swapped (Redis → Memcached, PostgreSQL → MongoDB) **without** modifying domain
+- Application layer is the only place that orchestrates domain entities + infrastructure adapters
 
 ---
 *Document Status: v4.0 — Updated March 2026*

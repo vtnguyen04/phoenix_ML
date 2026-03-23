@@ -1,8 +1,7 @@
-"""
-S3/MinIO Artifact Storage implementation.
+"""S3/MinIO artifact storage adapter.
 
-Uses boto3 to interact with S3-compatible object storage.
-Falls back gracefully when S3 is not configured.
+Uses boto3 for S3-compatible object storage. Silently degrades
+when S3 credentials are not configured.
 """
 
 import logging

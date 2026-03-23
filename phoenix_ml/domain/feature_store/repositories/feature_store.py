@@ -2,10 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class FeatureStore(ABC):
-    """
-    Interface for retrieving online features.
-    Adheres to DIP: High-level modules depend on this abstraction.
-    """
+    """Abstract interface for online feature retrieval."""
 
     @abstractmethod
     async def get_online_features(

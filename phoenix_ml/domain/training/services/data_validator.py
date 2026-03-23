@@ -1,7 +1,8 @@
-"""Data quality validation — check datasets before they enter the pipeline.
+"""Dataset quality validation.
 
-Validates: missing values, type mismatches, outliers, distribution stats.
-Returns a structured DataQualityReport with warnings and errors.
+Checks a ``pandas.DataFrame`` for missing values, type mismatches,
+outliers, and distribution statistics. Returns a ``DataQualityReport``
+containing severity-graded issues (INFO, WARNING, ERROR).
 """
 
 from __future__ import annotations

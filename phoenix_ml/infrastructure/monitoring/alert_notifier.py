@@ -1,6 +1,6 @@
-"""
-AlertNotifier Infrastructure Adapter.
-Sends alert notifications via HTTP webhooks (Slack, Discord, generic).
+"""Webhook-based alert notifier adapter.
+
+Sends JSON alert payloads via HTTP POST to configured webhook URLs.
 """
 
 import logging

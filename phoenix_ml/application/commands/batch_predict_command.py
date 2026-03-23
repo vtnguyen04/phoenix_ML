@@ -1,6 +1,4 @@
-"""
-Batch Prediction Command — process multiple predictions in one request.
-"""
+"""Command DTO for batch prediction requests."""
 
 from dataclasses import dataclass
 

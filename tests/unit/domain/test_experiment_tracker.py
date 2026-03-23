@@ -4,6 +4,7 @@ All tests patch _HAS_MLFLOW=False to avoid connecting to a real MLflow server.
 """
 
 import json
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,11 +14,11 @@ from phoenix_ml.domain.training.services.experiment_tracker import ExperimentTra
 
 
 @pytest.fixture
-def tracker() -> ExperimentTracker:
+def tracker() -> Generator[ExperimentTracker, None, None]:
     # Patch _HAS_MLFLOW to False to avoid real MLflow calls
     with patch("phoenix_ml.domain.training.services.experiment_tracker._HAS_MLFLOW", False):
         t = ExperimentTracker(tracking_uri="http://nonexistent:5000")
-        yield t  # type: ignore[misc]
+        yield t
 
 
 class TestExperimentTracker:

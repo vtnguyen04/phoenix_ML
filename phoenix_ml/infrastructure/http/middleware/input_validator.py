@@ -1,9 +1,7 @@
-"""Input validation middleware — validate features against model config.
+"""Input validation middleware for prediction requests.
 
-Checks:
-- Feature count matches model's expected feature count
-- Feature values within acceptable ranges (if configured)
-- Request body size limit
+Validates feature count, value ranges, and request body size
+against the active model configuration.
 """
 
 from __future__ import annotations

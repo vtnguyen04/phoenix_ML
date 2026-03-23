@@ -1,7 +1,7 @@
-"""
-AlertManager Domain Service.
+"""Alert management service.
+
 Evaluates alert rules against monitoring metrics and dispatches
-notifications when thresholds are breached.
+notifications when configured thresholds are breached.
 """
 
 import logging

@@ -1,38 +1,21 @@
-"""Training Pipeline — Optional multi-step training flow.
+"""Multi-step training pipeline.
 
-Allows users to define custom pipeline steps beyond simple train_and_export().
-Steps are executed in order; each step can transform or validate the model.
+Executes a sequence of ``IPipelineStep`` instances against a
+``PipelineContext``. Steps can be built-in (train, quantize, validate,
+register) or user-supplied via ``script`` in YAML config.
 
-Usage in YAML (optional — omit for default single-step training)::
+Configuration (optional, in ``model_configs/<model_id>.yaml``)::
 
-    # model_configs/sentiment.yaml
     pipeline:
       - step: train
-        script: my_training/train.py
       - step: quantize
-        script: my_training/quantize.py
-        config:
-          method: dynamic
-          weight_type: int8
+        config: {method: dynamic, weight_type: int8}
       - step: validate
-        script: my_training/validate.py
-        config:
-          min_accuracy: 0.95
+        config: {min_accuracy: 0.95}
       - step: register
-        strategy: canary
 
-Usage in code::
-
-    from phoenix_ml.domain.training.pipeline import TrainingPipeline, IPipelineStep
-
-    class MyQuantizeStep(IPipelineStep):
-        async def execute(self, context):
-            quantize_model(context.model_path, context.output_path)
-            return context
-
-    pipeline = TrainingPipeline()
-    pipeline.add_step(MyQuantizeStep(name="quantize"))
-    await pipeline.run(model_config)
+If ``ExperimentTracker`` is attached via ``set_tracker()``, ``run()``
+automatically wraps execution with MLflow logging.
 """
 
 from __future__ import annotations
@@ -291,10 +274,31 @@ class TrainingPipeline:
     or context.error, subsequent steps can check and react accordingly.
 
     Can be built from YAML config or programmatically.
+
+    If an ``ExperimentTracker`` is attached, ``run()`` automatically logs
+    everything to MLflow — params, metrics, artifacts, system info.
+    Users write zero MLflow code.
+
+    Example::
+
+        pipeline = TrainingPipeline.default()
+        pipeline.set_tracker(ExperimentTracker("http://mlflow:5000"))
+        context = await pipeline.run(context)
+        # Everything auto-logged to MLflow
     """
 
-    def __init__(self, steps: list[IPipelineStep] | None = None) -> None:
+    def __init__(
+        self,
+        steps: list[IPipelineStep] | None = None,
+        experiment_tracker: Any | None = None,
+    ) -> None:
         self._steps: list[IPipelineStep] = steps or []
+        self._tracker = experiment_tracker
+
+    def set_tracker(self, tracker: Any) -> TrainingPipeline:
+        """Attach an ExperimentTracker for auto-MLflow logging."""
+        self._tracker = tracker
+        return self
 
     def add_step(self, step: IPipelineStep) -> TrainingPipeline:
         """Add a step to the pipeline. Returns self for chaining."""
@@ -353,8 +357,20 @@ class TrainingPipeline:
     async def run(self, context: PipelineContext) -> PipelineContext:
         """Execute all steps in order.
 
+        If an ExperimentTracker is attached, automatically wraps execution
+        with full MLflow tracking (params, metrics, artifacts, system info).
+
         Returns the final context with metrics, artifacts, and status.
         """
+        # Auto-delegate to tracker if available
+        if self._tracker is not None:
+            result: PipelineContext = await self._tracker.tracked_run(self, context)
+            return result
+
+        return await self._execute_steps(context)
+
+    async def _execute_steps(self, context: PipelineContext) -> PipelineContext:
+        """Internal step execution (called directly or via tracker)."""
         step_names = [s.name for s in self._steps]
         logger.info(
             "🚀 Pipeline starting: %s → %s",

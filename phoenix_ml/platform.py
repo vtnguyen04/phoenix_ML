@@ -1,28 +1,7 @@
-"""PhoenixPlatform — Programmatic entry point for Phoenix ML framework.
+"""Programmatic entry point for the Phoenix ML framework.
 
-Usage::
-
-    from phoenix_ml import PhoenixPlatform
-
-    platform = PhoenixPlatform(
-        database_url="postgresql+asyncpg://user:pass@cloud-db:5432/mydb",
-        redis_url="redis://cloud-redis:6379",
-        kafka_url="kafka-broker:9092",
-        mlflow_uri="http://cloud-mlflow:5000",
-        airflow_url="http://cloud-airflow:8080/api/v1",
-        jaeger_endpoint="http://jaeger:4317",
-        model_configs_dir="./my_models/",
-    )
-    platform.serve(host="0.0.0.0", port=8000)
-
-All parameters are optional — sensible defaults used when not provided:
-  - database_url:     SQLite (no database server needed)
-  - redis_url:        In-memory cache (no Redis needed)
-  - kafka_url:        Events logged locally (no Kafka needed)
-  - mlflow_uri:       Metrics saved locally (no MLflow needed)
-  - airflow_url:      Manual retrain via API (no Airflow needed)
-  - jaeger_endpoint:  No distributed tracing
-  - grafana_url:      Prometheus metrics still exposed at /metrics
+Wraps configuration, server startup, model loading, and inference
+into a single ``PhoenixPlatform`` class for library-mode usage.
 """
 
 import logging
@@ -35,30 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class PhoenixPlatform:
-    """Main framework entry point with programmatic configuration.
+    """Convenience facade for configuring and starting the platform.
 
-    Attributes set here override environment variables and defaults.
-    Any parameter set to None falls back to env var → default value.
-
-    Infrastructure services are all OPTIONAL — framework runs with zero
-    external dependencies (SQLite + in-memory defaults).
-
-    Examples::
-
-        # Minimal — no infra needed
-        platform = PhoenixPlatform()
-        platform.serve()
-
-        # Full cloud setup
-        platform = PhoenixPlatform(
-            database_url="postgresql+asyncpg://user:pass@rds.aws.com:5432/ml",
-            redis_url="redis://elasticache.aws.com:6379",
-            kafka_url="msk.aws.com:9092",
-            mlflow_uri="http://mlflow.internal:5000",
-            airflow_url="http://airflow.internal:8080/api/v1",
-            jaeger_endpoint="http://jaeger.internal:4317",
-        )
-        platform.serve(host="0.0.0.0", port=8000, workers=4)
+    Constructor kwargs override env vars; ``None`` falls back to
+    env var then default. All infrastructure services are optional.
     """
 
     def __init__(  # noqa: PLR0913

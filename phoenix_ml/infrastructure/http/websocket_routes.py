@@ -1,7 +1,7 @@
-"""WebSocket real-time event streaming.
+"""WebSocket endpoint for real-time event streaming.
 
-Broadcasts: predictions, drift alerts, model updates, system events.
-Clients connect to /ws/events to receive live JSON messages.
+Clients connect to ``/ws/events`` to receive JSON events for predictions,
+drift alerts, model updates, and system notifications.
 """
 
 from __future__ import annotations

@@ -18,11 +18,10 @@ _settings = get_settings()
 
 
 class MonitoringService:
-    """
-    Application Service for Monitoring — Detection Only.
+    """Application service for drift detection and alerting.
 
-    Detects drift and triggers the Airflow Self-Healing Pipeline.
-    Uses Observer Pattern: emits DriftScorePublished / DriftDetected events.
+    Collects recent prediction logs, runs drift analysis per feature,
+    and emits ``DriftScorePublished`` / ``DriftDetected`` events.
     """
 
     MIN_DATA_POINTS = _settings.MONITORING_MIN_DATA_POINTS

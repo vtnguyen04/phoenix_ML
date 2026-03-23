@@ -16,12 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class RetrainHandler:
-    """
-    Application Service that handles model retraining triggers.
-    Executes training, evaluates results, and promotes if better.
+    """Application service for model retraining.
 
-    Uses Observer Pattern: emits ModelRetrained event.
-    Subscribers (MetricsPublisher, KafkaProducer, etc.) react independently.
+    Runs the training script, evaluates results against the current
+    champion, and promotes the challenger if metrics improve. Emits
+    ``ModelRetrained`` events via the domain event bus.
     """
 
     def __init__(

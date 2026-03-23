@@ -1,12 +1,7 @@
-"""Global exception handler — unified error responses with error codes.
+"""Global exception handlers for unified API error responses.
 
-Provides consistent error format for all API responses:
-{
-    "error_code": "MODEL_NOT_FOUND",
-    "message": "Model 'credit-risk' version 'v99' not found",
-    "details": {},
-    "correlation_id": "abc-123"
-}
+All exceptions are caught and returned as JSON with ``error_code``,
+``message``, optional ``details``, and ``correlation_id``.
 """
 
 from __future__ import annotations

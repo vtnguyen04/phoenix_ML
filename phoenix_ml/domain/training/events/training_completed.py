@@ -1,9 +1,4 @@
-"""
-Training Completed — Domain Event.
-
-Emitted when a training job finishes successfully, carrying metrics
-and the path to the newly trained model artifact.
-"""
+"""Domain event emitted when a training job completes successfully."""
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime

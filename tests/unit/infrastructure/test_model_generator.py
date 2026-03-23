@@ -1,6 +1,4 @@
-"""
-Tests for model_generator — generates ONNX models for CI/testing purposes.
-"""
+"""Tests for ONNX model generator."""
 
 from pathlib import Path
 

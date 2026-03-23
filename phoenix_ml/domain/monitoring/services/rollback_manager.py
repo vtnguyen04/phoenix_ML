@@ -1,7 +1,7 @@
-"""
-RollbackManager Domain Service.
-Monitors canary/challenger deployment health and automatically
-rolls back to the champion model when error rate exceeds thresholds.
+"""Automatic rollback manager for canary/challenger deployments.
+
+Monitors deployment health and rolls back to the champion model
+when error rate exceeds configured thresholds.
 """
 
 import logging

@@ -1,8 +1,7 @@
-"""
-CQRS Read-Side Query Handlers.
+"""CQRS read-side query handlers.
 
-Each handler receives a query object and returns data from the appropriate
-repository without side effects.
+Each handler receives a query object and returns data from the
+appropriate repository without side effects.
 """
 
 from typing import Any

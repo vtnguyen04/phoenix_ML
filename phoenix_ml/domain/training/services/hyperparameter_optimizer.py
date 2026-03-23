@@ -1,9 +1,7 @@
-"""
-Hyperparameter Optimizer — Domain Service.
+"""Hyperparameter search over a defined parameter space.
 
-Implements grid search and random search over a hyperparameter space,
-generating TrainingConfig variants for each trial. Uses the Strategy
-pattern to allow swapping search algorithms.
+Generates ``TrainingConfig`` variants using grid search or random
+search strategies. Implements the Strategy pattern via ``SearchStrategy``.
 """
 
 import itertools

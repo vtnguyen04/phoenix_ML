@@ -1,9 +1,7 @@
-"""
-AlertNotifier Port — Adapter Pattern.
+"""Abstract interface for alert notification channels.
 
-Abstract interface for alert notification channels.
-Implementations: Slack, PagerDuty, Email, Webhook, etc.
-Swap implementation in container.py — zero application code changes.
+Implementations deliver alerts to specific backends (Slack, PagerDuty,
+email, webhooks). Configured in ``container.py``.
 """
 
 from abc import ABC, abstractmethod

@@ -2,12 +2,12 @@
 
 ## Tech Stack
 
-| Technology | Version | Mục đích |
+| Technology | Version | Purpose |
 |-----------|---------|----------|
 | React | 19.x | UI framework |
 | TypeScript | 5.x | Type safety |
 | Vite | 6.x | Dev server + HMR + build tool |
-| Recharts | 2.x | Charts, biểu đồ performance |
+| Recharts | 2.x | Charts, performance graphs |
 | Vitest | 3.x | Unit testing |
 | React Testing Library | 16.x | Component testing |
 | ESLint | 9.x | Code linting |
@@ -24,7 +24,7 @@ frontend/
 ├── tsconfig.node.json            # TS config for Node files (vite config)
 ├── eslint.config.js              # ESLint: react-hooks, typescript-eslint
 │
-└── src/
+└── phoenix_ml/
     ├── main.tsx                  # Entry: ReactDOM.createRoot() → <App />
     ├── App.tsx                   # Main component: layout + state + API calls
     ├── index.css                 # Global styles: dark theme, gradients, animations
@@ -73,7 +73,7 @@ graph TD
 
 ### App.tsx — Main Application
 
-Estado (state) quản lý ở top level, truyền xuống components qua props.
+State is managed at top level and passed down to components via props.
 
 ```typescript
 // State
@@ -94,33 +94,33 @@ useEffect(() => {
 
 ### Dashboard Components
 
-| Component | Props | Mô tả chi tiết |
+| Component | Props | Detailed description |
 |-----------|-------|----------------|
-| `StatsGrid` | `modelInfo` | Hiển thị 4 StatCards: Accuracy, F1 Score, Avg Latency, Avg Confidence. Đọc từ `modelInfo.metadata.metrics` |
-| `ModelInfoCard` | `modelInfo` | Card chi tiết model: ID, version, framework, stage (StatusBadge), feature count, created_at |
-| `ModelComparison` | `models` | Bảng so sánh champion vs challengers. Cột: version, stage, accuracy, f1, latency |
-| `PredictionPanel` | — | Form interactive: chọn entity (EntitySelector) → nhập features → POST /predict → hiển thị PredictionResult |
-| `DriftPanel` | `driftReport` | Hiển thị drift: score (progress bar), method (KS/PSI/Chi2), status (OK/DRIFTED badge) |
+| `StatsGrid` | `modelInfo` | Displays 4 StatCards: Accuracy, F1 Score, Avg Latency, Avg Confidence. Reads from `modelInfo.metadata.metrics` |
+| `ModelInfoCard` | `modelInfo` | Card detailed model: ID, version, framework, stage (StatusBadge), feature count, created_at |
+| `ModelComparison` | `models` | Champion vs challengers comparison table. Columns: version, stage, accuracy, f1, latency |
+| `PredictionPanel` | — | Interactive form: select entity (EntitySelector) → enter features → POST /predict → displays PredictionResult |
+| `DriftPanel` | `driftReport` | Displays drift: score (progress bar), method (KS/PSI/Chi2), status (OK/DRIFTED badge) |
 | `PerformancePanel` | `performance` | Line chart (Recharts): accuracy/f1 over time |
-| `PipelineStatus` | — | Danh sách pipeline tasks từ Airflow: status badges (running/success/failed) |
-| `ServicesStatus` | — | Grid 11 ServiceCards cho tất cả infrastructure services |
+| `PipelineStatus` | — | List of pipeline tasks from Airflow: status badges (running/success/failed) |
+| `ServicesStatus` | — | Grid of 11 ServiceCards for all infrastructure services |
 | `GrafanaEmbed` | — | `<iframe>` embed Grafana dashboard URL (configurable) |
 
 ### UI Components
 
-| Component | Props | Mô tả |
+| Component | Props | Description |
 |-----------|-------|-------|
-| `ServiceCard` | `name, port, icon, healthUrl` | Card 1 service + live health check. Fetch `healthUrl` mỗi 15s → hiển thị 🟢 (online), 🔴 (offline), 🟡 (checking) |
+| `ServiceCard` | `name, port, icon, healthUrl` | Single service card + live health check. Fetches `healthUrl` every 15s → displays 🟢 (online), 🔴 (offline), 🟡 (checking) |
 | `StatCard` | `value, label, icon, trend` | Card 1 metric. Trend indicator: ↑ (green) / ↓ (red) |
 | `StatusBadge` | `stage` | Badge: champion (green), challenger (yellow), archived (gray) |
-| `PredictionResult` | `prediction` | Panel kết quả: class label + confidence bar + latency + model info |
-| `EntitySelector` | `onSelect` | Dropdown chọn entity ID cho feature lookup |
+| `PredictionResult` | `prediction` | Result panel: class label + confidence bar + latency + model info |
+| `EntitySelector` | `onSelect` | Dropdown to select entity ID for feature lookup |
 | `Spinner` | — | CSS loading animation |
 
 ## API Client
 
 ```typescript
-// src/api/mlService.ts
+// phoenix_ml/api/mlService.ts
 export class MLService {
   private baseUrl: string;
   
@@ -140,7 +140,7 @@ export class MLService {
 ## Configuration
 
 ```typescript
-// src/config.ts
+// phoenix_ml/config.ts
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 export const SERVICES = [
@@ -202,7 +202,7 @@ npx vitest run --coverage
 npx tsc --noEmit
 
 # Lint
-npx eslint src/
+npx eslint phoenix_ml/
 ```
 
 **Total: 16 test files, 104 tests**
@@ -211,11 +211,11 @@ npx eslint src/
 
 Global styles trong `index.css`:
 
-- **Dark theme** với gradient backgrounds
-- **CSS Variables** cho colors, spacing
+- **Dark theme** with gradient backgrounds
+- **CSS Variables** for colors and spacing
 - **Responsive grid** layout (CSS Grid + Flexbox)
 - **Micro-animations**: hover effects, transitions
-- **Google Fonts**: Inter/Roboto cho typography
+- **Google Fonts**: Inter/Roboto for typography
 
 ---
 *Document Status: v4.0 — Updated March 2026*

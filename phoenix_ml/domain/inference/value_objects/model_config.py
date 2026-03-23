@@ -1,11 +1,7 @@
-"""
-ModelConfig — Value Object for pluggable model definitions.
+"""Immutable value object describing a model's configuration.
 
-Enables the Phoenix ML framework to support any ML problem type
-(classification, object detection, recommendation, time series, etc.)
-without hardcoding dataset or feature information.
-
-Users define their model via YAML config files in MODEL_CONFIG_DIR.
+Loaded from YAML files in ``MODEL_CONFIG_DIR``. Each model's task type,
+features, training script, and monitoring settings are captured here.
 """
 
 from dataclasses import dataclass
@@ -14,13 +10,10 @@ from typing import Any
 
 @dataclass(frozen=True)
 class ModelConfig:
-    """
-    Immutable configuration describing a model and its problem domain.
+    """Frozen dataclass holding all model configuration fields.
 
-    This value object decouples the framework from any specific ML task.
-    All model-specific information (features, dataset, training script)
-    is loaded from external config files, making the platform truly
-    model-agnostic.
+    All fields default to safe zero-values. Loaded from external YAML
+    by ``model_config_loader.load_model_config()``.
 
     Attributes:
         model_id: Unique identifier for the model (e.g. "fraud-detect").

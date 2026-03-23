@@ -2,9 +2,7 @@ from pydantic import BaseModel
 
 
 class LoadModelCommand(BaseModel):
-    """
-    Command to trigger loading of a model into inference engine.
-    """
+    """Input DTO for loading a model into the inference engine."""
 
     model_id: str
     model_version: str

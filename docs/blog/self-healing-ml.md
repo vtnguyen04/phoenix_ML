@@ -1,26 +1,26 @@
 # Self-Healing ML: Automated Drift Detection and Recovery
 
-*Phoenix ML tự động phát hiện model degradation và recovery — không cần human intervention.*
+*Phoenix ML automatically detects model degradation and recovers — no human intervention needed.*
 
-## Vấn đề: Model Decay
+## Problem: Model Decay
 
-ML models degrade over time vì:
+ML models degrade over time because of:
 
-1. **Data Drift**: Distribution production data thay đổi so với training data
-2. **Concept Drift**: Relationship giữa features và target thay đổi
-3. **Feature Changes**: Upstream data pipeline thay đổi schema/semantics
+1. **Data Drift**: Production data distribution shifts from training data
+2. **Concept Drift**: Relationship between features and target changes
+3. **Feature Changes**: Upstream data pipeline changes schema/semantics
 4. **Anomalous Events**: Black swan events (COVID, recession)
 
-## Giải pháp: Self-Healing Pipeline
+## Solution: Self-Healing Pipeline
 
 ### Detection Layer
 
-Phoenix ML có 3 detection mechanisms chạy song song:
+Phoenix ML has 3 detection mechanisms running in parallel:
 
 #### 1. Statistical Drift Detection
 
 ```python
-# DriftCalculator (src/domain/monitoring/services/drift_calculator.py)
+# DriftCalculator (phoenix_ml/domain/monitoring/services/drift_calculator.py)
 # 3 algorithms configurable per model:
 
 # Kolmogorov-Smirnov test — continuous features
@@ -41,19 +41,19 @@ result = calculator.calculate_chi2(reference, current)
 #### 2. Anomaly Detection
 
 ```python
-# AnomalyDetector (src/domain/monitoring/services/anomaly_detector.py)
-# Z-score: phát hiện values vượt 2 std deviations
+# AnomalyDetector (phoenix_ml/domain/monitoring/services/anomaly_detector.py)
+# Z-score: detect values exceeding 2 standard deviations
 anomalies = detector.detect_zscore(latencies, threshold=2.0)
 
-# IQR: phát hiện outliers via interquartile range
+# IQR: detect outliers via interquartile range
 anomalies = detector.detect_iqr(confidence_scores)
 ```
 
 #### 3. Performance Monitoring
 
 ```python
-# ModelEvaluator (src/domain/monitoring/services/model_evaluator.py)
-# Khi có ground truth (via /feedback endpoint):
+# ModelEvaluator (phoenix_ml/domain/monitoring/services/model_evaluator.py)
+# When ground truth is available (via /feedback endpoint):
 evaluator = get_evaluator("classification")
 metrics = evaluator.evaluate(predictions, ground_truths)
 # → accuracy, f1, precision, recall
@@ -90,18 +90,34 @@ AlertRule(
 
 #### Automatic Rollback
 
-Khi drift score > critical threshold:
+When drift score > critical threshold:
 1. Archive all challenger models → stage = "archived"
 2. Keep champion model active → baseline safe
 3. Notify via webhook → team awareness
 
 #### Automatic Retraining
 
-Airflow DAG `phoenix_retrain_all`:
-1. Generate fresh synthetic data (nếu production data unavailable)
-2. Train all configured models
-3. Log metrics to MLflow
-4. Promote best model nếu metrics improve
+When drift triggers the self-healing pipeline:
+1. **Export fresh data** — query `prediction_logs` WHERE `ground_truth IS NOT NULL`
+2. **Merge with baseline** — combine labeled production data + original training data
+3. **Retrain** — train model on merged dataset (fresh production distribution)
+4. **Register** — deploy retrained model as challenger
+5. **Verify** — post-healing performance and drift checks
+
+```bash
+# The entire lifecycle can be simulated end-to-end:
+uv run python scripts/simulate_pipeline.py --fast
+```
+
+This exercises ALL 12 API endpoints:
+- `POST /predict` — serve traffic
+- `POST /feedback` — submit ground truth labels
+- `GET /monitoring/drift/{model_id}` — detect drift
+- `POST /models/rollback` — archive challengers, keep champion
+- `POST /data/export-training` — export labeled logs + baseline
+- `POST /models/register` — register retrained challenger
+- `GET /monitoring/reports/{model_id}` — drift audit trail
+- `GET /monitoring/performance/{model_id}` — performance metrics
 
 ### Monitoring Loop Architecture
 
@@ -157,4 +173,4 @@ async def _monitoring_loop():
 5. **Observable**: All metrics exported to Prometheus → Grafana dashboards
 
 ---
-*Published: March 2026 · Author: Võ Thành Nguyễn*
+*Published: March 2026*

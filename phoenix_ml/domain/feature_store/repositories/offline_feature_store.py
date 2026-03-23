@@ -3,10 +3,7 @@ from typing import Any
 
 
 class OfflineFeatureStore(ABC):
-    """
-    Interface for retrieving offline/historical features, used for distributed
-    training or batch inference. Adheres to ISP (Interface Segregation Principle).
-    """
+    """Abstract interface for historical feature retrieval."""
 
     @abstractmethod
     async def get_historical_features(

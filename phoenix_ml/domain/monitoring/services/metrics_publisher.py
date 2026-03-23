@@ -1,14 +1,8 @@
-"""
-MetricsPublisher — Domain Port for ALL observability metrics.
+"""Abstract port for observability metrics.
 
-Follows Dependency Inversion Principle (DIP): the application layer
-defines WHAT to observe, infrastructure decides HOW (Prometheus,
-Datadog, CloudWatch, StatsD, etc.).
-
-This single port replaces ALL direct Prometheus imports from the
-application layer.  To switch backends, swap the adapter in container.py:
-
-    metrics_publisher: MetricsPublisher = DatadogMetricsPublisher()
+Defines the contract for recording predictions, latency, confidence,
+model evaluation results, and drift scores. Infrastructure adapters
+(Prometheus, Datadog, etc.) implement this interface.
 """
 
 from abc import ABC, abstractmethod
@@ -16,12 +10,10 @@ from typing import Any
 
 
 class MetricsPublisher(ABC):
-    """Abstract port for ALL observability metrics.
+    """Abstract interface for recording observability metrics.
 
-    Covers:
-    - Prediction recording (count, latency, confidence)
-    - Model evaluation metrics (accuracy, RMSE, F1, …)
-    - Drift detection scores
+    Methods cover prediction counts, latency, confidence histograms,
+    model evaluation results, and drift detection scores.
     """
 
     # ── Prediction observability ──────────────────────────────────

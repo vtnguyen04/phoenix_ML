@@ -1,8 +1,7 @@
-"""
-Training Service — Domain Service.
+"""Training workflow orchestration.
 
-Orchestrates the training workflow: job creation, execution coordination,
-and result handling. Pure domain logic; no infrastructure dependencies.
+Coordinates job creation, execution, and result persistence via
+``TrainingRepository``. Pure domain logic with no infrastructure deps.
 """
 
 import logging

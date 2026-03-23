@@ -1,8 +1,7 @@
-"""
-Domain Events — Typed event dataclasses for the Observer Pattern.
+"""Typed event dataclasses for domain event bus.
 
-Each event represents something that HAPPENED in the domain.
-Handlers emit events; subscribers react independently.
+Each dataclass represents an immutable fact about something that
+occurred in the domain (prediction made, drift detected, etc.).
 """
 
 from dataclasses import dataclass, field

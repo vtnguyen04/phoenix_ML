@@ -1,10 +1,7 @@
-"""
-gRPC Server for Phoenix ML Inference Service.
+"""gRPC inference server.
 
-Provides a high-performance gRPC interface alongside the existing FastAPI
-HTTP server. Both servers share the same domain layer and infrastructure.
-
-Uses compiled proto stubs from inference.proto for proper gRPC registration.
+Runs alongside the FastAPI HTTP server, sharing the same domain layer.
+Uses compiled proto stubs from ``inference.proto``.
 """
 
 import logging

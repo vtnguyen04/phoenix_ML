@@ -4,9 +4,7 @@ from datetime import UTC, datetime
 
 @dataclass(frozen=True)
 class ModelLoaded:
-    """
-    Domain Event triggered when a model is successfully loaded into memory/GPU.
-    """
+    """Domain event emitted when a model is loaded into memory."""
 
     model_id: str
     model_version: str

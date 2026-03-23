@@ -1,12 +1,12 @@
 # Customization Guide
 
-Hướng dẫn tùy chỉnh Phoenix ML Platform: thêm model mới, custom engines, data loaders, plugins, alert notifiers.
+Guide to customizing Phoenix ML Platform: adding models, custom engines, data loaders, plugins, and alert notifiers.
 
-## Thêm Model Mới
+## Adding a New Model
 
-### Bước 1: Tạo Model Config (YAML)
+### Step 1: Create Model Config (YAML)
 
-Tạo file `model_configs/<model-id>.yaml`:
+Create file `model_configs/<model-id>.yaml`:
 
 ```yaml
 # model_configs/sentiment-analysis.yaml
@@ -18,14 +18,14 @@ feature_names:
   - sentiment_score
   - exclamation_count
   - question_count
-data_loader: tabular              # hoặc "image" cho image models
+data_loader: tabular              # or "image" for image models
 train_script: examples/sentiment/train.py
 monitoring:
-  drift_test: psi                 # ks, psi, hoặc chi2
+  drift_test: psi                 # ks, psi, or chi2
   drift_threshold: 0.25           # Custom threshold (default: 0.3)
 ```
 
-### Bước 2: Tạo Training Script
+### Step 2: Create Training Script
 
 ```python
 # examples/sentiment/train.py
@@ -80,29 +80,29 @@ if __name__ == "__main__":
     train()
 ```
 
-### Bước 3: Add to Airflow DAG
+### Step 3: Add to Airflow DAG
 
-Model sẽ tự động được pick up bởi Airflow DAG `phoenix_retrain_all` khi thêm YAML config vào `model_configs/`.
-DAG scan `model_configs/*.yaml` → tạo dynamic tasks cho mỗi model.
+Model will be automatically picked up by Airflow DAG `phoenix_retrain_all` when adding YAML config to `model_configs/`.
+DAG scans `model_configs/*.yaml` → creates dynamic tasks for each model.
 
-### Bước 4: Train & Run
+### Step 4: Train & Run
 
 ```bash
 uv run python examples/sentiment/train.py
-# Model sẽ tự động load khi API start (lifespan.py scan model_configs/)
+# Model will auto-load at API start (lifespan.py scans model_configs/)
 ```
 
 ## Custom Inference Engine
 
-Implement `InferenceEngine` ABC:
+Implement the `InferenceEngine` ABC:
 
 ```python
-# src/infrastructure/ml_engines/custom_engine.py
-from src.domain.inference.services.inference_engine import InferenceEngine
-from src.domain.inference.entities.model import Model
-from src.domain.inference.entities.prediction import Prediction
-from src.domain.inference.value_objects.feature_vector import FeatureVector
-from src.domain.inference.value_objects.confidence_score import ConfidenceScore
+# phoenix_ml/infrastructure/ml_engines/custom_engine.py
+from phoenix_ml.domain.inference.services.inference_engine import InferenceEngine
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.entities.prediction import Prediction
+from phoenix_ml.domain.inference.value_objects.feature_vector import FeatureVector
+from phoenix_ml.domain.inference.value_objects.confidence_score import ConfidenceScore
 
 class CustomEngine(InferenceEngine):
     async def load(self, model: Model) -> None:
@@ -129,10 +129,10 @@ class CustomEngine(InferenceEngine):
         pass
 ```
 
-Đăng ký trong `container.py`:
+Register in `container.py`:
 
 ```python
-# Thêm vào _ENGINE_FACTORIES:
+# Add to _ENGINE_FACTORIES:
 _ENGINE_FACTORIES = {
     "onnx": lambda: ONNXInferenceEngine(...),
     "tensorrt": lambda: TensorRTExecutor(...),
@@ -142,7 +142,7 @@ _ENGINE_FACTORIES = {
 ```
 
 ```bash
-# Sử dụng:
+# Use:
 INFERENCE_ENGINE=custom uv run uvicorn ...
 ```
 
@@ -151,8 +151,8 @@ INFERENCE_ENGINE=custom uv run uvicorn ...
 Implement `IDataLoader` ABC:
 
 ```python
-# src/infrastructure/data_loaders/text_loader.py
-from src.domain.training.services.data_loader_plugin import IDataLoader, DatasetInfo
+# phoenix_ml/infrastructure/data_loaders/text_loader.py
+from phoenix_ml.domain.training.services.data_loader_plugin import IDataLoader, DatasetInfo
 import numpy as np
 
 class TextDataLoader(IDataLoader):
@@ -176,10 +176,10 @@ class TextDataLoader(IDataLoader):
         return train_test_split(data, test_size=test_size)
 ```
 
-Đăng ký trong `registry.py`:
+Register in `registry.py`:
 
 ```python
-# src/infrastructure/data_loaders/registry.py
+# phoenix_ml/infrastructure/data_loaders/registry.py
 _LOADER_REGISTRY = {
     "tabular": TabularDataLoader,
     "image": ImageDataLoader,
@@ -190,8 +190,8 @@ _LOADER_REGISTRY = {
 ## Custom Pre/Post Processor Plugins
 
 ```python
-# Custom preprocessor cho model cụ thể
-from src.domain.inference.services.processor_plugin import IPreprocessor, IPostprocessor
+# Custom preprocessor for a specific model
+from phoenix_ml.domain.inference.services.processor_plugin import IPreprocessor, IPostprocessor
 import numpy as np
 
 class NormalizationPreprocessor(IPreprocessor):
@@ -213,7 +213,7 @@ class MultiLabelPostprocessor(IPostprocessor):
         return {"labels": active, "probabilities": model_output.tolist()}
 ```
 
-Đăng ký trong `container.py` (hoặc `lifespan.py`):
+Register in `container.py` (or `lifespan.py`):
 
 ```python
 plugin_registry.register_model(
@@ -227,8 +227,8 @@ plugin_registry.register_model(
 ## Custom Alert Notifier
 
 ```python
-# src/infrastructure/monitoring/teams_notifier.py
-from src.domain.monitoring.services.alert_notifier import IAlertNotifier
+# phoenix_ml/infrastructure/monitoring/teams_notifier.py
+from phoenix_ml.domain.monitoring.services.alert_notifier import IAlertNotifier
 import httpx
 
 class TeamsNotifier(IAlertNotifier):
@@ -252,28 +252,28 @@ class TeamsNotifier(IAlertNotifier):
             return resp.status_code == 200
 ```
 
-## Cấu hình Monitoring Thresholds
+## Configure Monitoring Thresholds
 
 Trong `model_configs/<model>.yaml`:
 
 ```yaml
 monitoring:
   drift_test: ks              # Algorithm: ks, psi, chi2
-  drift_threshold: 0.25       # Khi nào coi là drifted
+  drift_threshold: 0.25       # When to consider as drifted
 ```
 
 Trong `.env`:
 
 ```bash
-MONITORING_INTERVAL_SECONDS=30   # Check drift mỗi 30s
-DRIFT_THRESHOLD=0.3              # Default threshold (override bằng YAML)
+MONITORING_INTERVAL_SECONDS=30   # Check drift every 30s
+DRIFT_THRESHOLD=0.3              # Default threshold (overridden by YAML)
 ```
 
-## Thêm Routing Strategy
+## Add Routing Strategy
 
 ```python
-from src.domain.inference.services.routing_strategy import RoutingStrategy
-from src.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.services.routing_strategy import RoutingStrategy
+from phoenix_ml.domain.inference.entities.model import Model
 
 class WeightedStrategy(RoutingStrategy):
     """Route based on model performance weights."""

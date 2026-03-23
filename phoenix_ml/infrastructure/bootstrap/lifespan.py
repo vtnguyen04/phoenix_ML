@@ -35,6 +35,9 @@ from phoenix_ml.infrastructure.bootstrap.model_config_loader import (
     load_features_from_metrics,
 )
 from phoenix_ml.infrastructure.grpc.grpc_server import create_grpc_server
+from phoenix_ml.infrastructure.monitoring.system_metrics_collector import (
+    SystemMetricsCollector,
+)
 from phoenix_ml.infrastructure.persistence.database import Base, engine, get_db
 from phoenix_ml.infrastructure.persistence.models import ModelORM
 from phoenix_ml.infrastructure.persistence.postgres_drift_repo import (
@@ -48,6 +51,9 @@ from phoenix_ml.infrastructure.persistence.postgres_model_registry import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ── System metrics collector (CPU/GPU/Memory/Disk) ──
+_system_metrics_collector = SystemMetricsCollector(interval_seconds=5.0)
 
 # --- Self-Healing: Alert rules for Prometheus metrics ---
 alert_manager = AlertManager()
@@ -444,6 +450,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: PLR0915
     await kafka_producer.start()
     monitor_task = asyncio.create_task(run_monitoring_loop())
 
+    # ── Start system metrics collection (CPU/GPU/Memory/Disk) ──
+    _system_metrics_collector.start()
+
     # ── Kafka Consumer: process inference-events for downstream analytics ──
     async def _handle_inference_event(event: dict[str, Any]) -> None:
         """Handle consumed inference events (logging, analytics, etc.)."""
@@ -461,6 +470,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: PLR0915
 
     logger.info("🧹 Lifespan shutdown started...")
     shutdown_event.set()
+    _system_metrics_collector.stop()
     monitor_task.cancel()
     consumer_task.cancel()
 

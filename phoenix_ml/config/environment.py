@@ -1,7 +1,7 @@
 """Environment-specific configuration profiles.
 
-Provides dev/staging/production config overrides.
-Usage: set ENVIRONMENT=production in .env or env var.
+Provides dev/staging/production config overrides based on
+the ``ENVIRONMENT`` env var.
 """
 
 from __future__ import annotations

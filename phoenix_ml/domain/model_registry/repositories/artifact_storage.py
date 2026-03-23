@@ -3,10 +3,7 @@ from pathlib import Path
 
 
 class ArtifactStorage(ABC):
-    """
-    Interface for handling model files (artifacts).
-    Decouples storage logic (S3, Disk) from inference logic.
-    """
+    """Abstract interface for model artifact storage and retrieval."""
 
     @abstractmethod
     async def download(self, remote_uri: str, local_path: Path) -> Path:

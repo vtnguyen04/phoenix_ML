@@ -1,31 +1,31 @@
-# Tutorial: Sentiment Analysis — Chi tiết từ A đến Z
+# Tutorial: Sentiment Analysis — Step-by-Step Guide
 
-Hướng dẫn **thực tế, chi tiết** cách sử dụng Phoenix ML framework cho bài toán Sentiment Analysis.
+A **practical, detailed** guide to using Phoenix ML framework for Sentiment Analysis.
 
-> **Tóm tắt**: User chỉ cần (1) định nghĩa config, (2) viết training script, (3) đổi `.env` cho infra. Framework lo hết phần còn lại.
+> **Summary**: User only needs to (1) define config, (2) write training script, (3) update `.env` for infra. The framework handles the rest.
 
 ---
 
-## 📁 Cấu trúc thư mục của User
+## 📁 User Directory Structure
 
 ```
 my-sentiment-project/
-├── .env                           # ← User config infra URLs tại đây
+├── .env                           # ← User configures infra URLs here
 ├── model_configs/
-│   └── sentiment.yaml             # ← Định nghĩa bài toán
+│   └── sentiment.yaml             # ← Define use case
 ├── my_training/
 │   ├── train.py                   # ← Training script
-│   ├── data_loader.py             # ← (Tùy chọn) Custom data loader
-│   └── preprocessor.py            # ← (Tùy chọn) Custom preprocessor
+│   ├── data_loader.py             # ← (Optional) Custom data loader
+│   └── preprocessor.py            # ← (Optional) Custom preprocessor
 ├── data/
 │   └── sentiment/
 │       └── reviews.csv            # ← Dataset
-└── models/                        # ← Framework tự tạo khi train
+└── models/                        # ← Framework auto-creates khi train
 ```
 
 ---
 
-## 1️⃣ Bước 1 — Định nghĩa bài toán (YAML Config)
+## 1️⃣ Step 1 — Define your use case (YAML Config)
 
 ```yaml
 # model_configs/sentiment.yaml
@@ -38,7 +38,7 @@ train_script: my_training/train.py
 data_path: data/sentiment/reviews.csv
 dataset_name: product-reviews
 
-# Features mà model nhận (sau khi preprocessing)
+# Features the model receives (after preprocessing)
 feature_names:
   - text_length
   - avg_word_length
@@ -50,23 +50,23 @@ feature_names:
   - tfidf_0
   - tfidf_1
   - tfidf_2
-  # ... (tùy vào cách bạn extract features)
+  # ... (depends on how you extract features)
 
-# Custom data loader (tùy chọn)
-# Nếu để trống → framework dùng TabularDataLoader mặc định
+# Custom data loader (optional)
+# If empty → framework uses TabularDataLoader by default
 data_loader: my_training.data_loader.SentimentDataLoader
 
-# Nguồn dữ liệu
+# Data source
 data_source:
   type: file                      # file | database | dvc
-  # type: database → thêm:
+  # type: database → add:
   #   query: "SELECT text, label FROM reviews WHERE ..."
   #   connection: main_postgres
 
-# Chiến lược retrain
+# Retrain strategy
 retrain:
   trigger: scheduled              # drift | manual | data_change | scheduled
-  schedule: "0 0 * * 0"           # Cron: mỗi chủ nhật lúc 00:00
+  schedule: "0 0 * * 0"           # Cron: every Sunday at 00:00
   drift_detection: true
 
 # Monitoring
@@ -76,31 +76,31 @@ monitoring:
   primary_metric: f1_score
 ```
 
-### Giải thích từng field
+### Field-by-field Explanation
 
-| Field | Bắt buộc | Mô tả |
+| Field | Required | Description |
 |-------|---------|-------|
-| `model_id` | ✅ | ID duy nhất, dùng trong API call |
-| `task_type` | ✅ | `classification` → framework tự chọn defaults phù hợp |
-| `train_script` | ✅ | Path tới function `train_and_export()` |
-| `feature_names` | ✅ | Danh sách features, dùng cho drift monitoring |
-| `data_loader` | ❌ | Custom class path, nếu trống → `TabularDataLoader` |
+| `model_id` | ✅ | Unique ID, used in API calls |
+| `task_type` | ✅ | `classification` → framework selects appropriate defaults |
+| `train_script` | ✅ | Path to the `train_and_export()` function |
+| `feature_names` | ✅ | List of features, used for drift monitoring |
+| `data_loader` | ❌ | Custom class path, if empty → `TabularDataLoader` |
 | `data_source.type` | ❌ | Default: `file`. `database` cho SQL, `dvc` cho large datasets |
-| `retrain.trigger` | ❌ | Default: `drift`. Xem bảng triggers bên dưới |
+| `retrain.trigger` | ❌ | Default: `drift`. See triggers table below |
 | `monitoring.drift_test` | ❌ | Default: `ks` cho classification |
 
 ---
 
-## 2️⃣ Bước 2 — Viết Training Script
+## 2️⃣ Step 2 — Write Training Script
 
-### Cơ bản (đủ để chạy)
+### Basics (enough to run)
 
 ```python
 # my_training/train.py
 """Training script cho sentiment analysis.
 
-Framework yêu cầu function: train_and_export(output_path, **kwargs)
-Tham số tùy chọn: metrics_path, data_path, reference_path
+Framework requires function: train_and_export(output_path, **kwargs)
+Optional parameters: metrics_path, data_path, reference_path
 """
 import json
 from pathlib import Path
@@ -116,9 +116,9 @@ from skl2onnx.common.data_types import FloatTensorType
 
 
 def extract_text_features(texts: pd.Series) -> np.ndarray:
-    """Trích xuất features từ text.
+    """Extract features from text.
 
-    ĐÂY LÀ PHẦN USER TỰ DEFINE — logic preprocessing riêng cho bài toán.
+    THIS IS THE USER-DEFINED PART — custom preprocessing logic for your use case.
     """
     features = pd.DataFrame()
     features["text_length"] = texts.str.len()
@@ -148,7 +148,7 @@ def train_and_export(
     data_path: str | None = None,
     reference_path: str | None = None,
 ) -> None:
-    """Entry point — Framework gọi function này khi retrain."""
+    """Entry point — Framework calls this function during retrain."""
 
     # 1. Load data
     df = pd.read_csv(data_path or "data/sentiment/reviews.csv")
@@ -181,16 +181,16 @@ def train_and_export(
     with open(output_path, "wb") as f:
         f.write(onnx_model.SerializeToString())
 
-    # 6. Save metrics (framework gửi lên MLflow)
+    # 6. Save metrics (framework sends to MLflow)
     if metrics_path:
         Path(metrics_path).parent.mkdir(parents=True, exist_ok=True)
         with open(metrics_path, "w") as f:
             json.dump(metrics, f, indent=2)
 
-    # 7. Save reference data (framework dùng cho drift detection)
+    # 7. Save reference data (framework uses for drift detection)
     if reference_path:
         Path(reference_path).parent.mkdir(parents=True, exist_ok=True)
-        ref_data = X_train[:100].tolist()  # 100 samples làm baseline
+        ref_data = X_train[:100].tolist()  # 100 samples as baseline
         with open(reference_path, "w") as f:
             json.dump(ref_data, f)
 
@@ -200,13 +200,13 @@ def train_and_export(
 
 ---
 
-## 3️⃣ Tùy chọn: Tinh chỉnh Hyperparameters (Optuna)
+## 3️⃣ Optional: Hyperparameter Tuning (Optuna)
 
-Framework tích hợp Optuna — user **chỉ cần gọi** trong training script:
+Framework integrates Optuna — user **just needs to call it** in the training script:
 
 ```python
-# my_training/train.py — phiên bản nâng cao với Optuna
-from src.domain.training.services.optuna_optimizer import OptunaOptimizer
+# my_training/train.py — advanced version with Optuna
+from phoenix_ml.domain.training.services.optuna_optimizer import OptunaOptimizer
 
 
 def train_and_export(output_path, metrics_path=None, data_path=None, **kwargs):
@@ -214,17 +214,17 @@ def train_and_export(output_path, metrics_path=None, data_path=None, **kwargs):
     X = extract_text_features(df["text"])
     y = df["label"].values
 
-    # ── Tự động tìm hyperparameters tốt nhất ──
+    # ── Automatically find best hyperparameters ──
     optimizer = OptunaOptimizer(
-        n_trials=50,                 # Số lần thử
-        task_type="classification",  # hoặc "regression"
+        n_trials=50,                 # Number of trials
+        task_type="classification",  # or "regression"
         metric="f1",                 # accuracy | f1 | rmse | r2
     )
     result = optimizer.optimize(X, y)
     print(f"Best params: {result.best_params}")
     print(f"Best F1: {result.best_score:.4f}")
 
-    # ── Train final model với best params ──
+    # ── Train final model with best params ──
     from xgboost import XGBClassifier
     model = XGBClassifier(**result.best_params)
     model.fit(X, y)
@@ -235,7 +235,7 @@ def train_and_export(output_path, metrics_path=None, data_path=None, **kwargs):
 ### Custom search space
 
 ```python
-# User tự define search space
+# User defines search space
 custom_space = {
     "n_estimators": ("int", 50, 500),
     "max_depth": ("int", 3, 10),
@@ -252,36 +252,36 @@ optimizer = OptunaOptimizer(
 
 ---
 
-## 4️⃣ Tùy chọn: Custom Data Loader
+## 4️⃣ Optional: Custom Data Loader
 
-Nếu data format đặc biệt, user implement `IDataLoader`:
+If your data format is special, implement `IDataLoader`:
 
 ```python
 # my_training/data_loader.py
-from src.domain.training.services.data_loader_plugin import IDataLoader, DatasetInfo
+from phoenix_ml.domain.training.services.data_loader_plugin import IDataLoader, DatasetInfo
 import pandas as pd
 
 
 class SentimentDataLoader(IDataLoader):
     """Custom data loader cho sentiment analysis.
 
-    Xử lý CSV có cột 'text' và 'label' (positive/negative).
+    Processes CSV with 'text' and 'label' columns (positive/negative).
     """
 
     async def load(self, data_path: str, **kwargs) -> tuple:
         df = pd.read_csv(data_path)
 
-        # Custom: đọc nhiều sources
+        # Custom: read from multiple sources
         if data_path.endswith(".jsonl"):
             df = pd.read_json(data_path, lines=True)
 
-        # Custom logic: lọc data, clean text, etc.
+        # Custom logic: filter data, clean text, etc.
         df["text"] = df["text"].str.lower().str.strip()
         df = df.dropna(subset=["text", "label"])
 
         info = DatasetInfo(
             num_samples=len(df),
-            num_features=0,  # text, chưa extract features
+            num_features=0,  # text, features not yet extracted
             class_labels=["negative", "positive"],
             data_format="text_classification",
             metadata={"source": data_path, "avg_text_length": df["text"].str.len().mean()},
@@ -294,39 +294,39 @@ class SentimentDataLoader(IDataLoader):
         return train, test
 ```
 
-**Đăng ký trong YAML:**
+**Register in YAML:**
 ```yaml
 # model_configs/sentiment.yaml
 data_loader: my_training.data_loader.SentimentDataLoader
 ```
 
-**Hoặc đăng ký bằng code:**
+**Or register via code:**
 ```python
-from src.infrastructure.data_loaders.registry import DataLoaderRegistry
+from phoenix_ml.infrastructure.data_loaders.registry import DataLoaderRegistry
 DataLoaderRegistry.register("sentiment", SentimentDataLoader)
 ```
 
-### Nếu KHÔNG custom?
+### What if I don't customize?
 
-Không cần làm gì — framework tự dùng `TabularDataLoader` (đọc CSV, split train/test).
+No need — framework uses `TabularDataLoader` by default (reads CSV, splits train/test).
 
 ---
 
-## 5️⃣ Tùy chọn: Custom Pre/Post Processor
+## 5️⃣ Optional: Custom Pre/Post Processor
 
-Nếu muốn framework xử lý data **trước/sau inference** (thay vì client tự làm):
+If you want the framework to process data **before/after inference** (instead of client-side):
 
 ```python
 # my_training/preprocessor.py
-from src.domain.inference.services.processor_plugin import IPreprocessor, IPostprocessor
+from phoenix_ml.domain.inference.services.processor_plugin import IPreprocessor, IPostprocessor
 import numpy as np
 
 
 class SentimentPreprocessor(IPreprocessor):
-    """Text → feature vector trước khi vào model."""
+    """Text → feature vector before entering model."""
 
     async def preprocess(self, raw_input: dict, model_config: dict) -> list[float]:
-        # Nhận text từ API, trả về feature vector
+        # Receives text from API, returns feature vector
         text = raw_input.get("text", "")
         features = []
         features.append(float(len(text)))                          # text_length
@@ -334,12 +334,12 @@ class SentimentPreprocessor(IPreprocessor):
         features.append(np.mean([len(w) for w in words]) if words else 0)
         features.append(float(text.count("!")))
         features.append(float(text.count("?")))
-        # ... thêm TF-IDF features
+        # ... add TF-IDF features
         return features
 
 
 class SentimentPostprocessor(IPostprocessor):
-    """Model output → response có label text."""
+    """Model output → response with label text."""
 
     async def postprocess(self, model_output: list[float], model_config: dict) -> dict:
         labels = model_config.get("class_labels", ["negative", "positive"])
@@ -354,47 +354,47 @@ class SentimentPostprocessor(IPostprocessor):
         }
 ```
 
-**Đăng ký bằng code (trong startup script):**
+**Register via code (in startup script):**
 ```python
-from src.infrastructure.bootstrap.container import plugin_registry
+from phoenix_ml.infrastructure.bootstrap.container import plugin_registry
 
 plugin_registry.register_preprocessor("sentiment", SentimentPreprocessor())
 plugin_registry.register_postprocessor("sentiment", SentimentPostprocessor())
 ```
 
-**Kết quả**: User gọi API với **raw text**, framework tự xử lý:
+**Result**: User calls API with **raw text**, framework handles processing:
 ```bash
 POST /predict
-{"model_id": "sentiment", "text": "Sản phẩm rất tốt!"}
+{"model_id": "sentiment", "text": "Great product!"}
 # → {"sentiment": "positive", "confidence": 0.94, "label_id": 1}
 ```
 
-### Nếu KHÔNG custom?
+### What if I don't customize?
 
-Không cần! User gửi `features: [float, ...]` trực tiếp. Framework dùng `PassthroughPreprocessor` (pass-through) + `ClassificationPostprocessor` (argmax + confidence).
+Not needed! User sends `features: [float, ...]` directly. Framework uses `PassthroughPreprocessor` (pass-through) + `ClassificationPostprocessor` (argmax + confidence).
 
 ---
 
-## 6️⃣ Infrastructure — User chỉ cần đổi `.env`
+## 6️⃣ Infrastructure — Just Update `.env`
 
-Framework đọc **tất cả connection URLs từ environment variables**. User chỉ cần **đổi 1 file `.env`**:
+Framework reads **all connection URLs from environment variables**. User only needs to **update 1 file `.env`**:
 
 ```bash
-# .env — Copy từ .env.example và đổi URLs
+# .env — Copy from .env.example and update URLs
 
 # ── Cloud PostgreSQL ──────────────────────
-# Local: sqlite+aiosqlite:///./phoenix.db (mặc định, KHÔNG cần setup gì)
-# Cloud: đổi URL → framework TỰ CONNECT
+# Local: sqlite+aiosqlite:///./phoenix.db (default, no setup needed)
+# Cloud: update URL → framework auto-connects
 DATABASE_URL=postgresql+asyncpg://user:pass@my-cloud-db.aws.com:5432/phoenix
 
 # ── Cloud Redis ───────────────────────────
-# false = framework dùng in-memory (không cần Redis server)
-# true + URL = framework tự connect Redis
+# false = framework uses in-memory (no Redis server needed)
+# true + URL = framework auto-connects to Redis
 USE_REDIS=true
 REDIS_URL=redis://my-redis.aws.com:6379
 
 # ── Kafka ─────────────────────────────────
-# Framework auto-connect. Không có Kafka? Framework vẫn chạy (graceful degradation)
+# Framework auto-connects. No Kafka? Framework still runs (graceful degradation)
 KAFKA_URL=my-kafka.aws.com:9092
 
 # ── MLflow ────────────────────────────────
@@ -409,47 +409,47 @@ AIRFLOW_ADMIN_USER=admin
 AIRFLOW_ADMIN_PASSWORD=my-secret
 ```
 
-### Bảng: User cần setup gì?
+### Table: What does the user need to set up?
 
-| Service | Bắt buộc? | Nếu không có? |
+| Service | Required? | If absent? |
 |---------|----------|--------------|
-| **PostgreSQL** | ❌ Không | Framework dùng SQLite (tự tạo file) |
-| **Redis** | ❌ Không | `USE_REDIS=false` → dùng in-memory cache |
-| **Kafka** | ❌ Không | Graceful degradation, log events locally |
-| **MLflow** | ❌ Không | Metrics vẫn save local, không gửi MLflow |
-| **Airflow** | ❌ Không | Manual retrain qua API thay vì pipeline |
-| **Grafana** | ❌ Không | Prometheus metrics vẫn expose, không có dashboards |
+| **PostgreSQL** | ❌ No | Framework uses SQLite (auto-creates file) |
+| **Redis** | ❌ No | `USE_REDIS=false` → uses in-memory cache |
+| **Kafka** | ❌ No | Graceful degradation, logs events locally |
+| **MLflow** | ❌ No | Metrics saved locally, not sent to MLflow |
+| **Airflow** | ❌ No | Manual retrain via API instead of pipeline |
+| **Grafana** | ❌ No | Prometheus metrics still exposed, no dashboards |
 
-> **Kết luận**: Framework chạy được **KHÔNG CẦN bất kỳ service nào** — chỉ cần Python + model file. Services là optional, bật lên bằng cách đổi URLs trong `.env`.
+> **Conclusion**: Framework runs **WITHOUT any external service** — only Python + model file needed. Services are optional, enabled by updating URLs in `.env`.
 
 ---
 
-## 7️⃣ Deploy & Chạy
+## 7️⃣ Deploy & Run
 
-### Local (không Docker)
+### Local (no Docker)
 
 ```bash
-# Chỉ cần Python
-uv run python -m src.infrastructure.http.fastapi_server
+# Only Python needed
+uv run python -m phoenix_ml.infrastructure.http.fastapi_server
 # → http://localhost:8000/docs
 ```
 
 ### Docker Compose (full stack)
 
 ```bash
-# Clone repo, đổi .env, run
+# Clone repo, update .env, run
 docker compose up -d
-# → API: localhost:8000, Grafana: localhost:3000, MLflow: localhost:5000
+# → API: localhost:8001, Grafana: localhost:3001, MLflow: localhost:5001
 ```
 
-### Cloud (user tự deploy)
+### Cloud (user deploys)
 
 ```bash
 # 1. Push Docker image
 docker build -t my-registry.com/phoenix-ml .
 docker push my-registry.com/phoenix-ml
 
-# 2. Deploy với Helm chart (reference)
+# 2. Deploy with Helm chart (reference)
 helm install phoenix-ml deploy/helm/phoenix-ml/ \
   --set database.url="postgresql://..." \
   --set redis.url="redis://..." \
@@ -458,17 +458,17 @@ helm install phoenix-ml deploy/helm/phoenix-ml/ \
 
 ---
 
-## 8️⃣ Gọi API
+## 8️⃣ Call the API
 
 ```bash
-# ── Predict (gửi features đã extract) ──────────────
+# ── Predict (send extracted features) ──────────────
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
   -d '{"model_id": "sentiment", "features": [120, 5.2, 0.3, 0.05, 2, 0, 0.1, ...]}'
 
-# ── Hoặc gửi raw text (nếu có custom preprocessor) ──
+# ── Or send raw text (if custom preprocessor exists) ──
 curl -X POST http://localhost:8000/predict \
-  -d '{"model_id": "sentiment", "text": "Sản phẩm rất tuyệt vời!"}'
+  -d '{"model_id": "sentiment", "text": "This product is amazing!"}'
 
 # ── Batch predict ──────────────────────────────────
 curl -X POST http://localhost:8000/predict/batch \
@@ -482,27 +482,35 @@ curl -X POST http://localhost:8000/models/sentiment/retrain
 # → Triggers Airflow DAG
 
 # ── Check drift ────────────────────────────────────
-curl http://localhost:8000/monitoring/drift-report?model_id=sentiment
+curl http://localhost:8000/monitoring/drift/sentiment
+
+# ── Drift history ──────────────────────────────────
+curl http://localhost:8000/monitoring/reports/sentiment
 
 # ── Model details ──────────────────────────────────
 curl http://localhost:8000/models/sentiment
+
+# ── Export fresh data ──────────────────────────────
+curl -X POST http://localhost:8000/data/export-training \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "sentiment", "min_samples": 10, "include_baseline": true}'
 ```
 
 ---
 
-## Tóm tắt: User làm gì vs Framework làm gì
+## Summary: What You Do vs What the Framework Does
 
-| Phần | User tự làm | Framework hỗ trợ |
+| Area | User does | Framework provides |
 |------|-------------|-------------------|
-| **Định nghĩa bài toán** | ✍️ Viết YAML config | ✅ Parse, validate, smart defaults |
-| **Training** | ✍️ Viết `train_and_export()` | ✅ Gọi function, manage versions |
-| **Hyperparameters** | ✍️ Gọi `OptunaOptimizer` trong code | ✅ Optuna TPE integrated, log results |
-| **Data loading** | ❌ Không cần (hoặc ✍️ custom) | ✅ TabularLoader/ImageLoader mặc định |
-| **Preprocessing** | ❌ Không cần (hoặc ✍️ custom) | ✅ PassthroughPreprocessor mặc định |
-| **Inference** | ❌ Không cần | ✅ ONNX Runtime, sub-50ms |
-| **Drift monitoring** | ❌ Không cần | ✅ KS/PSI/Chi²/Wasserstein auto |
-| **Retrain** | ❌ Không cần | ✅ Auto-trigger (drift/schedule/data_change) |
-| **MLflow logging** | ❌ Không cần | ✅ Auto-log metrics, params, artifacts |
-| **A/B testing** | ❌ Không cần | ✅ Champion/Challenger routing |
-| **Infrastructure** | ✍️ Đổi URLs trong `.env` | ✅ Auto-connect, graceful degradation |
-| **Deploy** | ✍️ `docker compose up` hoặc Helm | ✅ Docker/Compose/Helm reference cung cấp |
+| **Define use case** | ✍️ Write YAML config | ✅ Parse, validate, smart defaults |
+| **Training** | ✍️ Write `train_and_export()` | ✅ Calls function, manages versions |
+| **Hyperparameters** | ✍️ Call `OptunaOptimizer` in code | ✅ Optuna TPE integrated, logs results |
+| **Data loading** | ❌ Not needed (or ✍️ custom) | ✅ TabularLoader/ImageLoader by default |
+| **Preprocessing** | ❌ Not needed (or ✍️ custom) | ✅ PassthroughPreprocessor by default |
+| **Inference** | ❌ Not needed | ✅ ONNX Runtime, sub-50ms |
+| **Drift monitoring** | ❌ Not needed | ✅ KS/PSI/Chi²/Wasserstein auto |
+| **Retrain** | ❌ Not needed | ✅ Auto-trigger (drift/schedule/data_change) |
+| **MLflow logging** | ❌ Not needed | ✅ Auto-log metrics, params, artifacts |
+| **A/B testing** | ❌ Not needed | ✅ Champion/Challenger routing |
+| **Infrastructure** | ✍️ Update URLs in `.env` | ✅ Auto-connect, graceful degradation |
+| **Deploy** | ✍️ `docker compose up` or Helm | ✅ Docker/Compose/Helm reference provided |

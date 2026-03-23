@@ -1,13 +1,13 @@
 # System Architecture: Phoenix ML Platform
 
-## 1. Tổng quan
+## 1. Overview
 
-Phoenix ML là hệ thống **MLOps end-to-end** xây dựng theo **Domain-Driven Design (DDD)** và **Clean Architecture**. Hệ thống cung cấp:
+Phoenix ML is an **end-to-end MLOps** system built with **Domain-Driven Design (DDD)** and **Clean Architecture**. It provides:
 
 - Real-time ML inference (REST + gRPC)
-- Tự động phát hiện data drift và anomaly
+- Automatic data drift and anomaly detection
 - Self-healing: alert → rollback → retrain
-- Multi-model serving với A/B testing, canary deployment
+- Multi-model serving with A/B testing and canary deployment
 - Full observability stack (metrics, tracing, logging)
 
 ## 2. Architecture Diagram
@@ -121,7 +121,7 @@ sequenceDiagram
 
 ## 3. Layer Architecture
 
-Phoenix ML tuân thủ **Clean Architecture** — dependency rule: outer layers phụ thuộc inner layers, KHÔNG NGƯỢC LẠI.
+Phoenix ML follows **Clean Architecture** — dependency rule: outer layers depend on inner layers, NEVER the reverse.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -150,15 +150,15 @@ Infrastructure → Application → Domain → Shared
      ↓ depends on      ↓ depends on    ↓ depends on
 ```
 
-- **Domain Layer** KHÔNG import FastAPI, SQLAlchemy, Redis, Kafka, ONNX Runtime
-- **Application Layer** chỉ import Domain entities/services
-- **Infrastructure Layer** implement Domain ABCs (interfaces)
+- **Domain Layer** does NOT import FastAPI, SQLAlchemy, Redis, Kafka, or ONNX Runtime
+- **Application Layer** only imports Domain entities/services
+- **Infrastructure Layer** implements Domain ABCs (interfaces)
 
 ### 3.2 Source Code Structure
 
 ```
-src/
-├── config/                         # 5 files — Settings (Pydantic, đọc .env)
+phoenix_ml/
+├── config/                         # 5 files — Settings (Pydantic, reads .env)
 │   ├── app.py                      #   APP_VERSION, DEFAULT_MODEL_ID
 │   ├── inference.py                #   BATCH_MAX_SIZE, INFERENCE_ENGINE
 │   ├── infrastructure.py           #   DATABASE_URL, KAFKA_URL, REDIS_URL
@@ -220,18 +220,18 @@ src/
 
 ### 4.1 Pattern Catalog
 
-| Pattern | Location | Mục đích | Chi tiết |
-|---------|----------|----------|----------|
-| **Strategy** | `RoutingStrategy` | Model traffic routing | 4 strategies: `SingleModel` (100% champion), `ABTest` (split by ratio), `Canary` (% nhỏ cho challenger), `Shadow` (mirror, chỉ return champion) |
-| **Circuit Breaker** | `CircuitBreaker` | Fault tolerance | 3 states: CLOSED → OPEN (khi error rate > threshold) → HALF_OPEN (thử lại sau timeout). Tự phục hồi |
+| Pattern | Location | Purpose | Details |
+|---------|----------|---------|----------|
+| **Strategy** | `RoutingStrategy` | Model traffic routing | 4 strategies: `SingleModel` (100% champion), `ABTest` (split by ratio), `Canary` (small % to challenger), `Shadow` (mirror, only return champion) |
+| **Circuit Breaker** | `CircuitBreaker` | Fault tolerance | 3 states: CLOSED → OPEN (when error rate > threshold) → HALF_OPEN (retry after timeout). Self-recovering |
 | **Chain of Responsibility** | `RequestPipeline` | Request processing | Pipeline steps: Validation → Cache Check → Feature Enrichment → Inference → Logging |
 | **Command/CQRS** | `commands/`, `handlers/` | Read/write separation | Commands: PredictCommand, BatchPredictCommand. Queries: GetModelQuery, GetDriftReportQuery |
-| **Repository** | `ModelRepository`, `FeatureStore` | Data access abstraction | ABCs trong domain, implementations trong infrastructure |
+| **Repository** | `ModelRepository`, `FeatureStore` | Data access abstraction | ABCs in domain, implementations in infrastructure |
 | **Observer** | `DomainEventBus` | Event-driven architecture | Subscribers auto-react: PredictionCompleted → publish Prometheus metrics, DriftDetected → trigger alert |
 | **Adapter** | Infrastructure layer | Framework decoupling | `RedisFeatureStore` adapts Redis → `FeatureStore` ABC, `ONNXInferenceEngine` adapts `onnxruntime` → `InferenceEngine` ABC |
-| **Factory** | `container.py` engine factory | Engine selection | Dict-based factory: `{"onnx": ..., "tensorrt": ..., "triton": ...}` — OCP: thêm engine mới = thêm 1 entry |
+| **Factory** | `container.py` engine factory | Engine selection | Dict-based factory: `{"onnx": ..., "tensorrt": ..., "triton": ...}` — OCP: adding a new engine = adding one entry |
 | **Plugin** | `PluginRegistry` | Model-specific processing | Register preprocessor/postprocessor per model_id — extensible without modifying core |
-| **Singleton** | `get_settings()`, `container.py` | Shared instances | Module-level singletons cho settings, DI container objects |
+| **Singleton** | `get_settings()`, `container.py` | Shared instances | Module-level singletons for settings and DI container objects |
 
 ### 4.2 Strategy Pattern — Routing
 
@@ -312,17 +312,17 @@ sequenceDiagram
 
 ### 5.2 Multi-Model Monitoring
 
-Monitoring loop chạy cho **tất cả** models cấu hình trong `model_configs/`:
+The monitoring loop runs for **all** models configured in `model_configs/`:
 
-- Mỗi model có **riêng** reference data (`models/<id>/v1/reference_data.json`)
-- Mỗi model có **riêng** drift test type (`ks`, `psi`, `chi2` — từ YAML config)
-- Monitoring interval cấu hình qua `MONITORING_INTERVAL_SECONDS` (default: 30s production)
+- Each model has its **own** reference data (`models/<id>/v1/reference_data.json`)
+- Each model has its **own** drift test type (`ks`, `psi`, `chi2` — from YAML config)
+- Monitoring interval is configured via `MONITORING_INTERVAL_SECONDS` (default: 30 s in production)
 
 ## 6. Infrastructure Services
 
 ### 6.1 Docker Compose Stack
 
-| Service | Image | Port(s) | Mục đích |
+| Service | Image | Port(s) | Purpose |
 |---------|-------|---------|----------|
 | `phoenix-api` | Custom (Dockerfile) | 8000→8001 | FastAPI API server + gRPC :50051 |
 | `phoenix-frontend` | Custom (Dockerfile.frontend) | 5173→5174 | React dashboard (Vite dev server) |
@@ -339,7 +339,7 @@ Monitoring loop chạy cho **tất cả** models cấu hình trong `model_config
 
 ### 6.2 Airflow Stack (docker-compose.airflow.yaml)
 
-| Service | Port | Mục đích |
+| Service | Port | Purpose |
 |---------|------|----------|
 | `airflow-webserver` | 8080 | Airflow UI |
 | `airflow-scheduler` | — | DAG scheduling |
@@ -385,11 +385,11 @@ Return PredictionResponse to Client
 ```
 Airflow DAG (dags/retrain_pipeline.py)
     ↓
-generate_datasets.py → data/{model}/dataset.csv hoặc .npz
+generate_datasets.py → data/{model}/dataset.csv or .npz
     ↓
 examples/{model}/train.py
     ↓
-DataLoader (tabular_loader.py hoặc image_loader.py)
+DataLoader (tabular_loader.py or image_loader.py)
     ↓
 sklearn/xgboost model → ONNX export
     ↓
@@ -400,6 +400,18 @@ MLflow: log params, metrics, artifacts
 PostgreSQL: register model version
     ↓
 Promote to champion stage
+
+--- OR self-healing retrain ---
+
+Drift detected → POST /data/export-training
+    ↓
+Query prediction_logs WHERE ground_truth IS NOT NULL
+    ↓
+Merge: baseline + fresh labeled data → combined CSV
+    ↓
+examples/{model}/train.py --data combined.csv
+    ↓
+POST /models/register (challenger)
 ```
 
 ## 8. Test Architecture
@@ -433,10 +445,10 @@ Promote to champion stage
 ```bash
 uv run ruff check .           # Lint: 0 errors
 uv run ruff format --check .  # Format: 243 files consistent
-uv run mypy src/               # Type check: 0 issues in 145 files
+uv run mypy phoenix_ml/               # Type check: 0 issues
 uv run pytest tests/           # Tests: all pass, 87% coverage
 npx tsc --noEmit               # Frontend type check: 0 errors
-npx eslint src/                # Frontend lint: 0 errors
+npx eslint phoenix_ml/                # Frontend lint: 0 errors
 npx vitest run                 # Frontend tests: 104/104 pass
 ```
 

@@ -1,20 +1,12 @@
-"""
-ITrainer — Plugin Interface for Model Training.
+"""Abstract interface for model training.
 
-Enables the Phoenix ML framework to support any ML training pipeline
-(scikit-learn, PyTorch, TensorFlow, YOLOv8, HuggingFace, etc.)
-without modifying the framework core.
+Implementations handle training and validation for a specific ML
+framework (scikit-learn, PyTorch, etc.) and are registered in
+``PluginRegistry`` keyed by ``model_id``.
 
-Users implement this interface for their specific ML problem:
-  - Classification: GradientBoosting, XGBoost, LightGBM
-  - Object Detection: YOLOv8, Faster R-CNN, DETR
-  - Recommendation: Matrix Factorization, Neural CF
-  - Time Series: Prophet, LSTM, Transformer
-  - NLP: BERT, GPT fine-tuning
-  - Custom: Any other ML/DL framework
-
-The self-healing pipeline calls ITrainer.train() to retrain
-when drift is detected, making retraining fully pluggable.
+Methods:
+    train(config) -> TrainResult: Execute training, return result with model path.
+    validate(model_path, data_path) -> dict[str, float]: Evaluate a saved model.
 """
 
 from abc import ABC, abstractmethod
@@ -38,23 +30,10 @@ class TrainResult:
 
 
 class ITrainer(ABC):
-    """Plugin interface for model training.
+    """Abstract base for model training.
 
-    Implement this for your specific ML problem type.
-    The self-healing pipeline uses this to retrain models
-    when drift is detected.
-
-    Example::
-
-        class YOLOTrainer(ITrainer):
-            async def train(self, config):
-                model = YOLO("yolov8n.pt")
-                results = model.train(data=config["dataset_path"], epochs=100)
-                model.export(format="onnx")
-                return TrainResult(
-                    model_path="runs/detect/train/weights/best.onnx",
-                    metrics={"mAP50": results.maps[0]},
-                )
+    Subclasses implement ``train()`` and ``validate()`` for a specific
+    ML framework. Registered in ``PluginRegistry`` per ``model_id``.
     """
 
     @abstractmethod
