@@ -1,0 +1,19 @@
+{{- if .Values.grpc.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-grpc
+  labels:
+    app: {{ .Release.Name }}
+    component: grpc
+spec:
+  type: {{ .Values.grpc.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.grpc.port | default 50051 }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    app: {{ .Release.Name }}
+    component: api
+{{- end }}
