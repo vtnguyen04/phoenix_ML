@@ -1,0 +1,3433 @@
+
+<!DOCTYPE html>
+
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta content="High-Throughput Real-time ML Inference System" name="description"/>
+<meta content="Võ Thành Nguyễn" name="author"/>
+<link href="../architecture/system-design/" rel="prev"/>
+<link href="../frontend/architecture/" rel="next"/>
+<link href="../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.1" name="generator"/>
+<title>Project Structure - Phoenix ML Platform</title>
+<link href="../assets/stylesheets/main.484c7ddc.min.css" rel="stylesheet"/>
+<link href="../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CFira+Code:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Inter";--md-code-font:"Fira Code"}</style>
+<script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="black" data-md-color-scheme="slate" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#phoenix-ml-platform-detailed-project-structure">
+          Skip to content
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+<nav aria-label="Header" class="md-header__inner md-grid">
+<a aria-label="Phoenix ML Platform" class="md-header__button md-logo" data-md-component="logo" href=".." title="Phoenix ML Platform">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            Phoenix ML Platform
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              Project Structure
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Switch to light mode" class="md-option" data-md-color-accent="indigo" data-md-color-media="" data-md-color-primary="black" data-md-color-scheme="slate" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Switch to light mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Switch to dark mode" class="md-option" data-md-color-accent="blue" data-md-color-media="" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Switch to dark mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Search" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Search" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Search" class="md-search__options">
+<button aria-label="Clear" class="md-search__icon md-icon" tabindex="-1" title="Clear" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Initializing search
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="md-header__source">
+<a class="md-source" data-md-component="source" href="https://github.com/vtnguyen04/phoenix_ML" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+</div>
+<div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+</div>
+</nav>
+<nav aria-label="Tabs" class="md-tabs" data-md-component="tabs">
+<div class="md-grid">
+<ul class="md-tabs__list">
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="..">
+        
+  
+  
+    
+  
+  Welcome
+
+      </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../guides/getting-started/">
+          
+  
+  
+  Getting Started
+
+        </a>
+</li>
+<li class="md-tabs__item md-tabs__item--active">
+<a class="md-tabs__link" href="../architecture/system-design/">
+          
+  
+  
+  Core Concepts
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../guides/library-api/">
+          
+  
+  
+  Operations &amp; Guides
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../api/reference/">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../adr/002-use-onnx-runtime/">
+          
+  
+  
+  Architecture Decisions
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../blog/system-design-overview/">
+          
+  
+  
+  Engineering Blog
+
+        </a>
+</li>
+</ul>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Navigation" class="md-nav md-nav--primary md-nav--lifted" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="Phoenix ML Platform" class="md-nav__button md-logo" data-md-component="logo" href=".." title="Phoenix ML Platform">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    Phoenix ML Platform
+  </label>
+<div class="md-nav__source">
+<a class="md-source" data-md-component="source" href="https://github.com/vtnguyen04/phoenix_ML" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+</div>
+<div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+</div>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="..">
+<span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../guides/getting-started/">
+<span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_2_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_2_label" class="md-nav" data-md-level="2">
+<label class="md-nav__title" for="__nav_2_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../tutorials/sentiment-analysis/">
+<span class="md-ellipsis">
+    
+  
+    Sentiment Analysis
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../tutorials/credit-risk/">
+<span class="md-ellipsis">
+    
+  
+    Credit Risk
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../tutorials/fraud-detection/">
+<span class="md-ellipsis">
+    
+  
+    Fraud Detection
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../tutorials/house-price/">
+<span class="md-ellipsis">
+    
+  
+    House Price
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../tutorials/image-classification/">
+<span class="md-ellipsis">
+    
+  
+    Image Classification
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_3" type="checkbox"/>
+<label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+<span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_3_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_3">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../architecture/system-design/">
+<span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--active">
+<input class="md-nav__toggle md-toggle" id="__toc" type="checkbox"/>
+<label class="md-nav__link md-nav__link--active" for="__toc">
+<span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<a class="md-nav__link md-nav__link--active" href="./">
+<span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+</a>
+<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#high-level-structure">
+<span class="md-ellipsis">
+      
+        📁 High-Level Structure
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#root-configuration-files">
+<span class="md-ellipsis">
+      
+        🔧 Root — Configuration Files
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#backend-source-code">
+<span class="md-ellipsis">
+      
+        📂 Backend Source Code
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#react-typescript-dashboard">
+<span class="md-ellipsis">
+      
+        📂 React TypeScript Dashboard
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#backend-tests-pytest">
+<span class="md-ellipsis">
+      
+        📂 Backend Tests (pytest)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#model-configuration-yaml">
+<span class="md-ellipsis">
+      
+        📂 Model Configuration (YAML)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#training-scripts">
+<span class="md-ellipsis">
+      
+        📂 Training Scripts
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#airflow-dags">
+<span class="md-ellipsis">
+      
+        📂 Airflow DAGs
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#utility-scripts">
+<span class="md-ellipsis">
+      
+        📂 Utility Scripts
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#performance-benchmarks">
+<span class="md-ellipsis">
+      
+        📂 Performance Benchmarks
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#kubernetes-helm-chart">
+<span class="md-ellipsis">
+      
+        📂 Kubernetes Helm Chart
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#grafana-configuration">
+<span class="md-ellipsis">
+      
+        📂 Grafana Configuration
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#mkdocs-documentation-site">
+<span class="md-ellipsis">
+      
+        📂 MkDocs Documentation Site
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#jupyter-demo-notebooks">
+<span class="md-ellipsis">
+      
+        📂 Jupyter Demo Notebooks
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#database-migrations">
+<span class="md-ellipsis">
+      
+        📂 Database Migrations
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#running-the-project">
+<span class="md-ellipsis">
+      
+        🚀 Running the Project
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../frontend/architecture/">
+<span class="md-ellipsis">
+    
+  
+    Frontend
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_4" type="checkbox"/>
+<label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Operations &amp; Guides
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_4_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_4">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations &amp; Guides
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../guides/library-api/">
+<span class="md-ellipsis">
+    
+  
+    Library API
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../deployment/docker-stack/">
+<span class="md-ellipsis">
+    
+  
+    Deployment Stack
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../guides/monitoring/">
+<span class="md-ellipsis">
+    
+  
+    Monitoring &amp; Alerting
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../guides/customization/">
+<span class="md-ellipsis">
+    
+  
+    Customization
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../guides/troubleshooting/">
+<span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../api/reference/">
+<span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_6" type="checkbox"/>
+<label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_6_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_6">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture Decisions
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../adr/002-use-onnx-runtime/">
+<span class="md-ellipsis">
+    
+  
+    002 - ONNX Runtime
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../adr/003-use-kafka-for-event-streaming/">
+<span class="md-ellipsis">
+    
+  
+    003 - Kafka Streaming
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../adr/004-observability-with-prometheus-grafana/">
+<span class="md-ellipsis">
+    
+  
+    004 - Observability
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../adr/005-dvc-data-versioning/">
+<span class="md-ellipsis">
+    
+  
+    005 - DVC Versioning
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_7" type="checkbox"/>
+<label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Engineering Blog
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_7_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_7">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Engineering Blog
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../blog/system-design-overview/">
+<span class="md-ellipsis">
+    
+  
+    System Design
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../blog/self-healing-ml/">
+<span class="md-ellipsis">
+    
+  
+    Self-Healing ML
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../blog/performance-optimization/">
+<span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#high-level-structure">
+<span class="md-ellipsis">
+      
+        📁 High-Level Structure
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#root-configuration-files">
+<span class="md-ellipsis">
+      
+        🔧 Root — Configuration Files
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#backend-source-code">
+<span class="md-ellipsis">
+      
+        📂 Backend Source Code
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#react-typescript-dashboard">
+<span class="md-ellipsis">
+      
+        📂 React TypeScript Dashboard
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#backend-tests-pytest">
+<span class="md-ellipsis">
+      
+        📂 Backend Tests (pytest)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#model-configuration-yaml">
+<span class="md-ellipsis">
+      
+        📂 Model Configuration (YAML)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#training-scripts">
+<span class="md-ellipsis">
+      
+        📂 Training Scripts
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#airflow-dags">
+<span class="md-ellipsis">
+      
+        📂 Airflow DAGs
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#utility-scripts">
+<span class="md-ellipsis">
+      
+        📂 Utility Scripts
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#performance-benchmarks">
+<span class="md-ellipsis">
+      
+        📂 Performance Benchmarks
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#kubernetes-helm-chart">
+<span class="md-ellipsis">
+      
+        📂 Kubernetes Helm Chart
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#grafana-configuration">
+<span class="md-ellipsis">
+      
+        📂 Grafana Configuration
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#mkdocs-documentation-site">
+<span class="md-ellipsis">
+      
+        📂 MkDocs Documentation Site
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#jupyter-demo-notebooks">
+<span class="md-ellipsis">
+      
+        📂 Jupyter Demo Notebooks
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#database-migrations">
+<span class="md-ellipsis">
+      
+        📂 Database Migrations
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#running-the-project">
+<span class="md-ellipsis">
+      
+        🚀 Running the Project
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="phoenix-ml-platform-detailed-project-structure">Phoenix ML Platform — Detailed Project Structure</h1>
+<blockquote>
+<p>Documentation describing <strong>all directories and files</strong> in the project (excluding <code>__pycache__</code>, <code>data/</code>, <code>models/</code>, <code>.venv/</code>, <code>.git/</code>).
+Architecture: <strong>Layered modular architecture</strong> with clear separation of concerns</p>
+</blockquote>
+<hr/>
+<h2 id="high-level-structure">📁 High-Level Structure</h2>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a>phoenix_ML/
+<a href="#__codelineno-0-2" id="__codelineno-0-2" name="__codelineno-0-2"></a>├── phoenix_ml/                    ← Backend source code (Python)
+<a href="#__codelineno-0-3" id="__codelineno-0-3" name="__codelineno-0-3"></a>│   ├── config/             ← App settings (reads from .env)
+<a href="#__codelineno-0-4" id="__codelineno-0-4" name="__codelineno-0-4"></a>│   ├── domain/             ← Pure business logic (no framework dependencies)
+<a href="#__codelineno-0-5" id="__codelineno-0-5" name="__codelineno-0-5"></a>│   ├── application/        ← Use cases, commands, handlers (CQRS)
+<a href="#__codelineno-0-6" id="__codelineno-0-6" name="__codelineno-0-6"></a>│   ├── infrastructure/     ← Adapters: DB, Kafka, HTTP, gRPC, ML engines
+<a href="#__codelineno-0-7" id="__codelineno-0-7" name="__codelineno-0-7"></a>│   └── shared/             ← Utilities, exceptions, data ingestion
+<a href="#__codelineno-0-8" id="__codelineno-0-8" name="__codelineno-0-8"></a>├── frontend/               ← React TypeScript dashboard
+<a href="#__codelineno-0-9" id="__codelineno-0-9" name="__codelineno-0-9"></a>├── tests/                  ← Unit / Integration / E2E tests
+<a href="#__codelineno-0-10" id="__codelineno-0-10" name="__codelineno-0-10"></a>├── dags/                   ← Airflow DAGs
+<a href="#__codelineno-0-11" id="__codelineno-0-11" name="__codelineno-0-11"></a>├── examples/               ← Training scripts per model
+<a href="#__codelineno-0-12" id="__codelineno-0-12" name="__codelineno-0-12"></a>├── model_configs/          ← YAML config per model
+<a href="#__codelineno-0-13" id="__codelineno-0-13" name="__codelineno-0-13"></a>├── scripts/                ← Utility scripts
+<a href="#__codelineno-0-14" id="__codelineno-0-14" name="__codelineno-0-14"></a>├── benchmarks/             ← Performance benchmarks
+<a href="#__codelineno-0-15" id="__codelineno-0-15" name="__codelineno-0-15"></a>├── deploy/                 ← Helm charts (Kubernetes)
+<a href="#__codelineno-0-16" id="__codelineno-0-16" name="__codelineno-0-16"></a>├── docs/                   ← MkDocs documentation site
+<a href="#__codelineno-0-17" id="__codelineno-0-17" name="__codelineno-0-17"></a>├── grafana/                ← Grafana dashboards &amp; provisioning
+<a href="#__codelineno-0-18" id="__codelineno-0-18" name="__codelineno-0-18"></a>├── notebooks/              ← Jupyter demo notebooks
+<a href="#__codelineno-0-19" id="__codelineno-0-19" name="__codelineno-0-19"></a>├── alembic/                ← Database migrations
+<a href="#__codelineno-0-20" id="__codelineno-0-20" name="__codelineno-0-20"></a>├── .github/workflows/      ← CI/CD pipelines
+<a href="#__codelineno-0-21" id="__codelineno-0-21" name="__codelineno-0-21"></a>└── [root config files]     ← Docker, pyproject, env, etc.
+</code></pre></div>
+<hr/>
+<h2 id="root-configuration-files">🔧 Root — Configuration Files</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pyproject.toml</code></td>
+<td>Python project config: dependencies, tool settings (ruff, mypy, pytest). Managed by <code>uv</code></td>
+</tr>
+<tr>
+<td><code>Makefile</code></td>
+<td>Shortcuts for Docker/dev: <code>make up</code>, <code>make down</code>, <code>make test</code>, <code>make build</code>, <code>make clean</code>, <code>make ps</code></td>
+</tr>
+<tr>
+<td><code>Dockerfile</code></td>
+<td>Build backend API image: Python 3.13 + FastAPI + ONNX Runtime</td>
+</tr>
+<tr>
+<td><code>Dockerfile.airflow</code></td>
+<td>Build Airflow worker image: base airflow + project dependencies</td>
+</tr>
+<tr>
+<td><code>Dockerfile.frontend</code></td>
+<td>Build frontend image: Node.js + Vite dev server</td>
+</tr>
+<tr>
+<td><code>docker-compose.yaml</code></td>
+<td><strong>14 Docker services</strong>: api, frontend, postgres, redis, kafka, zookeeper, mlflow, prometheus, grafana, jaeger, kafka-ui, minio</td>
+</tr>
+<tr>
+<td><code>docker-compose.airflow.yaml</code></td>
+<td><strong>Airflow services</strong>: webserver, scheduler, init, postgres-airflow</td>
+</tr>
+<tr>
+<td><code>docker-entrypoint.sh</code></td>
+<td>Docker entrypoint: fix volume permissions → run app under user <code>phoenix</code></td>
+</tr>
+<tr>
+<td><code>.env</code></td>
+<td>Environment variables: <code>DATABASE_URL</code>, <code>REDIS_URL</code>, <code>KAFKA_URL</code>, <code>MLFLOW_TRACKING_URI</code>, ports</td>
+</tr>
+<tr>
+<td><code>.env.example</code></td>
+<td>Template for <code>.env</code> — used when freshly cloned</td>
+</tr>
+<tr>
+<td><code>prometheus.yml</code></td>
+<td>Prometheus config: scrape interval, target (API <code>/metrics</code> endpoint)</td>
+</tr>
+<tr>
+<td><code>mkdocs.yml</code></td>
+<td>MkDocs site config: navigation, Material theme, plugins (search, mermaid)</td>
+</tr>
+<tr>
+<td><code>alembic.ini</code></td>
+<td>Alembic config: database URL, migration directory</td>
+</tr>
+<tr>
+<td><code>.gitignore</code></td>
+<td>Files ignored by Git: <code>__pycache__</code>, <code>.venv</code>, <code>node_modules</code>, <code>*.pyc</code>, <code>models/</code>, logs, etc.</td>
+</tr>
+<tr>
+<td><code>.dockerignore</code></td>
+<td>Files ignored by Docker during image build</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td>Project overview: features, architecture, tech stack, getting started</td>
+</tr>
+<tr>
+<td><code>QUICKSTART.md</code></td>
+<td>Quick start guide: clone → setup → run</td>
+</tr>
+<tr>
+<td><code>CONTRIBUTING.md</code></td>
+<td>Contributing guide: branching, commit convention, CI checks</td>
+</tr>
+<tr>
+<td><code>project.md</code></td>
+<td>Detailed internal documentation (72KB) — design, architecture decisions</td>
+</tr>
+</tbody>
+</table>
+<h3>CI/CD</h3>
+<p><strong>Path:</strong> <code>.github/workflows/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.github/workflows/ci.yaml</code></td>
+<td><strong>CI pipeline</strong>: <code>ruff check</code> → <code>mypy</code> → <code>pytest</code> → build Docker image. Runs on every push/PR</td>
+</tr>
+<tr>
+<td><code>.github/workflows/docs.yaml</code></td>
+<td><strong>Docs pipeline</strong>: auto build + deploy MkDocs to GitHub Pages</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="backend-source-code">📂 Backend Source Code</h2>
+<p><strong>Path:</strong> <code>phoenix_ml/</code></p>
+<h3>`__init__.py`</h3>
+<p><strong>Path:</strong> <code>phoenix_ml/__init__.py</code>
+Package init.</p>
+<h3>`py.typed`</h3>
+<p><strong>Path:</strong> <code>phoenix_ml/py.typed</code>
+PEP 561 marker — allows mypy to type-check this package when used as library.</p>
+<hr/>
+<h3>Application Configuration</h3>
+<p><strong>Path:</strong> <code>phoenix_ml/config/</code></p>
+<p>Reads environment variables from <code>.env</code> and returns Pydantic Settings objects.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Exports <code>get_settings()</code> — merges all settings into a single singleton</td>
+</tr>
+<tr>
+<td><code>app.py</code></td>
+<td><strong>AppSettings</strong>: <code>APP_VERSION</code>, <code>DEFAULT_MODEL_ID</code>, <code>DEFAULT_MODEL_VERSION</code>, <code>MODEL_CONFIG_DIR</code></td>
+</tr>
+<tr>
+<td><code>inference.py</code></td>
+<td><strong>InferenceSettings</strong>: <code>BATCH_MAX_SIZE</code>, <code>BATCH_MAX_WAIT_MS</code>, <code>CACHE_DIR</code>, <code>INFERENCE_ENGINE</code> (onnx/tensorrt/triton)</td>
+</tr>
+<tr>
+<td><code>infrastructure.py</code></td>
+<td><strong>InfraSettings</strong>: <code>DATABASE_URL</code>, <code>REDIS_URL</code>, <code>KAFKA_URL</code>, <code>MLFLOW_TRACKING_URI</code>, <code>ARTIFACT_STORAGE_DIR</code></td>
+</tr>
+<tr>
+<td><code>monitoring.py</code></td>
+<td><strong>MonitoringSettings</strong>: <code>MONITORING_INTERVAL_SECONDS</code>, <code>DRIFT_THRESHOLD</code>, <code>USE_REDIS</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Usage:</strong>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-1-1" id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_settings</span>
+<a href="#__codelineno-1-2" id="__codelineno-1-2" name="__codelineno-1-2"></a><span class="n">settings</span> <span class="o">=</span> <span class="n">get_settings</span><span class="p">()</span>
+<a href="#__codelineno-1-3" id="__codelineno-1-3" name="__codelineno-1-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">DATABASE_URL</span><span class="p">)</span>   <span class="c1"># postgresql+asyncpg://...</span>
+<a href="#__codelineno-1-4" id="__codelineno-1-4" name="__codelineno-1-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">KAFKA_URL</span><span class="p">)</span>      <span class="c1"># kafka:9092</span>
+</code></pre></div></p>
+<hr/>
+<h3>Domain Layer (Business Logic)</h3>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/</code></p>
+<blockquote>
+<p>Pure Python layer, does <strong>NOT import</strong> any framework (FastAPI, SQLAlchemy, Kafka, etc.)
+Contains entities, value objects, domain services, and repository interfaces (ABCs).</p>
+</blockquote>
+<h4>`__init__.py`</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/__init__.py</code>
+Package init.</p>
+<hr/>
+<h4>Bounded Context: Inference</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/inference/</code></p>
+<p><strong>Responsibility</strong>: Managing models, performing predictions, routing traffic, circuit breaking.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+</tbody>
+</table>
+<h5>Entities</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/inference/entities/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>model.py</code></td>
+<td><strong>Model entity</strong>: <code>id</code>, <code>version</code>, <code>uri</code>, <code>framework</code>, <code>stage</code> (PRODUCTION/STAGING/ARCHIVED/DEVELOPMENT), <code>metadata</code>, <code>is_active</code>, <code>created_at</code>. <strong>ModelStage enum</strong>. Property <code>unique_key</code> = <code>"{id}:{version}"</code></td>
+</tr>
+<tr>
+<td><code>prediction.py</code></td>
+<td><strong>Prediction entity</strong>: <code>model_id</code>, <code>model_version</code>, <code>result</code>, <code>confidence</code> (ConfidenceScore), <code>latency_ms</code>. Result of a single inference</td>
+</tr>
+</tbody>
+</table>
+<h5>Value Objects</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/inference/value_objects/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>confidence_score.py</code></td>
+<td><strong>ConfidenceScore</strong>: immutable, validates value ∈ [0.0, 1.0]. Raises ValueError if out of range</td>
+</tr>
+<tr>
+<td><code>feature_vector.py</code></td>
+<td><strong>FeatureVector</strong>: wraps numpy <code>ndarray</code>, validates dtype float32, property <code>dimension</code></td>
+</tr>
+<tr>
+<td><code>latency_budget.py</code></td>
+<td><strong>LatencyBudget</strong>: inference time limit (milliseconds), method <code>is_exceeded(elapsed)</code></td>
+</tr>
+<tr>
+<td><code>model_config.py</code></td>
+<td><strong>ModelConfig dataclass</strong>: per-model configuration from YAML — <code>model_id</code>, <code>version</code>, <code>feature_names</code>, <code>data_loader</code>, <code>train_script</code>, <code>monitoring_drift_test</code>, <code>has_named_features</code></td>
+</tr>
+<tr>
+<td><code>model_version.py</code></td>
+<td><strong>ModelVersion</strong>: parses semantic version string (v1, v2.1), supports comparison operators</td>
+</tr>
+</tbody>
+</table>
+<h5>Events</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/inference/events/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>model_loaded.py</code></td>
+<td><strong>ModelLoaded event</strong>: <code>model_id</code>, <code>version</code>, <code>timestamp</code> — emitted when a model is loaded into the engine</td>
+</tr>
+<tr>
+<td><code>prediction_made.py</code></td>
+<td><strong>PredictionMade event</strong>: <code>model_id</code>, <code>result</code>, <code>confidence</code>, <code>latency</code> — emitted after each prediction</td>
+</tr>
+</tbody>
+</table>
+<h5>Services</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/inference/services/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>inference_engine.py</code></td>
+<td><strong>InferenceEngine ABC</strong>: ML engine interface. Methods: <code>load(model)</code>, <code>predict(model, features)</code>, <code>batch_predict(model, features_list)</code>, <code>optimize(model)</code></td>
+</tr>
+<tr>
+<td><code>inference_service.py</code></td>
+<td><strong>InferenceService</strong>: main orchestrator — receives request → resolves model (routing) → gets features → runs inference → returns Prediction</td>
+</tr>
+<tr>
+<td><code>batch_manager.py</code></td>
+<td><strong>BatchManager</strong> + <strong>BatchConfig</strong>: automatically groups concurrent requests into 1 batch → calls <code>batch_predict()</code> once → splits results. Configure <code>max_batch_size</code>, <code>max_wait_time_ms</code></td>
+</tr>
+<tr>
+<td><code>routing_strategy.py</code></td>
+<td><strong>RoutingStrategy ABC</strong> + 4 implementations: <code>SingleModelStrategy</code> (100% champion), <code>ABTestStrategy</code> (split by ratio), <code>CanaryStrategy</code> (small % to challenger), <code>ShadowStrategy</code> (mirror traffic, only returns champion)</td>
+</tr>
+<tr>
+<td><code>circuit_breaker.py</code></td>
+<td><strong>CircuitBreaker</strong>: 3 states (CLOSED → OPEN → HALF_OPEN). Automatically stops inference when error rate exceeds threshold, self-recovers after timeout</td>
+</tr>
+<tr>
+<td><code>request_pipeline.py</code></td>
+<td><strong>RequestPipeline</strong>: Chain of Responsibility — runs ordered middleware steps (logging, validation, caching) before/after inference</td>
+</tr>
+<tr>
+<td><code>processor_plugin.py</code></td>
+<td><strong>IPreprocessor ABC</strong>: transforms raw input → model features. <strong>IPostprocessor ABC</strong>: transforms model output → API response. Built-in: <code>PassthroughPreprocessor</code>, <code>ClassificationPostprocessor</code> (binary/multi-class)</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h4>Bounded Context: Monitoring</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/monitoring/</code></p>
+<p><strong>Responsibility</strong>: Detecting data drift, evaluating model performance, automatic alerting and rollback.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+</tbody>
+</table>
+<h5>Entities</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/monitoring/entities/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>drift_report.py</code></td>
+<td><strong>DriftReport entity</strong>: <code>model_id</code>, <code>feature_name</code>, <code>method</code> (ks/psi/chi2), <code>score</code>, <code>is_drifted</code>, <code>threshold</code>, <code>timestamp</code></td>
+</tr>
+</tbody>
+</table>
+<h5>Repositories</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/monitoring/repositories/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>drift_report_repository.py</code></td>
+<td><strong>DriftReportRepository ABC</strong>: <code>save(report)</code>, <code>get_by_model(model_id, limit)</code></td>
+</tr>
+<tr>
+<td><code>prediction_log_repository.py</code></td>
+<td><strong>PredictionLogRepository ABC</strong>: <code>log(command, prediction)</code>, <code>get_recent(model_id, limit)</code>, <code>update_ground_truth(pred_id, truth)</code></td>
+</tr>
+</tbody>
+</table>
+<h5>Services</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/monitoring/services/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>drift_calculator.py</code></td>
+<td><strong>DriftCalculator</strong>: calculates data drift. Methods: <code>calculate_ks(reference, current)</code>, <code>calculate_psi(ref, cur)</code>, <code>calculate_chi2(ref, cur)</code>. Returns <code>DriftResult(score, is_drifted)</code></td>
+</tr>
+<tr>
+<td><code>alert_manager.py</code></td>
+<td><strong>AlertManager</strong>: manages alert rules. <strong>AlertRule</strong>: <code>name</code>, <code>metric</code>, <code>threshold</code>, <code>severity</code> (INFO/WARNING/CRITICAL), <code>comparison</code> (gt/lt), <code>cooldown_seconds</code>. <strong>Alert</strong>: result of evaluating one rule</td>
+</tr>
+<tr>
+<td><code>alert_notifier.py</code></td>
+<td><strong>IAlertNotifier ABC</strong>: notification sending interface. Method: <code>notify(alert) → bool</code></td>
+</tr>
+<tr>
+<td><code>anomaly_detector.py</code></td>
+<td><strong>AnomalyDetector</strong>: detects anomalies in metrics. Methods: <code>detect_zscore(values, threshold)</code>, <code>detect_iqr(values)</code>. Returns list of anomaly indices</td>
+</tr>
+<tr>
+<td><code>metrics_publisher.py</code></td>
+<td><strong>MetricsPublisher ABC</strong>: metrics publishing interface. Methods: <code>record_prediction()</code>, <code>record_latency()</code>, <code>record_confidence()</code>, <code>publish_model_metrics()</code>, <code>publish_drift_score()</code>, <code>record_drift_detected()</code></td>
+</tr>
+<tr>
+<td><code>model_evaluator.py</code></td>
+<td><strong>IModelEvaluator ABC</strong> + <code>ClassificationEvaluator</code> (accuracy, f1, precision, recall) + <code>RegressionEvaluator</code> (rmse, mae, r2). Factory function <code>get_evaluator(task_type)</code></td>
+</tr>
+<tr>
+<td><code>rollback_manager.py</code></td>
+<td><strong>RollbackManager</strong>: automatic model rollback. Logic: check performance → if below threshold → archive challenger → restore champion</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h4>Bounded Context: Training</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/training/</code></p>
+<p><strong>Responsibility</strong>: Training job management, plugin interfaces for data loading and training.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+</tbody>
+</table>
+<h5>Entities</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/training/entities/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>training_config.py</code></td>
+<td><strong>TrainingConfig</strong>: training configuration — <code>model_id</code>, <code>data_path</code>, <code>hyperparameters</code>, <code>epochs</code>, <code>batch_size</code></td>
+</tr>
+<tr>
+<td><code>training_job.py</code></td>
+<td><strong>TrainingJob entity</strong>: <code>job_id</code>, <code>model_id</code>, <code>status</code> (PENDING/RUNNING/COMPLETED/FAILED), <code>started_at</code>, <code>finished_at</code>, <code>metrics</code></td>
+</tr>
+</tbody>
+</table>
+<h5>Events</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/training/events/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>training_completed.py</code></td>
+<td><strong>TrainingCompleted event</strong>: <code>model_id</code>, <code>version</code>, <code>metrics</code>, <code>duration</code></td>
+</tr>
+</tbody>
+</table>
+<h5>Repositories</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/training/repositories/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>training_repository.py</code></td>
+<td><strong>TrainingRepository ABC</strong>: <code>save(job)</code>, <code>get(job_id)</code>, <code>list_by_model(model_id)</code></td>
+</tr>
+</tbody>
+</table>
+<h5>Services</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/training/services/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>training_service.py</code></td>
+<td><strong>TrainingService</strong>: orchestrates training — load data → train → evaluate → save model</td>
+</tr>
+<tr>
+<td><code>data_loader_plugin.py</code></td>
+<td><strong>IDataLoader ABC</strong>: plugin interface for dataset loading. Methods: <code>load(data_path)</code> → <code>(data, DatasetInfo)</code>, <code>split(data, test_size)</code> → <code>(train, test)</code>. <strong>DatasetInfo dataclass</strong>: <code>num_samples</code>, <code>num_features</code>, <code>feature_names</code>, <code>class_labels</code>, <code>data_format</code></td>
+</tr>
+<tr>
+<td><code>trainer_plugin.py</code></td>
+<td><strong>ITrainer ABC</strong>: plugin interface for training algorithms. Methods: <code>train(data, config)</code>, <code>evaluate(model, test_data)</code></td>
+</tr>
+<tr>
+<td><code>hyperparameter_optimizer.py</code></td>
+<td><strong>HyperparameterOptimizer</strong>: hyperparameter optimization — grid search, random search</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h4>Bounded Context: Feature Store</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/feature_store/</code></p>
+<p><strong>Responsibility</strong>: Managing features for inference (online) and training (offline).</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+</tbody>
+</table>
+<h5>Entities</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/feature_store/entities/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>feature_registry.py</code></td>
+<td><strong>FeatureRegistry</strong>: manages metadata — feature name, type, source, lineage</td>
+</tr>
+</tbody>
+</table>
+<h5>Repositories</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/feature_store/repositories/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>feature_store.py</code></td>
+<td><strong>FeatureStore ABC</strong>: online store interface. Methods: <code>get_online_features(entity_id, feature_names) → list[float]</code>, <code>add_features(entity_id, data)</code></td>
+</tr>
+<tr>
+<td><code>offline_feature_store.py</code></td>
+<td><strong>OfflineFeatureStore ABC</strong>: offline store interface for batch retrieval</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h4>Bounded Context: Model Registry</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/model_registry/</code></p>
+<p><strong>Responsibility</strong>: Managing model artifacts, versioning, and staging.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+</tbody>
+</table>
+<h5>Repositories</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/model_registry/repositories/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>artifact_storage.py</code></td>
+<td><strong>ArtifactStorage ABC</strong>: model file storage interface. Methods: <code>download(remote_uri, local_path)</code>, <code>upload(local_path, remote_uri)</code>, <code>exists(remote_uri)</code>, <code>delete(remote_uri)</code></td>
+</tr>
+<tr>
+<td><code>model_repository.py</code></td>
+<td><strong>ModelRepository ABC</strong>: model CRUD interface. Methods: <code>save(model)</code>, <code>get_by_id(id, version)</code>, <code>get_active_versions(id)</code>, <code>get_champion(id)</code>, <code>update_stage(id, version, stage)</code>, <code>list_all()</code></td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h4>Shared Domain Kernel</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/shared/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>domain_events.py</code></td>
+<td>Shared domain events: <strong>PredictionCompleted</strong> (<code>model_id</code>, <code>version</code>, <code>status</code>, <code>latency</code>, <code>confidence</code>), <strong>DriftDetected</strong>, <strong>DriftScorePublished</strong>, <strong>ModelRetrained</strong></td>
+</tr>
+<tr>
+<td><code>event_bus.py</code></td>
+<td><strong>DomainEventBus</strong>: Observer pattern — <code>subscribe(event_type, handler)</code>, <code>publish(event)</code>. Fully decouples modules</td>
+</tr>
+<tr>
+<td><code>plugin_registry.py</code></td>
+<td><strong>PluginRegistry</strong>: registers + resolves preprocessor/postprocessor/data_loader plugins by <code>model_id</code>. Method <code>register_model(id, pre, post, loader)</code>, <code>resolve(id)</code></td>
+</tr>
+</tbody>
+</table>
+<h5>Interfaces</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/domain/shared/interfaces/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>message_producer.py</code></td>
+<td><strong>IMessageProducer ABC</strong>: message queue producer interface. Method: <code>publish(topic, event)</code></td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h3>Application Layer (Use Cases)</h3>
+<p><strong>Path:</strong> <code>phoenix_ml/application/</code></p>
+<blockquote>
+<p>Orchestrates domain objects, implements CQRS pattern (Command/Query separation).</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>decorators.py</code></td>
+<td>Utility decorators: <code>@timing</code> (measure + log execution time), <code>@retry</code> (auto-retry on failure with configurable attempts)</td>
+</tr>
+</tbody>
+</table>
+<h4>Commands</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/application/commands/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>predict_command.py</code></td>
+<td><strong>PredictCommand</strong>: input DTO — <code>model_id</code>, <code>model_version</code> (optional), <code>entity_id</code> (optional), <code>features</code> (optional list[float])</td>
+</tr>
+<tr>
+<td><code>batch_predict_command.py</code></td>
+<td><strong>BatchPredictCommand</strong>: <code>model_id</code>, <code>batch</code> (list of feature vectors), <code>model_version</code>, <code>entity_ids</code></td>
+</tr>
+<tr>
+<td><code>load_model_command.py</code></td>
+<td><strong>LoadModelCommand</strong>: <code>model_id</code>, <code>version</code></td>
+</tr>
+<tr>
+<td><code>trigger_retrain_command.py</code></td>
+<td><strong>TriggerRetrainCommand</strong>: <code>model_id</code>, <code>reason</code></td>
+</tr>
+</tbody>
+</table>
+<h4>Handlers</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/application/handlers/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>predict_handler.py</code></td>
+<td><strong>PredictHandler</strong>: receives PredictCommand → resolves model → calls InferenceService.predict() → publishes PredictionCompleted event → returns Prediction</td>
+</tr>
+<tr>
+<td><code>batch_predict_handler.py</code></td>
+<td><strong>BatchPredictHandler</strong>: wraps PredictHandler for batch — iterates through each item, collects results</td>
+</tr>
+<tr>
+<td><code>load_model_handler.py</code></td>
+<td><strong>LoadModelHandler</strong>: loads model from registry → loads into inference engine</td>
+</tr>
+<tr>
+<td><code>retrain_handler.py</code></td>
+<td><strong>RetrainHandler</strong>: triggers retraining workflow — validates model exists → kicks off training</td>
+</tr>
+<tr>
+<td><code>query_handlers.py</code></td>
+<td>3 query handlers (CQRS read side): <strong>GetModelQueryHandler</strong> (queries model info), <strong>GetDriftReportQueryHandler</strong> (retrieves drift reports), <strong>GetModelPerformanceQueryHandler</strong> (computes performance metrics)</td>
+</tr>
+</tbody>
+</table>
+<h4>Dto</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/application/dto/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>prediction_request.py</code></td>
+<td><strong>PredictionRequest DTO</strong>: Pydantic model for HTTP request validation</td>
+</tr>
+<tr>
+<td><code>prediction_response.py</code></td>
+<td><strong>PredictionResponse DTO</strong>: Pydantic model for HTTP response serialization</td>
+</tr>
+</tbody>
+</table>
+<h4>Queries</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/application/queries/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Export query DTOs: <strong>GetModelQuery</strong> (<code>model_id</code>, <code>version</code>), <strong>GetDriftReportQuery</strong> (<code>model_id</code>, <code>limit</code>), <strong>GetModelPerformanceQuery</strong> (<code>model_id</code>)</td>
+</tr>
+</tbody>
+</table>
+<h4>Services</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/application/services/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>monitoring_service.py</code></td>
+<td><strong>MonitoringService</strong>: orchestrates drift detection flow — retrieves recent prediction logs → computes drift vs reference data → saves report → checks alert rules → fires alerts if needed</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h3>Infrastructure Layer (Adapters)</h3>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/</code></p>
+<blockquote>
+<p>Implements ABCs from the domain layer. Connects to external systems: DB, Kafka, Redis, ML engines, HTTP, gRPC.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+</tbody>
+</table>
+<h4>Dependency Injection &amp; App Lifecycle</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/bootstrap/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>container.py</code></td>
+<td><strong>DI Container</strong>: creates and wires all singletons — <code>inference_engine</code> (ONNX/TensorRT/Triton factory), <code>kafka_producer</code>, <code>kafka_consumer</code>, <code>feature_store</code> (Redis/Memory factory), <code>event_bus</code>, <code>metrics_publisher</code>, <code>drift_calculator</code>, <code>model_evaluator</code>, <code>plugin_registry</code>, <code>artifact_storage</code>, <code>batch_manager</code>. Function <code>ensure_model_exists()</code> auto-generates ONNX models for CI/test</td>
+</tr>
+<tr>
+<td><code>lifespan.py</code></td>
+<td><strong>FastAPI Lifespan</strong>: STARTUP: create DB tables → seed all models from <code>model_configs/</code> → seed feature store → start gRPC server → start Kafka producer/consumer → start monitoring loop. SHUTDOWN: cancel tasks → stop gRPC/Kafka/batch_manager → dispose DB engine</td>
+</tr>
+<tr>
+<td><code>model_config_loader.py</code></td>
+<td><strong>load_all_model_configs(config_dir)</strong>: scans all <code>.yaml</code> files in <code>model_configs/</code> → parses into <code>dict[str, ModelConfig]</code>. Function <code>load_features_from_metrics(path)</code>: reads feature names from <code>metrics.json</code></td>
+</tr>
+</tbody>
+</table>
+<h4>ML Inference Engines</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/ml_engines/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>onnx_engine.py</code></td>
+<td><strong>ONNXInferenceEngine</strong> (implement InferenceEngine): production engine using ONNX Runtime. Loads <code>.onnx</code> → caches session → CPU inference via <code>asyncio.to_thread</code>. Supports sklearn ONNX (class probabilities) + multi-class + regression. <strong>Default engine</strong></td>
+</tr>
+<tr>
+<td><code>tensorrt_executor.py</code></td>
+<td><strong>TensorRTExecutor</strong> (implement InferenceEngine): high-performance GPU inference using ONNX Runtime TensorrtExecutionProvider, FP16 support, CPU fallback</td>
+</tr>
+<tr>
+<td><code>triton_client.py</code></td>
+<td><strong>TritonInferenceClient</strong> (implement InferenceEngine): HTTP REST v2 client for NVIDIA Triton Inference Server. Calls <code>/v2/models/{id}/infer</code>. Falls back to mock if Triton offline</td>
+</tr>
+<tr>
+<td><code>mock_engine.py</code></td>
+<td><strong>MockInferenceEngine</strong> (implement InferenceEngine): mock engine for testing — result = <code>mean(features)</code>, confidence = 0.99</td>
+</tr>
+</tbody>
+</table>
+<h4>Kafka</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/messaging/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>kafka_producer.py</code></td>
+<td><strong>KafkaProducer</strong>: async event publishing to Kafka topics. Uses <code>AIOKafkaProducer</code>, JSON serialization. No-op fallback if Kafka offline</td>
+</tr>
+<tr>
+<td><code>kafka_consumer.py</code></td>
+<td><strong>KafkaConsumer</strong>: async event consumption from Kafka topics. Uses <code>AIOKafkaConsumer</code>, JSON deserialization, per-message error handling, auto-commit offsets. No-op fallback if Kafka offline</td>
+</tr>
+</tbody>
+</table>
+<h4>Feature Store Adapters</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/feature_store/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>redis_feature_store.py</code></td>
+<td><strong>RedisFeatureStore</strong> (implement FeatureStore): production store using Redis. Key format <code>features:{entity_id}</code>, uses <code>HMGET</code>/<code>HSET</code> for hash storage</td>
+</tr>
+<tr>
+<td><code>in_memory_feature_store.py</code></td>
+<td><strong>InMemoryFeatureStore</strong> (implement FeatureStore): in-memory dict store for testing/dev</td>
+</tr>
+<tr>
+<td><code>parquet_feature_store.py</code></td>
+<td><strong>ParquetFeatureStore</strong> (implement OfflineFeatureStore): reads features from Parquet files for batch processing</td>
+</tr>
+</tbody>
+</table>
+<h4>Dataset Loading</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/data_loaders/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init — exports <code>DataLoaderRegistry</code>, <code>TabularDataLoader</code>, <code>ImageDataLoader</code>, <code>resolve_data_loader</code></td>
+</tr>
+<tr>
+<td><code>tabular_loader.py</code></td>
+<td><strong>TabularDataLoader</strong> (implement IDataLoader): loads CSV/Parquet → pandas DataFrame. <code>split()</code> uses sklearn <code>train_test_split</code></td>
+</tr>
+<tr>
+<td><code>image_loader.py</code></td>
+<td><strong>ImageDataLoader</strong> (implement IDataLoader): loads NPZ archives or image directories (class_0/, class_1/...). Normalizes 0-255→0-1, flattens for ONNX, stratified split</td>
+</tr>
+<tr>
+<td><code>registry.py</code></td>
+<td><strong>DataLoaderRegistry</strong>: registry pattern. <code>resolve_data_loader(model_id)</code> → resolves loader based on model config YAML's <code>data_loader</code> field. Default: <code>TabularDataLoader</code></td>
+</tr>
+</tbody>
+</table>
+<h4>FastAPI HTTP Server</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/http/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>fastapi_server.py</code></td>
+<td>Creates FastAPI app instance, includes routers, CORS middleware config</td>
+</tr>
+<tr>
+<td><code>routes.py</code></td>
+<td><strong>Main API Router</strong> — 14 endpoints: <code>GET /health</code>, <code>POST /predict</code>, <code>POST /predict/batch</code>, <code>POST /feedback</code>, <code>GET /models</code>, <code>GET /models/{id}</code>, <code>POST /models/register</code>, <code>POST /models/rollback</code>, <code>POST /models/{id}/retrain</code>, <code>GET /monitoring/drift/{id}</code>, <code>GET /monitoring/reports/{id}</code>, <code>GET /monitoring/performance/{id}</code>. Background task: logs prediction → Postgres + Kafka</td>
+</tr>
+<tr>
+<td><code>data_routes.py</code></td>
+<td><strong>Data Router</strong> — 3 endpoints: <code>POST /data/ingest</code>, <code>POST /data/validate</code>, <code>POST /data/export-training</code>. Export training uses SRP helpers: <code>_fetch_labeled_logs()</code>, <code>_load_baseline_data()</code>, <code>_build_fresh_dataframe()</code>, <code>_merge_datasets()</code>, <code>_write_export_csv()</code></td>
+</tr>
+<tr>
+<td><code>feature_routes.py</code></td>
+<td><strong>Feature Router</strong>: <code>GET /features/{entity_id}</code> (gets features), <code>POST /features/{entity_id}</code> (adds features)</td>
+</tr>
+<tr>
+<td><code>dependencies.py</code></td>
+<td>FastAPI Depends: <code>get_predict_handler()</code> — injects PredictHandler with InferenceService, event_bus</td>
+</tr>
+</tbody>
+</table>
+<h4>gRPC Server</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/grpc/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>grpc_server.py</code></td>
+<td><strong>InferenceServicer</strong>: gRPC async server. RPCs: <code>Predict(PredictRequest) → PredictResponse</code>, <code>HealthCheck() → HealthCheckResponse</code>. <strong>LoggingInterceptor</strong>: logs method + latency. Factory <code>create_grpc_server()</code>. Port: <code>50051</code></td>
+</tr>
+</tbody>
+</table>
+<h5>Proto</h5>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/grpc/proto/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>inference.proto</code></td>
+<td>Protocol Buffers definition: message <code>PredictRequest</code>, <code>PredictResponse</code>, <code>HealthCheckRequest</code>, <code>HealthCheckResponse</code>. Service <code>InferenceService</code></td>
+</tr>
+<tr>
+<td><code>inference_pb2.py</code></td>
+<td>Generated protobuf Python code (from <code>protoc</code>)</td>
+</tr>
+<tr>
+<td><code>inference_pb2_grpc.py</code></td>
+<td>Generated gRPC stubs (servicer base class + client stub)</td>
+</tr>
+</tbody>
+</table>
+<h4>Model Artifact Storage</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/artifact_storage/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>local_artifact_storage.py</code></td>
+<td><strong>LocalArtifactStorage</strong> (implement ArtifactStorage): stores/reads model files on local filesystem</td>
+</tr>
+<tr>
+<td><code>s3_artifact_storage.py</code></td>
+<td><strong>S3ArtifactStorage</strong> (implement ArtifactStorage): stores/reads model files on S3/MinIO via boto3. URI format: <code>s3://bucket/key</code></td>
+</tr>
+</tbody>
+</table>
+<h4>Observability Adapters</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/monitoring/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>prometheus_metrics.py</code></td>
+<td>Prometheus metric object declarations: <code>PREDICTION_COUNT</code> (Counter), <code>INFERENCE_LATENCY</code> (Histogram), <code>MODEL_CONFIDENCE</code> (Histogram), <code>DRIFT_SCORE</code> (Gauge), <code>DRIFT_DETECTED_COUNT</code> (Counter), <code>MODEL_ACCURACY</code>/<code>MODEL_F1_SCORE</code>/<code>MODEL_RMSE</code>/<code>MODEL_MAE</code>/<code>MODEL_R2</code>/<code>MODEL_PRIMARY_METRIC</code> (Gauges)</td>
+</tr>
+<tr>
+<td><code>prometheus_metrics_publisher.py</code></td>
+<td><strong>PrometheusMetricsPublisher</strong> (implement MetricsPublisher): sets/increments Prometheus metrics. Metric mapping follows OCP — adding a new metric = adding a dict entry</td>
+</tr>
+<tr>
+<td><code>alert_notifier.py</code></td>
+<td><strong>AlertNotifier</strong> (implement IAlertNotifier): sends alerts via HTTP webhook. Slack-compatible payload (blocks + emoji). Supports Slack, Discord, generic webhooks</td>
+</tr>
+<tr>
+<td><code>tracing.py</code></td>
+<td><strong>init_tracing()</strong>: sets up OpenTelemetry TracerProvider + OTLP exporter sending traces → Jaeger. Functions <code>get_tracer()</code>, <code>shutdown_tracing()</code></td>
+</tr>
+<tr>
+<td><code>in_memory_log_repo.py</code></td>
+<td><strong>InMemoryPredictionLogRepository</strong> (implement PredictionLogRepository): stores prediction logs in RAM for testing</td>
+</tr>
+</tbody>
+</table>
+<h4>Database Adapters</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/infrastructure/persistence/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>database.py</code></td>
+<td>SQLAlchemy async engine + session factory. <code>get_db()</code> → <code>AsyncSession</code>. <code>Base</code> declarative base for ORM</td>
+</tr>
+<tr>
+<td><code>models.py</code></td>
+<td>ORM models: <strong>ModelORM</strong> (table <code>models</code>), <strong>PredictionLogORM</strong> (table <code>prediction_logs</code>), <strong>DriftReportORM</strong> (table <code>drift_reports</code>)</td>
+</tr>
+<tr>
+<td><code>postgres_model_registry.py</code></td>
+<td><strong>PostgresModelRegistry</strong> (implement ModelRepository): CRUD models in PostgreSQL. <code>update_stage("champion")</code> auto-demotes old champion → retired</td>
+</tr>
+<tr>
+<td><code>postgres_log_repo.py</code></td>
+<td><strong>PostgresPredictionLogRepository</strong> (implement PredictionLogRepository): stores logs in PostgreSQL, queries recent predictions</td>
+</tr>
+<tr>
+<td><code>postgres_drift_repo.py</code></td>
+<td><strong>PostgresDriftReportRepository</strong> (implement DriftReportRepository): stores drift reports in PostgreSQL</td>
+</tr>
+<tr>
+<td><code>mlflow_model_registry.py</code></td>
+<td><strong>MlflowModelRegistry</strong> (implement ModelRepository): CRUD models via MLflow API. Logs ONNX artifacts, manages stages (Production/Staging/Archived), tracks metrics. Bi-directional mapping between MLflow numeric version ↔ Phoenix semantic version</td>
+</tr>
+<tr>
+<td><code>in_memory_model_repo.py</code></td>
+<td><strong>InMemoryModelRepository</strong> (implement ModelRepository): stores models in dict for testing</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h3>Shared Utilities</h3>
+<p><strong>Path:</strong> <code>phoenix_ml/shared/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+</tbody>
+</table>
+<h4>Exceptions</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/shared/exceptions/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Custom exceptions: <strong>ModelNotFoundError</strong>, <strong>InferenceError</strong>, <strong>DriftDetectedError</strong>, <strong>ValidationError</strong>, <strong>ConfigurationError</strong></td>
+</tr>
+</tbody>
+</table>
+<h4>Data Ingestion Pipeline</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/shared/ingestion/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>interfaces.py</code></td>
+<td><strong>IDataIngestor ABC</strong>: interface — <code>ingest(source) → list[dict]</code></td>
+</tr>
+<tr>
+<td><code>api_ingestor.py</code></td>
+<td><strong>APIDataIngestor</strong> (implement IDataIngestor): ingests data from external HTTP APIs via httpx</td>
+</tr>
+<tr>
+<td><code>redis_ingestor.py</code></td>
+<td><strong>RedisDataIngestor</strong> (implement IDataIngestor): ingests data from Redis streams/keys</td>
+</tr>
+<tr>
+<td><code>data_collector.py</code></td>
+<td><strong>DataCollector</strong>: aggregates data from multiple ingestors, merges and deduplicates</td>
+</tr>
+<tr>
+<td><code>service.py</code></td>
+<td><strong>IngestionService</strong>: orchestrates full ingestion pipeline — collect → validate → transform → store</td>
+</tr>
+</tbody>
+</table>
+<h4>Utils</h4>
+<p><strong>Path:</strong> <code>phoenix_ml/shared/utils/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>model_generator.py</code></td>
+<td><code>generate_simple_onnx(path, n_features)</code>: generates a mock ONNX model (sklearn LogisticRegression → skl2onnx) for CI/testing. Used when model.onnx does not exist</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="react-typescript-dashboard">📂 React TypeScript Dashboard</h2>
+<p><strong>Path:</strong> <code>frontend/</code></p>
+<h3>Root Files</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>index.html</code></td>
+<td>HTML template — mount point <code>&lt;div id="root"&gt;</code></td>
+</tr>
+<tr>
+<td><code>package.json</code></td>
+<td>NPM dependencies: react, recharts, vite, vitest, @testing-library</td>
+</tr>
+<tr>
+<td><code>vite.config.ts</code></td>
+<td>Vite dev server config: port 5173, proxy <code>/api</code> → backend <code>VITE_API_TARGET</code></td>
+</tr>
+<tr>
+<td><code>tsconfig.json</code></td>
+<td>TypeScript config root — references app + node configs</td>
+</tr>
+<tr>
+<td><code>tsconfig.app.json</code></td>
+<td>TypeScript config for app code: strict mode, jsx react-jsx</td>
+</tr>
+<tr>
+<td><code>tsconfig.node.json</code></td>
+<td>TypeScript config for Node.js files (vite config)</td>
+</tr>
+<tr>
+<td><code>eslint.config.js</code></td>
+<td>ESLint config: react-hooks rules, typescript-eslint</td>
+</tr>
+<tr>
+<td><code>.gitignore</code></td>
+<td>Frontend-specific gitignore (dist, node_modules)</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td>Frontend README</td>
+</tr>
+<tr>
+<td><code>public/vite.svg</code></td>
+<td>Vite logo favicon</td>
+</tr>
+</tbody>
+</table>
+<h3>Phoenix Ml</h3>
+<p><strong>Path:</strong> <code>frontend/phoenix_ml/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>App.tsx</code></td>
+<td><strong>Main App component</strong>: layout (Sidebar + content), state management, API calls on mount, renders all dashboard panels</td>
+</tr>
+<tr>
+<td><code>main.tsx</code></td>
+<td>Entry point: <code>ReactDOM.createRoot()</code> → render <code>&lt;App /&gt;</code></td>
+</tr>
+<tr>
+<td><code>index.css</code></td>
+<td>Global CSS styles: dark theme, gradients, animations, responsive grid</td>
+</tr>
+<tr>
+<td><code>config.ts</code></td>
+<td>Centralized config: <code>API_BASE_URL</code>, <code>SERVICES</code> array (11 services with name/port/icon/healthUrl), <code>ENDPOINTS</code> mapping, <code>CHART_CONFIG</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Api</h3>
+<p><strong>Path:</strong> <code>frontend/phoenix_ml/api/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mlService.ts</code></td>
+<td><strong>MLService class</strong>: fetch wrapper for all API calls — <code>predict(modelId, features)</code>, <code>getModelInfo(modelId)</code>, <code>getDriftReport(modelId)</code>, <code>getPerformance(modelId)</code>, <code>getModels()</code>, <code>getPipelineStatus()</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Dashboard</h3>
+<p><strong>Path:</strong> <code>frontend/phoenix_ml/components/dashboard/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>StatsGrid.tsx</code></td>
+<td>Grid of 4 stat cards: Accuracy, F1 Score, Avg Latency, Avg Confidence</td>
+</tr>
+<tr>
+<td><code>ModelInfoCard.tsx</code></td>
+<td>Card displaying model details: ID, version, framework, stage, feature count</td>
+</tr>
+<tr>
+<td><code>ModelComparison.tsx</code></td>
+<td>Champion vs Challenger comparison table: metrics side-by-side, promote/rollback actions</td>
+</tr>
+<tr>
+<td><code>PredictionPanel.tsx</code></td>
+<td>Interactive form: select entity → fill features → call <code>/predict</code> → display result + confidence + latency</td>
+</tr>
+<tr>
+<td><code>DriftPanel.tsx</code></td>
+<td>Displays drift detection report: score, method (KS/PSI/Chi2), status badge (OK/DRIFTED)</td>
+</tr>
+<tr>
+<td><code>PerformancePanel.tsx</code></td>
+<td>Chart displaying performance metrics over time (using Recharts)</td>
+</tr>
+<tr>
+<td><code>PipelineStatus.tsx</code></td>
+<td>Status of Airflow pipeline tasks: data ingestion, training, evaluation, deployment</td>
+</tr>
+<tr>
+<td><code>ServicesStatus.tsx</code></td>
+<td>Grid of 11 ServiceCards: displays all infrastructure services (API, DB, Redis, Kafka, MLflow, etc.)</td>
+</tr>
+<tr>
+<td><code>GrafanaEmbed.tsx</code></td>
+<td>Embeds Grafana dashboard iframe with configurable URL</td>
+</tr>
+</tbody>
+</table>
+<h3>Layout</h3>
+<p><strong>Path:</strong> <code>frontend/phoenix_ml/components/layout/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Sidebar.tsx</code></td>
+<td>Navigation sidebar: logo + nav links (Dashboard, Models, Monitoring, Pipeline)</td>
+</tr>
+</tbody>
+</table>
+<h3>Ui</h3>
+<p><strong>Path:</strong> <code>frontend/phoenix_ml/components/ui/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ServiceCard.tsx</code></td>
+<td>Single service card: icon + name + port + live health check (fetches healthUrl every 15s → 🟢/🔴/🟡)</td>
+</tr>
+<tr>
+<td><code>StatCard.tsx</code></td>
+<td>Single metric card: value + label + icon + trend indicator (up/down)</td>
+</tr>
+<tr>
+<td><code>StatusBadge.tsx</code></td>
+<td>Badge displaying model stage: champion (green), challenger (yellow), archived (gray)</td>
+</tr>
+<tr>
+<td><code>Spinner.tsx</code></td>
+<td>CSS loading spinner animation</td>
+</tr>
+<tr>
+<td><code>PredictionResult.tsx</code></td>
+<td>Panel displaying prediction result: class label + confidence bar + latency + model info</td>
+</tr>
+<tr>
+<td><code>EntitySelector.tsx</code></td>
+<td>Dropdown to select entity ID for feature lookup</td>
+</tr>
+</tbody>
+</table>
+<h3>Tests (Vitest + React Testing Library)</h3>
+<p><strong>Path:</strong> <code>frontend/phoenix_ml/test/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>setup.ts</code></td>
+<td>Test environment setup (jsdom, cleanup)</td>
+</tr>
+<tr>
+<td><code>App.test.tsx</code></td>
+<td>Tests that App component renders correctly</td>
+</tr>
+<tr>
+<td><code>api/mlService.test.ts</code></td>
+<td>Tests MLService: mock fetch, verify API calls</td>
+</tr>
+<tr>
+<td><code>dashboard/StatsGrid.test.tsx</code></td>
+<td>Test StatsGrid renders 4 stat cards</td>
+</tr>
+<tr>
+<td><code>dashboard/ModelInfoCard.test.tsx</code></td>
+<td>Test ModelInfoCard displays model info</td>
+</tr>
+<tr>
+<td><code>dashboard/DriftPanel.test.tsx</code></td>
+<td>Test DriftPanel shows drift status</td>
+</tr>
+<tr>
+<td><code>dashboard/PredictionPanel.test.tsx</code></td>
+<td>Test PredictionPanel form + submit</td>
+</tr>
+<tr>
+<td><code>dashboard/PipelineStatus.test.tsx</code></td>
+<td>Test PipelineStatus renders tasks</td>
+</tr>
+<tr>
+<td><code>dashboard/ServicesStatus.test.tsx</code></td>
+<td>Test ServicesStatus shows 11 services</td>
+</tr>
+<tr>
+<td><code>dashboard/GrafanaEmbed.test.tsx</code></td>
+<td>Test GrafanaEmbed renders iframe</td>
+</tr>
+<tr>
+<td><code>layout/Sidebar.test.tsx</code></td>
+<td>Test Sidebar navigation links</td>
+</tr>
+<tr>
+<td><code>ui/ServiceCard.test.tsx</code></td>
+<td>Test ServiceCard render + health indicator</td>
+</tr>
+<tr>
+<td><code>ui/EntitySelector.test.tsx</code></td>
+<td>Test EntitySelector dropdown</td>
+</tr>
+<tr>
+<td><code>ui/PredictionResult.test.tsx</code></td>
+<td>Test PredictionResult display</td>
+</tr>
+<tr>
+<td><code>ui/Spinner.test.tsx</code></td>
+<td>Test Spinner renders</td>
+</tr>
+<tr>
+<td><code>ui/StatCard.test.tsx</code></td>
+<td>Test StatCard value + label</td>
+</tr>
+<tr>
+<td><code>ui/StatusBadge.test.tsx</code></td>
+<td>Test StatusBadge colors</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total: 16 test files, 104 tests</strong></p>
+<hr/>
+<h2 id="backend-tests-pytest">📂 Backend Tests (pytest)</h2>
+<p><strong>Path:</strong> <code>tests/</code></p>
+<h3>Root</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>conftest.py</code></td>
+<td>Shared fixtures: mock inference engine, sample Model, FeatureVector, async DB session factory</td>
+</tr>
+</tbody>
+</table>
+<h3>End-to-End Tests</h3>
+<p><strong>Path:</strong> <code>tests/e2e/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_full_flow.py</code></td>
+<td>Full flow: register model → predict → submit feedback → check drift</td>
+</tr>
+</tbody>
+</table>
+<h3>Integration Tests</h3>
+<p><strong>Path:</strong> <code>tests/integration/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>test_api_predict.py</code></td>
+<td>Tests <code>/predict</code> endpoint with real handler</td>
+</tr>
+<tr>
+<td><code>test_api_routes.py</code></td>
+<td>Tests all API routes: health, models, predict, monitoring</td>
+</tr>
+<tr>
+<td><code>test_circuit_breaker_integration.py</code></td>
+<td>Test circuit breaker open/close flow</td>
+</tr>
+<tr>
+<td><code>test_feature_store_integration.py</code></td>
+<td>Test feature store get/add flow</td>
+</tr>
+<tr>
+<td><code>test_full_self_healing_flow.py</code></td>
+<td>Test self-healing: drift detected → alert → rollback</td>
+</tr>
+<tr>
+<td><code>test_grpc_inference.py</code></td>
+<td>Test gRPC predict + health check</td>
+</tr>
+<tr>
+<td><code>test_model_registry_integration.py</code></td>
+<td>Test model registry CRUD</td>
+</tr>
+<tr>
+<td><code>test_monitoring_pipeline.py</code></td>
+<td>Test monitoring: log predictions → check drift → save report</td>
+</tr>
+<tr>
+<td><code>test_real_inference.py</code></td>
+<td>Tests inference with real ONNX model</td>
+</tr>
+<tr>
+<td><code>test_real_model_inference.py</code></td>
+<td>Test end-to-end inference pipeline</td>
+</tr>
+</tbody>
+</table>
+<h3>Application Layer Unit Tests</h3>
+<p><strong>Path:</strong> <code>tests/unit/application/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>test_predict_handler.py</code></td>
+<td>Test PredictHandler: mock service → verify prediction + events</td>
+</tr>
+<tr>
+<td><code>test_predict_handler_routing.py</code></td>
+<td>Tests PredictHandler with routing strategies (A/B, canary)</td>
+</tr>
+<tr>
+<td><code>test_batch_predict_handler.py</code></td>
+<td>Test BatchPredictHandler multi-item batching</td>
+</tr>
+<tr>
+<td><code>test_load_model_handler.py</code></td>
+<td>Test LoadModelHandler loads correct model</td>
+</tr>
+<tr>
+<td><code>test_retrain_handler.py</code></td>
+<td>Test RetrainHandler trigger flow</td>
+</tr>
+<tr>
+<td><code>test_query_handlers.py</code></td>
+<td>Test GetModel, GetDriftReport, GetPerformance handlers</td>
+</tr>
+<tr>
+<td><code>test_monitoring_service.py</code></td>
+<td>Test MonitoringService drift detection + alerting</td>
+</tr>
+<tr>
+<td><code>test_dto_and_config.py</code></td>
+<td>Test DTOs validation + Settings loading</td>
+</tr>
+</tbody>
+</table>
+<h3>Inference Domain Unit Tests</h3>
+<p><strong>Path:</strong> <code>tests/unit/domain/inference/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>test_domain_models.py</code></td>
+<td>Test Model entity, Prediction entity, value objects</td>
+</tr>
+<tr>
+<td><code>test_events_and_latency.py</code></td>
+<td>Test domain events + LatencyBudget</td>
+</tr>
+<tr>
+<td><code>test_model_config.py</code></td>
+<td>Test ModelConfig parsing, validation</td>
+</tr>
+<tr>
+<td><code>test_model_version.py</code></td>
+<td>Test ModelVersion parsing, comparison</td>
+</tr>
+<tr>
+<td><code>test_routing_strategy.py</code></td>
+<td>Test all routing strategies: Single, A/B, Canary, Shadow</td>
+</tr>
+<tr>
+<td><code>test_circuit_breaker.py</code></td>
+<td>Test CircuitBreaker state transitions: CLOSED → OPEN → HALF_OPEN</td>
+</tr>
+<tr>
+<td><code>test_request_pipeline.py</code></td>
+<td>Test RequestPipeline middleware chain</td>
+</tr>
+<tr>
+<td><code>test_plugin_registry.py</code></td>
+<td>Test PluginRegistry register/resolve</td>
+</tr>
+</tbody>
+</table>
+<h3>Monitoring Domain Unit Tests</h3>
+<p><strong>Path:</strong> <code>tests/unit/domain/monitoring/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_drift_calculator.py</code></td>
+<td>Test drift calculation: KS, PSI, chi2</td>
+</tr>
+<tr>
+<td><code>test_alert_manager.py</code></td>
+<td>Test AlertManager: rules, evaluation, cooldown</td>
+</tr>
+<tr>
+<td><code>test_anomaly_detector.py</code></td>
+<td>Test AnomalyDetector: z-score, IQR</td>
+</tr>
+<tr>
+<td><code>test_model_evaluator.py</code></td>
+<td>Test ClassificationEvaluator + RegressionEvaluator metrics</td>
+</tr>
+<tr>
+<td><code>test_rollback_manager.py</code></td>
+<td>Test RollbackManager decision logic</td>
+</tr>
+</tbody>
+</table>
+<h3>Other Domain Tests</h3>
+<p><strong>Path:</strong> <code>tests/unit/domain/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>test_inference_service.py</code></td>
+<td>Test InferenceService orchestration</td>
+</tr>
+<tr>
+<td><code>test_feature_lineage.py</code></td>
+<td>Test FeatureRegistry lineage tracking</td>
+</tr>
+</tbody>
+</table>
+<h3>Training Domain Unit Tests</h3>
+<p><strong>Path:</strong> <code>tests/unit/domain/training/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>test_training_service.py</code></td>
+<td>Test TrainingService flow: load → train → evaluate → save</td>
+</tr>
+<tr>
+<td><code>test_data_loader_plugin.py</code></td>
+<td>Test IDataLoader interface + DatasetInfo</td>
+</tr>
+</tbody>
+</table>
+<h3>Infrastructure Unit Tests</h3>
+<p><strong>Path:</strong> <code>tests/unit/infrastructure/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_onnx_engine.py</code></td>
+<td>Test ONNXInferenceEngine: load, predict, batch</td>
+</tr>
+<tr>
+<td><code>test_tensorrt_executor.py</code></td>
+<td>Test TensorRTExecutor</td>
+</tr>
+<tr>
+<td><code>test_triton_client.py</code></td>
+<td>Test TritonInferenceClient: HTTP calls + mock fallback</td>
+</tr>
+<tr>
+<td><code>test_kafka_producer.py</code></td>
+<td>Test KafkaProducer: publish + no-op fallback</td>
+</tr>
+<tr>
+<td><code>test_kafka_consumer.py</code></td>
+<td>Test KafkaConsumer: start/stop + no-op fallback</td>
+</tr>
+<tr>
+<td><code>test_redis_feature_store.py</code></td>
+<td>Test RedisFeatureStore: HMGET/HSET</td>
+</tr>
+<tr>
+<td><code>test_in_memory_feature_store.py</code></td>
+<td>Test InMemoryFeatureStore</td>
+</tr>
+<tr>
+<td><code>test_parquet_feature_store.py</code></td>
+<td>Test ParquetFeatureStore</td>
+</tr>
+<tr>
+<td><code>test_data_loaders.py</code></td>
+<td>Test TabularDataLoader + ImageDataLoader</td>
+</tr>
+<tr>
+<td><code>test_routes.py</code></td>
+<td>Test all HTTP routes: predict, models, monitoring</td>
+</tr>
+<tr>
+<td><code>test_feature_routes.py</code></td>
+<td>Test feature store routes</td>
+</tr>
+<tr>
+<td><code>test_container.py</code></td>
+<td>Test DI container wiring</td>
+</tr>
+<tr>
+<td><code>test_model_config_loader.py</code></td>
+<td>Test YAML config loading</td>
+</tr>
+<tr>
+<td><code>test_mlflow_registry.py</code></td>
+<td>Test MlflowModelRegistry: CRUD + stage management</td>
+</tr>
+<tr>
+<td><code>test_postgres_repos.py</code></td>
+<td>Test PostgreSQL repositories</td>
+</tr>
+<tr>
+<td><code>test_orm_models.py</code></td>
+<td>Test ORM model definitions</td>
+</tr>
+<tr>
+<td><code>test_in_memory_model_repo.py</code></td>
+<td>Test InMemoryModelRepository</td>
+</tr>
+<tr>
+<td><code>test_in_memory_log_repo.py</code></td>
+<td>Test InMemoryPredictionLogRepository</td>
+</tr>
+<tr>
+<td><code>test_local_artifact_storage.py</code></td>
+<td>Test LocalArtifactStorage: upload/download</td>
+</tr>
+<tr>
+<td><code>test_s3_artifact_storage.py</code></td>
+<td>Test S3ArtifactStorage: mock boto3</td>
+</tr>
+<tr>
+<td><code>test_alert_notifier.py</code></td>
+<td>Test AlertNotifier: webhook + Slack payload</td>
+</tr>
+<tr>
+<td><code>test_tracing.py</code></td>
+<td>Test OpenTelemetry tracing setup</td>
+</tr>
+<tr>
+<td><code>test_model_generator.py</code></td>
+<td>Test generate_simple_onnx()</td>
+</tr>
+<tr>
+<td><code>test_data_ingestion.py</code></td>
+<td>Test data ingestion pipeline</td>
+</tr>
+</tbody>
+</table>
+<h3>Shared Utils Tests</h3>
+<p><strong>Path:</strong> <code>tests/unit/shared/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__init__.py</code></td>
+<td>Package init</td>
+</tr>
+<tr>
+<td><code>test_exceptions.py</code></td>
+<td>Test custom exceptions</td>
+</tr>
+<tr>
+<td><code>test_interfaces.py</code></td>
+<td>Test IDataIngestor interface</td>
+</tr>
+<tr>
+<td><code>test_api_ingestor.py</code></td>
+<td>Test APIDataIngestor</td>
+</tr>
+<tr>
+<td><code>test_redis_ingestor.py</code></td>
+<td>Test RedisDataIngestor</td>
+</tr>
+<tr>
+<td><code>test_data_collector.py</code></td>
+<td>Test DataCollector aggregation</td>
+</tr>
+<tr>
+<td><code>test_ingestion_service.py</code></td>
+<td>Test IngestionService pipeline</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total backend: 60 test files, ~460+ tests, 87% coverage</strong></p>
+<hr/>
+<h2 id="model-configuration-yaml">📂 Model Configuration (YAML)</h2>
+<p><strong>Path:</strong> <code>model_configs/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Model</th>
+<th>Data Loader</th>
+<th>Drift Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>credit-risk.yaml</code></td>
+<td>Credit risk detection — GBClassifier, 30 features</td>
+<td><code>tabular</code></td>
+<td><code>ks</code></td>
+</tr>
+<tr>
+<td><code>fraud-detection.yaml</code></td>
+<td>Fraud detection — RandomForest, 12 features</td>
+<td><code>tabular</code></td>
+<td><code>psi</code></td>
+</tr>
+<tr>
+<td><code>house-price.yaml</code></td>
+<td>House price prediction — Ridge regression, 8 features</td>
+<td><code>tabular</code></td>
+<td><code>chi2</code></td>
+</tr>
+<tr>
+<td><code>image-class.yaml</code></td>
+<td>Image classification — MLP, 784 pixel features (28×28), 10 classes</td>
+<td><code>image</code></td>
+<td><code>ks</code></td>
+</tr>
+<tr>
+<td><code>sentiment.yaml</code></td>
+<td>Sentiment analysis — TF-IDF + LogisticRegression, text features</td>
+<td><code>text</code></td>
+<td><code>psi</code></td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="training-scripts">📂 Training Scripts</h2>
+<p><strong>Path:</strong> <code>examples/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>credit_risk/train.py</code></td>
+<td>Trains GBClassifier on <code>data/credit_risk/dataset.csv</code>. Output: <code>models/credit_risk/v1/model.onnx</code> + <code>metrics.json</code></td>
+</tr>
+<tr>
+<td><code>fraud_detection/train.py</code></td>
+<td>Trains RandomForest classifier on <code>data/fraud_detection/dataset.csv</code>. Output: <code>models/fraud_detection/v1/model.onnx</code> + <code>metrics.json</code></td>
+</tr>
+<tr>
+<td><code>house_price/train.py</code></td>
+<td>Trains Ridge regression on <code>data/house_price/dataset.csv</code>. Output: <code>models/house_price/v1/model.onnx</code> + <code>metrics.json</code></td>
+</tr>
+<tr>
+<td><code>image_classification/train.py</code></td>
+<td>Trains MLP classifier on <code>data/image_class/dataset.npz</code>. Output: <code>models/image_class/v1/model.onnx</code> + <code>metrics.json</code></td>
+</tr>
+<tr>
+<td><code>sentiment/train.py</code></td>
+<td>Trains TF-IDF + LogisticRegression on <code>data/sentiment/reviews.csv</code>. Output: <code>models/sentiment/v1/model.onnx</code> + <code>metrics.json</code></td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="airflow-dags">📂 Airflow DAGs</h2>
+<p><strong>Path:</strong> <code>dags/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>retrain_pipeline.py</code></td>
+<td><strong>DAG <code>phoenix_retrain_all</code></strong>: dynamic pipeline retraining all models. Tasks per model: <code>generate_data</code> → <code>train_model</code> → <code>log_mlflow</code> → <code>promote_model</code>. Reads config from <code>model_configs/*.yaml</code>, resolves training script path, logs metrics to MLflow</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="utility-scripts">📂 Utility Scripts</h2>
+<p><strong>Path:</strong> <code>scripts/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generate_datasets.py</code></td>
+<td>Generates synthetic datasets for all models: <code>credit_risk/dataset.csv</code>, <code>fraud_detection/dataset.csv</code>, <code>house_price/dataset.csv</code>, <code>image_class/dataset.npz</code>, <code>sentiment/reviews.csv</code></td>
+</tr>
+<tr>
+<td><code>seed_features.py</code></td>
+<td>Seeds feature store (Redis/Memory) with reference feature records</td>
+</tr>
+<tr>
+<td><code>simulate_pipeline.py</code></td>
+<td><strong>Full 8-week lifecycle simulation</strong>: traffic → labels → drift → alert → rollback → export fresh data → retrain → register → verify. Exercises ALL 12 API endpoints</td>
+</tr>
+<tr>
+<td><code>simulate_traffic.py</code></td>
+<td>Simulates inference traffic: sends random predict requests continuously</td>
+</tr>
+<tr>
+<td><code>simulate_drift.py</code></td>
+<td>Simulates data drift: sends requests with shifted feature distributions</td>
+</tr>
+<tr>
+<td><code>train_challenger.py</code></td>
+<td>Trains challenger model version, registers in model registry</td>
+</tr>
+<tr>
+<td><code>run_production_simulation.py</code></td>
+<td>Full production simulation: traffic + drift + retrain + rollback</td>
+</tr>
+<tr>
+<td><code>test_monitoring_flows.py</code></td>
+<td>Tests monitoring integration: drift detection + alerting flows</td>
+</tr>
+<tr>
+<td><code>test_real_e2e.py</code></td>
+<td>End-to-end test with real Docker services running</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="performance-benchmarks">📂 Performance Benchmarks</h2>
+<p><strong>Path:</strong> <code>benchmarks/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>latency_benchmark.py</code></td>
+<td>Measures inference latency (p50, p95, p99, mean)</td>
+</tr>
+<tr>
+<td><code>throughput_benchmark.py</code></td>
+<td>Measures throughput (requests/second) with concurrent clients</td>
+</tr>
+<tr>
+<td><code>memory_benchmark.py</code></td>
+<td>Measures memory usage during load/predict (RSS, peak)</td>
+</tr>
+<tr>
+<td><code>load_test.py</code></td>
+<td>Load testing: ramps up concurrent users → measures response times</td>
+</tr>
+<tr>
+<td><code>locustfile.py</code></td>
+<td>Locust config: defines user behaviors for load testing</td>
+</tr>
+<tr>
+<td><code>benchmark_report.py</code></td>
+<td>Generates HTML/Markdown benchmark report from results</td>
+</tr>
+<tr>
+<td><code>RESULTS.md</code></td>
+<td>Benchmark results</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="kubernetes-helm-chart">📂 Kubernetes Helm Chart</h2>
+<p><strong>Path:</strong> <code>deploy/helm/phoenix-ml/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Chart.yaml</code></td>
+<td>Helm chart metadata: name, version, description</td>
+</tr>
+<tr>
+<td><code>values.yaml</code></td>
+<td>Default values: replica count, image tag, resources (CPU/memory limits), service ports</td>
+</tr>
+<tr>
+<td><code>templates/deployment.yaml</code></td>
+<td>K8s Deployment: container spec, health probes, env vars from ConfigMap/Secret</td>
+</tr>
+<tr>
+<td><code>templates/service.yaml</code></td>
+<td>K8s Service: ClusterIP for internal access</td>
+</tr>
+<tr>
+<td><code>templates/ingress.yaml</code></td>
+<td>K8s Ingress: external access rules, TLS config</td>
+</tr>
+<tr>
+<td><code>templates/hpa.yaml</code></td>
+<td>HorizontalPodAutoscaler: auto-scales based on CPU/custom metrics</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="grafana-configuration">📂 Grafana Configuration</h2>
+<p><strong>Path:</strong> <code>grafana/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dashboards/phoenix-ml.json</code></td>
+<td>Main dashboard JSON: panels for inference latency, prediction count, drift score, model accuracy, system health</td>
+</tr>
+<tr>
+<td><code>provisioning/dashboards/provider.yml</code></td>
+<td>Dashboard auto-provisioning: points Grafana to JSON files</td>
+</tr>
+<tr>
+<td><code>provisioning/dashboards/phoenix_dashboard.json</code></td>
+<td>Dashboard provisioning config</td>
+</tr>
+<tr>
+<td><code>provisioning/datasources/datasource.yml</code></td>
+<td>Auto-provision Prometheus datasource: URL <code>http://prometheus:9090</code></td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="mkdocs-documentation-site">📂 MkDocs Documentation Site</h2>
+<p><strong>Path:</strong> <code>docs/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>index.md</code></td>
+<td>Homepage: project overview, quick links</td>
+</tr>
+<tr>
+<td><code>architecture/system-design.md</code></td>
+<td>System architecture: components, data flow, deployment diagram</td>
+</tr>
+<tr>
+<td><code>api/reference.md</code></td>
+<td>API reference: all endpoints with examples</td>
+</tr>
+<tr>
+<td><code>guides/customization.md</code></td>
+<td>Customization guide: adding new models, custom plugins</td>
+</tr>
+<tr>
+<td><code>guides/library-api.md</code></td>
+<td>Guide to using as Python library</td>
+</tr>
+<tr>
+<td><code>guides/monitoring.md</code></td>
+<td>Monitoring setup guide: Prometheus, Grafana, alerts</td>
+</tr>
+<tr>
+<td><code>guides/troubleshooting.md</code></td>
+<td>FAQ + troubleshooting guide</td>
+</tr>
+<tr>
+<td><code>deployment/docker-stack.md</code></td>
+<td>Docker deployment guide: compose, volumes, networking</td>
+</tr>
+<tr>
+<td><code>frontend/architecture.md</code></td>
+<td>Frontend architecture: React components, state, API integration</td>
+</tr>
+<tr>
+<td><code>blog/system-design-overview.md</code></td>
+<td>Blog: system design decisions</td>
+</tr>
+<tr>
+<td><code>blog/self-healing-ml.md</code></td>
+<td>Blog: self-healing ML pipeline</td>
+</tr>
+<tr>
+<td><code>blog/performance-optimization.md</code></td>
+<td>Blog: performance optimization techniques</td>
+</tr>
+<tr>
+<td><code>adr/002-use-onnx-runtime.md</code></td>
+<td>ADR #2: Why ONNX Runtime for inference</td>
+</tr>
+<tr>
+<td><code>adr/003-use-kafka-for-event-streaming.md</code></td>
+<td>ADR #3: Why Kafka for event streaming</td>
+</tr>
+<tr>
+<td><code>adr/004-observability-with-prometheus-grafana.md</code></td>
+<td>ADR #4: Why Prometheus + Grafana</td>
+</tr>
+<tr>
+<td><code>assets/icon.png</code></td>
+<td>Site icon</td>
+</tr>
+<tr>
+<td><code>assets/logo.png</code></td>
+<td>Site logo</td>
+</tr>
+<tr>
+<td><code>assets/mlops-pipeline.png</code></td>
+<td>Pipeline architecture diagram</td>
+</tr>
+<tr>
+<td><code>assets/system-architecture.png</code></td>
+<td>System architecture diagram</td>
+</tr>
+<tr>
+<td><code>assets/tech-stack.png</code></td>
+<td>Tech stack diagram</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="jupyter-demo-notebooks">📂 Jupyter Demo Notebooks</h2>
+<p><strong>Path:</strong> <code>notebooks/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>01_inference_demo.ipynb</code></td>
+<td>Demo: call predict API, visualize results</td>
+</tr>
+<tr>
+<td><code>02_drift_detection_demo.ipynb</code></td>
+<td>Demo: generate drift, detect, visualize scores</td>
+</tr>
+<tr>
+<td><code>03_self_healing_demo.ipynb</code></td>
+<td>Demo: full self-healing cycle (drift → alert → retrain → promote)</td>
+</tr>
+<tr>
+<td><code>04_ab_testing_demo.ipynb</code></td>
+<td>Demo: A/B testing setup, traffic routing, compare models</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="database-migrations">📂 Database Migrations</h2>
+<p><strong>Path:</strong> <code>alembic/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>env.py</code></td>
+<td>Alembic environment: async SQLAlchemy engine, auto-detect model changes</td>
+</tr>
+<tr>
+<td><code>script.py.mako</code></td>
+<td>Template for auto-generated migration files</td>
+</tr>
+<tr>
+<td><code>versions/8e03d4fe1b79_initial_schema_*.py</code></td>
+<td><strong>Initial migration</strong>: creates 3 tables — <code>models</code> (id, version, uri, framework, stage, metadata, metrics, is_active, created_at), <code>prediction_logs</code> (id, model_id, features, result, confidence, latency, ground_truth, timestamp), <code>drift_reports</code> (id, model_id, feature_name, method, score, is_drifted, threshold, timestamp)</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2 id="running-the-project">🚀 Running the Project</h2>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-2-1" id="__codelineno-2-1" name="__codelineno-2-1"></a><span class="c1"># 1. Clone &amp; setup</span>
+<a href="#__codelineno-2-2" id="__codelineno-2-2" name="__codelineno-2-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vtnguyen04/phoenix_ML.git
+<a href="#__codelineno-2-3" id="__codelineno-2-3" name="__codelineno-2-3"></a><span class="nb">cd</span><span class="w"> </span>phoenix_ML
+<a href="#__codelineno-2-4" id="__codelineno-2-4" name="__codelineno-2-4"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+<a href="#__codelineno-2-5" id="__codelineno-2-5" name="__codelineno-2-5"></a>
+<a href="#__codelineno-2-6" id="__codelineno-2-6" name="__codelineno-2-6"></a><span class="c1"># 2. Start all services (14 containers)</span>
+<a href="#__codelineno-2-7" id="__codelineno-2-7" name="__codelineno-2-7"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+<a href="#__codelineno-2-8" id="__codelineno-2-8" name="__codelineno-2-8"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.airflow.yaml<span class="w"> </span>up<span class="w"> </span>-d
+<a href="#__codelineno-2-9" id="__codelineno-2-9" name="__codelineno-2-9"></a>
+<a href="#__codelineno-2-10" id="__codelineno-2-10" name="__codelineno-2-10"></a><span class="c1"># 3. Generate datasets &amp; train models</span>
+<a href="#__codelineno-2-11" id="__codelineno-2-11" name="__codelineno-2-11"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/generate_datasets.py
+<a href="#__codelineno-2-12" id="__codelineno-2-12" name="__codelineno-2-12"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/credit_risk/train.py
+<a href="#__codelineno-2-13" id="__codelineno-2-13" name="__codelineno-2-13"></a>
+<a href="#__codelineno-2-14" id="__codelineno-2-14" name="__codelineno-2-14"></a><span class="c1"># 4. Access services</span>
+<a href="#__codelineno-2-15" id="__codelineno-2-15" name="__codelineno-2-15"></a><span class="c1">#   Frontend:     http://localhost:5174</span>
+<a href="#__codelineno-2-16" id="__codelineno-2-16" name="__codelineno-2-16"></a><span class="c1">#   API Docs:     http://localhost:8000/docs</span>
+<a href="#__codelineno-2-17" id="__codelineno-2-17" name="__codelineno-2-17"></a><span class="c1">#   Airflow:      http://localhost:8080  (admin/admin)</span>
+<a href="#__codelineno-2-18" id="__codelineno-2-18" name="__codelineno-2-18"></a><span class="c1">#   MLflow:       http://localhost:5001</span>
+<a href="#__codelineno-2-19" id="__codelineno-2-19" name="__codelineno-2-19"></a><span class="c1">#   Grafana:      http://localhost:3001  (admin/admin)</span>
+<a href="#__codelineno-2-20" id="__codelineno-2-20" name="__codelineno-2-20"></a><span class="c1">#   Kafka UI:     http://localhost:8082</span>
+<a href="#__codelineno-2-21" id="__codelineno-2-21" name="__codelineno-2-21"></a><span class="c1">#   Prometheus:   http://localhost:9090</span>
+<a href="#__codelineno-2-22" id="__codelineno-2-22" name="__codelineno-2-22"></a><span class="c1">#   Jaeger:       http://localhost:16686</span>
+<a href="#__codelineno-2-23" id="__codelineno-2-23" name="__codelineno-2-23"></a>
+<a href="#__codelineno-2-24" id="__codelineno-2-24" name="__codelineno-2-24"></a><span class="c1"># 5. Run all tests &amp; lints</span>
+<a href="#__codelineno-2-25" id="__codelineno-2-25" name="__codelineno-2-25"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>.<span class="w">                                  </span><span class="c1"># Lint</span>
+<a href="#__codelineno-2-26" id="__codelineno-2-26" name="__codelineno-2-26"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>--check<span class="w"> </span>.<span class="w">                         </span><span class="c1"># Format check</span>
+<a href="#__codelineno-2-27" id="__codelineno-2-27" name="__codelineno-2-27"></a>uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>phoenix_ml/<span class="w">                                     </span><span class="c1"># Type check</span>
+<a href="#__codelineno-2-28" id="__codelineno-2-28" name="__codelineno-2-28"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w">                                 </span><span class="c1"># Backend tests</span>
+<a href="#__codelineno-2-29" id="__codelineno-2-29" name="__codelineno-2-29"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>phoenix-frontend<span class="w"> </span>npx<span class="w"> </span>tsc<span class="w"> </span>--noEmit<span class="w">        </span><span class="c1"># Frontend type check</span>
+<a href="#__codelineno-2-30" id="__codelineno-2-30" name="__codelineno-2-30"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>phoenix-frontend<span class="w"> </span>npx<span class="w"> </span>eslint<span class="w"> </span>phoenix_ml/<span class="w">          </span><span class="c1"># Frontend lint</span>
+<a href="#__codelineno-2-31" id="__codelineno-2-31" name="__codelineno-2-31"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>phoenix-frontend<span class="w"> </span>npx<span class="w"> </span>vitest<span class="w"> </span>run<span class="w">           </span><span class="c1"># Frontend tests</span>
+</code></pre></div>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Back to top
+</button>
+</main>
+<footer class="md-footer">
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.sections", "navigation.expand", "content.code.copy", "content.tooltips", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+<script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+</body>
+</html>

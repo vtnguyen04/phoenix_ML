@@ -1,0 +1,1795 @@
+
+<!DOCTYPE html>
+
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta content="High-Throughput Real-time ML Inference System" name="description"/>
+<meta content="Võ Thành Nguyễn" name="author"/>
+<link href="../../tutorials/image-classification/" rel="prev"/>
+<link href="../../project-structure/" rel="next"/>
+<link href="../../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.1" name="generator"/>
+<title>Architecture - Phoenix ML Platform</title>
+<link href="../../assets/stylesheets/main.484c7ddc.min.css" rel="stylesheet"/>
+<link href="../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CFira+Code:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Inter";--md-code-font:"Fira Code"}</style>
+<script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="black" data-md-color-scheme="slate" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#system-architecture-phoenix-ml-platform">
+          Skip to content
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+<nav aria-label="Header" class="md-header__inner md-grid">
+<a aria-label="Phoenix ML Platform" class="md-header__button md-logo" data-md-component="logo" href="../.." title="Phoenix ML Platform">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            Phoenix ML Platform
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Switch to light mode" class="md-option" data-md-color-accent="indigo" data-md-color-media="" data-md-color-primary="black" data-md-color-scheme="slate" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Switch to light mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Switch to dark mode" class="md-option" data-md-color-accent="blue" data-md-color-media="" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Switch to dark mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Search" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Search" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Search" class="md-search__options">
+<button aria-label="Clear" class="md-search__icon md-icon" tabindex="-1" title="Clear" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Initializing search
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="md-header__source">
+<a class="md-source" data-md-component="source" href="https://github.com/vtnguyen04/phoenix_ML" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+</div>
+<div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+</div>
+</nav>
+<nav aria-label="Tabs" class="md-tabs" data-md-component="tabs">
+<div class="md-grid">
+<ul class="md-tabs__list">
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../..">
+        
+  
+  
+    
+  
+  Welcome
+
+      </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../guides/getting-started/">
+          
+  
+  
+  Getting Started
+
+        </a>
+</li>
+<li class="md-tabs__item md-tabs__item--active">
+<a class="md-tabs__link" href="./">
+          
+  
+  
+  Core Concepts
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../guides/library-api/">
+          
+  
+  
+  Operations &amp; Guides
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../api/reference/">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../adr/002-use-onnx-runtime/">
+          
+  
+  
+  Architecture Decisions
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../blog/system-design-overview/">
+          
+  
+  
+  Engineering Blog
+
+        </a>
+</li>
+</ul>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Navigation" class="md-nav md-nav--primary md-nav--lifted" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="Phoenix ML Platform" class="md-nav__button md-logo" data-md-component="logo" href="../.." title="Phoenix ML Platform">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    Phoenix ML Platform
+  </label>
+<div class="md-nav__source">
+<a class="md-source" data-md-component="source" href="https://github.com/vtnguyen04/phoenix_ML" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+</div>
+<div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+</div>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../..">
+<span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../guides/getting-started/">
+<span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_2_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_2_label" class="md-nav" data-md-level="2">
+<label class="md-nav__title" for="__nav_2_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/sentiment-analysis/">
+<span class="md-ellipsis">
+    
+  
+    Sentiment Analysis
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/credit-risk/">
+<span class="md-ellipsis">
+    
+  
+    Credit Risk
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/fraud-detection/">
+<span class="md-ellipsis">
+    
+  
+    Fraud Detection
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/house-price/">
+<span class="md-ellipsis">
+    
+  
+    House Price
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/image-classification/">
+<span class="md-ellipsis">
+    
+  
+    Image Classification
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_3" type="checkbox"/>
+<label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+<span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_3_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_3">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item md-nav__item--active">
+<input class="md-nav__toggle md-toggle" id="__toc" type="checkbox"/>
+<label class="md-nav__link md-nav__link--active" for="__toc">
+<span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<a class="md-nav__link md-nav__link--active" href="./">
+<span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+</a>
+<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#1-overview">
+<span class="md-ellipsis">
+      
+        1. Overview
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#2-architecture-diagram">
+<span class="md-ellipsis">
+      
+        2. Architecture Diagram
+      
+    </span>
+</a>
+<nav aria-label="2. Architecture Diagram" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#21-overall-system-architecture">
+<span class="md-ellipsis">
+      
+        2.1 Overall System Architecture
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#22-request-flow-single-prediction">
+<span class="md-ellipsis">
+      
+        2.2 Request Flow (Single Prediction)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#3-layer-architecture">
+<span class="md-ellipsis">
+      
+        3. Layer Architecture
+      
+    </span>
+</a>
+<nav aria-label="3. Layer Architecture" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#31-dependency-rule">
+<span class="md-ellipsis">
+      
+        3.1 Dependency Rule
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#32-source-code-structure">
+<span class="md-ellipsis">
+      
+        3.2 Source Code Structure
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#4-design-patterns">
+<span class="md-ellipsis">
+      
+        4. Design Patterns
+      
+    </span>
+</a>
+<nav aria-label="4. Design Patterns" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#41-pattern-catalog">
+<span class="md-ellipsis">
+      
+        4.1 Pattern Catalog
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#42-strategy-pattern-routing">
+<span class="md-ellipsis">
+      
+        4.2 Strategy Pattern — Routing
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#43-circuit-breaker-state-machine">
+<span class="md-ellipsis">
+      
+        4.3 Circuit Breaker — State Machine
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#5-self-healing-flow">
+<span class="md-ellipsis">
+      
+        5. Self-Healing Flow
+      
+    </span>
+</a>
+<nav aria-label="5. Self-Healing Flow" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#51-detection-response-pipeline">
+<span class="md-ellipsis">
+      
+        5.1 Detection → Response Pipeline
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#52-multi-model-monitoring">
+<span class="md-ellipsis">
+      
+        5.2 Multi-Model Monitoring
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#6-infrastructure-services">
+<span class="md-ellipsis">
+      
+        6. Infrastructure Services
+      
+    </span>
+</a>
+<nav aria-label="6. Infrastructure Services" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#61-docker-compose-stack">
+<span class="md-ellipsis">
+      
+        6.1 Docker Compose Stack
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#62-airflow-stack-docker-composeairflowyaml">
+<span class="md-ellipsis">
+      
+        6.2 Airflow Stack (docker-compose.airflow.yaml)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#7-data-flow">
+<span class="md-ellipsis">
+      
+        7. Data Flow
+      
+    </span>
+</a>
+<nav aria-label="7. Data Flow" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#71-prediction-data-flow">
+<span class="md-ellipsis">
+      
+        7.1 Prediction Data Flow
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#72-training-data-flow">
+<span class="md-ellipsis">
+      
+        7.2 Training Data Flow
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#8-test-architecture">
+<span class="md-ellipsis">
+      
+        8. Test Architecture
+      
+    </span>
+</a>
+<nav aria-label="8. Test Architecture" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#81-test-pyramid">
+<span class="md-ellipsis">
+      
+        8.1 Test Pyramid
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#82-coverage">
+<span class="md-ellipsis">
+      
+        8.2 Coverage
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#83-quality-gates-ci">
+<span class="md-ellipsis">
+      
+        8.3 Quality Gates (CI)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../project-structure/">
+<span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../frontend/architecture/">
+<span class="md-ellipsis">
+    
+  
+    Frontend
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_4" type="checkbox"/>
+<label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Operations &amp; Guides
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_4_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_4">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations &amp; Guides
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../guides/library-api/">
+<span class="md-ellipsis">
+    
+  
+    Library API
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../deployment/docker-stack/">
+<span class="md-ellipsis">
+    
+  
+    Deployment Stack
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../guides/monitoring/">
+<span class="md-ellipsis">
+    
+  
+    Monitoring &amp; Alerting
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../guides/customization/">
+<span class="md-ellipsis">
+    
+  
+    Customization
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../guides/troubleshooting/">
+<span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../api/reference/">
+<span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_6" type="checkbox"/>
+<label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_6_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_6">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture Decisions
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/002-use-onnx-runtime/">
+<span class="md-ellipsis">
+    
+  
+    002 - ONNX Runtime
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/003-use-kafka-for-event-streaming/">
+<span class="md-ellipsis">
+    
+  
+    003 - Kafka Streaming
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/004-observability-with-prometheus-grafana/">
+<span class="md-ellipsis">
+    
+  
+    004 - Observability
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/005-dvc-data-versioning/">
+<span class="md-ellipsis">
+    
+  
+    005 - DVC Versioning
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_7" type="checkbox"/>
+<label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Engineering Blog
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_7_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_7">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Engineering Blog
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../blog/system-design-overview/">
+<span class="md-ellipsis">
+    
+  
+    System Design
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../blog/self-healing-ml/">
+<span class="md-ellipsis">
+    
+  
+    Self-Healing ML
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../blog/performance-optimization/">
+<span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#1-overview">
+<span class="md-ellipsis">
+      
+        1. Overview
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#2-architecture-diagram">
+<span class="md-ellipsis">
+      
+        2. Architecture Diagram
+      
+    </span>
+</a>
+<nav aria-label="2. Architecture Diagram" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#21-overall-system-architecture">
+<span class="md-ellipsis">
+      
+        2.1 Overall System Architecture
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#22-request-flow-single-prediction">
+<span class="md-ellipsis">
+      
+        2.2 Request Flow (Single Prediction)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#3-layer-architecture">
+<span class="md-ellipsis">
+      
+        3. Layer Architecture
+      
+    </span>
+</a>
+<nav aria-label="3. Layer Architecture" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#31-dependency-rule">
+<span class="md-ellipsis">
+      
+        3.1 Dependency Rule
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#32-source-code-structure">
+<span class="md-ellipsis">
+      
+        3.2 Source Code Structure
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#4-design-patterns">
+<span class="md-ellipsis">
+      
+        4. Design Patterns
+      
+    </span>
+</a>
+<nav aria-label="4. Design Patterns" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#41-pattern-catalog">
+<span class="md-ellipsis">
+      
+        4.1 Pattern Catalog
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#42-strategy-pattern-routing">
+<span class="md-ellipsis">
+      
+        4.2 Strategy Pattern — Routing
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#43-circuit-breaker-state-machine">
+<span class="md-ellipsis">
+      
+        4.3 Circuit Breaker — State Machine
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#5-self-healing-flow">
+<span class="md-ellipsis">
+      
+        5. Self-Healing Flow
+      
+    </span>
+</a>
+<nav aria-label="5. Self-Healing Flow" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#51-detection-response-pipeline">
+<span class="md-ellipsis">
+      
+        5.1 Detection → Response Pipeline
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#52-multi-model-monitoring">
+<span class="md-ellipsis">
+      
+        5.2 Multi-Model Monitoring
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#6-infrastructure-services">
+<span class="md-ellipsis">
+      
+        6. Infrastructure Services
+      
+    </span>
+</a>
+<nav aria-label="6. Infrastructure Services" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#61-docker-compose-stack">
+<span class="md-ellipsis">
+      
+        6.1 Docker Compose Stack
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#62-airflow-stack-docker-composeairflowyaml">
+<span class="md-ellipsis">
+      
+        6.2 Airflow Stack (docker-compose.airflow.yaml)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#7-data-flow">
+<span class="md-ellipsis">
+      
+        7. Data Flow
+      
+    </span>
+</a>
+<nav aria-label="7. Data Flow" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#71-prediction-data-flow">
+<span class="md-ellipsis">
+      
+        7.1 Prediction Data Flow
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#72-training-data-flow">
+<span class="md-ellipsis">
+      
+        7.2 Training Data Flow
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#8-test-architecture">
+<span class="md-ellipsis">
+      
+        8. Test Architecture
+      
+    </span>
+</a>
+<nav aria-label="8. Test Architecture" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#81-test-pyramid">
+<span class="md-ellipsis">
+      
+        8.1 Test Pyramid
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#82-coverage">
+<span class="md-ellipsis">
+      
+        8.2 Coverage
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#83-quality-gates-ci">
+<span class="md-ellipsis">
+      
+        8.3 Quality Gates (CI)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="system-architecture-phoenix-ml-platform">System Architecture: Phoenix ML Platform</h1>
+<h2 id="1-overview">1. Overview</h2>
+<p>Phoenix ML is an <strong>end-to-end MLOps</strong> system built with <strong>Domain-Driven Design (DDD)</strong> and <strong>Clean Architecture</strong>. It provides:</p>
+<ul>
+<li>Real-time ML inference (REST + gRPC)</li>
+<li>Automatic data drift and anomaly detection</li>
+<li>Self-healing: alert → rollback → retrain</li>
+<li>Multi-model serving with A/B testing and canary deployment</li>
+<li>Full observability stack (metrics, tracing, logging)</li>
+</ul>
+<h2 id="2-architecture-diagram">2. Architecture Diagram</h2>
+<h3 id="21-overall-system-architecture">2.1 Overall System Architecture</h3>
+<pre class="mermaid"><code>graph TD
+    Client["External Client"] --&gt;|REST/gRPC| API["Phoenix API Gateway&lt;br/&gt;FastAPI + gRPC"]
+
+    subgraph "Inference Core"
+        API --&gt; Handler["PredictHandler&lt;br/&gt;CQRS Command Handler"]
+        Handler --&gt; Pipeline["Request Pipeline&lt;br/&gt;Chain of Responsibility"]
+        Pipeline --&gt; Router["Routing Strategy&lt;br/&gt;A/B · Canary · Shadow"]
+        Router --&gt; CB["Circuit Breaker&lt;br/&gt;Closed/Open/Half-Open"]
+        CB --&gt; Engines
+
+        subgraph Engines["Model Executors"]
+            ONNX["ONNX Runtime&lt;br/&gt;(Default - CPU/GPU)"]
+            TRT["TensorRT Executor&lt;br/&gt;(FP16 GPU)"]
+            Triton["Triton Client&lt;br/&gt;(HTTP v2 API)"]
+        end
+    end
+
+    subgraph "Data Layer"
+        Handler --&gt;|"HMGET/HSET"| Redis["Redis&lt;br/&gt;(Online Feature Store)"]
+        Handler --&gt;|Read| Parquet["Parquet Files&lt;br/&gt;(Offline Features)"]
+        API --&gt;|"SQLAlchemy async"| Postgres["PostgreSQL&lt;br/&gt;(Models, Logs, Reports)"]
+        API --&gt;|"boto3"| MinIO["MinIO / S3&lt;br/&gt;(Model Artifacts)"]
+    end
+
+    subgraph "Event Streaming"
+        Handler -.-&gt;|"JSON publish"| Kafka{"Apache Kafka&lt;br/&gt;(KRaft mode)"}
+        Kafka --&gt;|"Consumer group"| Logger["Prediction Logger"]
+        Kafka --&gt;|"Consumer group"| Analytics["Stream Analytics"]
+    end
+
+    subgraph "Self-Healing Subsystem"
+        Monitor["MonitoringService&lt;br/&gt;(Background loop)"] --&gt; Drift["DriftCalculator&lt;br/&gt;(KS · PSI · Chi2)"]
+        Monitor --&gt; Anomaly["AnomalyDetector&lt;br/&gt;(Z-score · IQR)"]
+        Monitor --&gt; Alert["AlertManager&lt;br/&gt;(Rules + Cooldown)"]
+        Alert --&gt; Notifier["AlertNotifier&lt;br/&gt;(Slack / Discord webhook)"]
+        Alert --&gt; Rollback["RollbackManager&lt;br/&gt;(Auto-revert model)"]
+    end
+
+    subgraph "Observability"
+        API --&gt;|"/metrics"| Prometheus["Prometheus&lt;br/&gt;(Scrape metrics)"]
+        Prometheus --&gt; Grafana["Grafana&lt;br/&gt;(Dashboards)"]
+        API --&gt;|"OTLP export"| Jaeger["Jaeger&lt;br/&gt;(Distributed Tracing)"]
+    end
+
+    subgraph "Frontend"
+        Dashboard["React Dashboard&lt;br/&gt;(TypeScript + Recharts)"]
+        Dashboard --&gt;|"fetch API"| API
+        Dashboard --&gt;|"iframe embed"| Grafana
+    end
+
+    subgraph "MLOps Pipeline"
+        Airflow["Apache Airflow&lt;br/&gt;(Scheduler)"] --&gt;|"DAG tasks"| Train["Train Models&lt;br/&gt;(sklearn → ONNX)"]
+        Train --&gt;|"MLflow log"| MLflow["MLflow&lt;br/&gt;(Experiment Tracking)"]
+    end</code></pre>
+<h3 id="22-request-flow-single-prediction">2.2 Request Flow (Single Prediction)</h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant C as Client
+    participant API as FastAPI Router
+    participant PH as PredictHandler
+    participant FS as FeatureStore
+    participant IS as InferenceService
+    participant RS as RoutingStrategy
+    participant CB as CircuitBreaker
+    participant IE as ONNX Engine
+    participant EB as EventBus
+    participant KF as Kafka
+    participant PG as PostgreSQL
+
+    C-&gt;&gt;API: POST /predict {model_id, features}
+    API-&gt;&gt;PH: handle(PredictCommand)
+
+    opt entity_id provided (no raw features)
+        PH-&gt;&gt;FS: get_online_features(entity_id)
+        FS--&gt;&gt;PH: [0.5, 1.2, 0.8, ...]
+    end
+
+    PH-&gt;&gt;IS: predict(model, features)
+    IS-&gt;&gt;RS: select_model(champion, challenger)
+    RS--&gt;&gt;IS: selected_model (based on strategy)
+    IS-&gt;&gt;CB: check_state()
+
+    alt Circuit CLOSED
+        IS-&gt;&gt;IE: predict(model, feature_vector)
+        IE--&gt;&gt;IS: Prediction(result, confidence, latency)
+    else Circuit OPEN
+        IS--&gt;&gt;PH: raise CircuitOpenError
+    end
+
+    IS--&gt;&gt;PH: Prediction
+
+    par Async Task 1
+        PH-&gt;&gt;EB: publish(PredictionCompleted)
+    and Async Task 2
+        EB-&gt;&gt;KF: publish("inference-events", event)
+    and Async Task 3
+        PH-&gt;&gt;PG: log_prediction(command, prediction)
+    end
+
+    PH--&gt;&gt;API: PredictionResponse
+    API--&gt;&gt;C: 200 OK {result, confidence, latency_ms}</code></pre>
+<h2 id="3-layer-architecture">3. Layer Architecture</h2>
+<p>Phoenix ML uses a <strong>layered architecture</strong> — dependency rule: outer layers depend on inner layers, never the reverse.</p>
+<pre class="mermaid"><code>graph TD
+    subgraph Infrastructure
+        I["FastAPI · gRPC · PostgreSQL · Redis · Kafka&lt;br/&gt;ONNX Runtime · Prometheus · S3 · MLflow"]
+    end
+    subgraph Application
+        A["PredictHandler · BatchPredictHandler&lt;br/&gt;MonitoringService · Commands · Queries · DTOs"]
+    end
+    subgraph Domain
+        D["Model · Prediction · InferenceService&lt;br/&gt;DriftCalculator · AlertManager · RoutingStrategy&lt;br/&gt;CircuitBreaker · FeatureStore (ABC) · EventBus"]
+    end
+    subgraph Shared
+        S["Exceptions · Interfaces · Utilities"]
+    end
+    Infrastructure --&gt; Application --&gt; Domain --&gt; Shared</code></pre>
+<h3 id="31-dependency-rule">3.1 Dependency Rule</h3>
+<pre class="mermaid"><code>graph LR
+    Infrastructure --&gt; Application --&gt; Domain --&gt; Shared</code></pre>
+<ul>
+<li><strong>Domain Layer</strong> does NOT import FastAPI, SQLAlchemy, Redis, Kafka, or ONNX Runtime</li>
+<li><strong>Application Layer</strong> only imports Domain entities/services</li>
+<li><strong>Infrastructure Layer</strong> implements Domain ABCs (interfaces)</li>
+</ul>
+<h3 id="32-source-code-structure">3.2 Source Code Structure</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a>phoenix_ml/
+<a href="#__codelineno-0-2" id="__codelineno-0-2" name="__codelineno-0-2"></a>├── config/                         # 5 files — Settings (Pydantic, reads .env)
+<a href="#__codelineno-0-3" id="__codelineno-0-3" name="__codelineno-0-3"></a>│   ├── app.py                      #   APP_VERSION, DEFAULT_MODEL_ID
+<a href="#__codelineno-0-4" id="__codelineno-0-4" name="__codelineno-0-4"></a>│   ├── inference.py                #   BATCH_MAX_SIZE, INFERENCE_ENGINE
+<a href="#__codelineno-0-5" id="__codelineno-0-5" name="__codelineno-0-5"></a>│   ├── infrastructure.py           #   DATABASE_URL, KAFKA_URL, REDIS_URL
+<a href="#__codelineno-0-6" id="__codelineno-0-6" name="__codelineno-0-6"></a>│   └── monitoring.py               #   MONITORING_INTERVAL_SECONDS
+<a href="#__codelineno-0-7" id="__codelineno-0-7" name="__codelineno-0-7"></a>│
+<a href="#__codelineno-0-8" id="__codelineno-0-8" name="__codelineno-0-8"></a>├── domain/                         # 40+ files — Pure business logic
+<a href="#__codelineno-0-9" id="__codelineno-0-9" name="__codelineno-0-9"></a>│   ├── inference/                  #   ML prediction bounded context
+<a href="#__codelineno-0-10" id="__codelineno-0-10" name="__codelineno-0-10"></a>│   │   ├── entities/               #     Model, Prediction
+<a href="#__codelineno-0-11" id="__codelineno-0-11" name="__codelineno-0-11"></a>│   │   ├── value_objects/          #     ConfidenceScore, FeatureVector, LatencyBudget
+<a href="#__codelineno-0-12" id="__codelineno-0-12" name="__codelineno-0-12"></a>│   │   ├── services/               #     InferenceEngine, InferenceService, BatchManager
+<a href="#__codelineno-0-13" id="__codelineno-0-13" name="__codelineno-0-13"></a>│   │   │                           #     RoutingStrategy, CircuitBreaker, RequestPipeline
+<a href="#__codelineno-0-14" id="__codelineno-0-14" name="__codelineno-0-14"></a>│   │   └── events/                 #     ModelLoaded, PredictionMade
+<a href="#__codelineno-0-15" id="__codelineno-0-15" name="__codelineno-0-15"></a>│   ├── monitoring/                 #   Drift &amp; alerting bounded context
+<a href="#__codelineno-0-16" id="__codelineno-0-16" name="__codelineno-0-16"></a>│   │   ├── entities/               #     DriftReport
+<a href="#__codelineno-0-17" id="__codelineno-0-17" name="__codelineno-0-17"></a>│   │   ├── services/               #     DriftCalculator, AlertManager, AnomalyDetector
+<a href="#__codelineno-0-18" id="__codelineno-0-18" name="__codelineno-0-18"></a>│   │   │                           #     MetricsPublisher, ModelEvaluator, RollbackManager
+<a href="#__codelineno-0-19" id="__codelineno-0-19" name="__codelineno-0-19"></a>│   │   └── repositories/          #     DriftReportRepository, PredictionLogRepository
+<a href="#__codelineno-0-20" id="__codelineno-0-20" name="__codelineno-0-20"></a>│   ├── training/                   #   Training bounded context
+<a href="#__codelineno-0-21" id="__codelineno-0-21" name="__codelineno-0-21"></a>│   │   ├── entities/               #     TrainingConfig, TrainingJob
+<a href="#__codelineno-0-22" id="__codelineno-0-22" name="__codelineno-0-22"></a>│   │   ├── services/               #     TrainingService, IDataLoader, ITrainer
+<a href="#__codelineno-0-23" id="__codelineno-0-23" name="__codelineno-0-23"></a>│   │   └── events/                 #     TrainingCompleted
+<a href="#__codelineno-0-24" id="__codelineno-0-24" name="__codelineno-0-24"></a>│   ├── feature_store/              #   Feature management bounded context
+<a href="#__codelineno-0-25" id="__codelineno-0-25" name="__codelineno-0-25"></a>│   │   ├── entities/               #     FeatureRegistry
+<a href="#__codelineno-0-26" id="__codelineno-0-26" name="__codelineno-0-26"></a>│   │   └── repositories/          #     FeatureStore, OfflineFeatureStore
+<a href="#__codelineno-0-27" id="__codelineno-0-27" name="__codelineno-0-27"></a>│   ├── model_registry/            #   Model versioning bounded context
+<a href="#__codelineno-0-28" id="__codelineno-0-28" name="__codelineno-0-28"></a>│   │   └── repositories/          #     ModelRepository, ArtifactStorage
+<a href="#__codelineno-0-29" id="__codelineno-0-29" name="__codelineno-0-29"></a>│   └── shared/                     #   Shared kernel
+<a href="#__codelineno-0-30" id="__codelineno-0-30" name="__codelineno-0-30"></a>│       ├── domain_events.py        #     PredictionCompleted, DriftDetected, ModelRetrained
+<a href="#__codelineno-0-31" id="__codelineno-0-31" name="__codelineno-0-31"></a>│       ├── event_bus.py            #     DomainEventBus (Observer pattern)
+<a href="#__codelineno-0-32" id="__codelineno-0-32" name="__codelineno-0-32"></a>│       └── plugin_registry.py     #     PluginRegistry (pre/post processors)
+<a href="#__codelineno-0-33" id="__codelineno-0-33" name="__codelineno-0-33"></a>│
+<a href="#__codelineno-0-34" id="__codelineno-0-34" name="__codelineno-0-34"></a>├── application/                    # 14 files — Use cases (CQRS)
+<a href="#__codelineno-0-35" id="__codelineno-0-35" name="__codelineno-0-35"></a>│   ├── commands/                   #   PredictCommand, BatchPredictCommand, LoadModelCommand
+<a href="#__codelineno-0-36" id="__codelineno-0-36" name="__codelineno-0-36"></a>│   ├── handlers/                   #   PredictHandler, BatchPredictHandler, RetrainHandler
+<a href="#__codelineno-0-37" id="__codelineno-0-37" name="__codelineno-0-37"></a>│   │                               #   QueryHandlers (GetModel, GetDrift, GetPerformance)
+<a href="#__codelineno-0-38" id="__codelineno-0-38" name="__codelineno-0-38"></a>│   ├── services/                   #   MonitoringService
+<a href="#__codelineno-0-39" id="__codelineno-0-39" name="__codelineno-0-39"></a>│   ├── dto/                        #   PredictionRequest, PredictionResponse
+<a href="#__codelineno-0-40" id="__codelineno-0-40" name="__codelineno-0-40"></a>│   └── decorators.py              #   @timing, @retry decorators
+<a href="#__codelineno-0-41" id="__codelineno-0-41" name="__codelineno-0-41"></a>│
+<a href="#__codelineno-0-42" id="__codelineno-0-42" name="__codelineno-0-42"></a>├── infrastructure/                 # 37 files — Framework adapters
+<a href="#__codelineno-0-43" id="__codelineno-0-43" name="__codelineno-0-43"></a>│   ├── bootstrap/                  #   container.py (DI), lifespan.py (startup/shutdown)
+<a href="#__codelineno-0-44" id="__codelineno-0-44" name="__codelineno-0-44"></a>│   ├── http/                       #   FastAPI routes, dependencies
+<a href="#__codelineno-0-45" id="__codelineno-0-45" name="__codelineno-0-45"></a>│   ├── grpc/                       #   gRPC server + proto definitions
+<a href="#__codelineno-0-46" id="__codelineno-0-46" name="__codelineno-0-46"></a>│   ├── ml_engines/                 #   ONNX, TensorRT, Triton, Mock
+<a href="#__codelineno-0-47" id="__codelineno-0-47" name="__codelineno-0-47"></a>│   ├── messaging/                  #   Kafka producer + consumer
+<a href="#__codelineno-0-48" id="__codelineno-0-48" name="__codelineno-0-48"></a>│   ├── feature_store/              #   Redis, InMemory, Parquet
+<a href="#__codelineno-0-49" id="__codelineno-0-49" name="__codelineno-0-49"></a>│   ├── persistence/                #   PostgreSQL repos, MLflow, InMemory
+<a href="#__codelineno-0-50" id="__codelineno-0-50" name="__codelineno-0-50"></a>│   ├── monitoring/                 #   Prometheus, Jaeger, AlertNotifier
+<a href="#__codelineno-0-51" id="__codelineno-0-51" name="__codelineno-0-51"></a>│   ├── artifact_storage/          #   Local, S3/MinIO
+<a href="#__codelineno-0-52" id="__codelineno-0-52" name="__codelineno-0-52"></a>│   └── data_loaders/             #   Tabular (CSV), Image (NPZ/dir)
+<a href="#__codelineno-0-53" id="__codelineno-0-53" name="__codelineno-0-53"></a>│
+<a href="#__codelineno-0-54" id="__codelineno-0-54" name="__codelineno-0-54"></a>└── shared/                         # 9 files — Cross-cutting concerns
+<a href="#__codelineno-0-55" id="__codelineno-0-55" name="__codelineno-0-55"></a>    ├── exceptions/                 #   ModelNotFoundError, InferenceError, etc.
+<a href="#__codelineno-0-56" id="__codelineno-0-56" name="__codelineno-0-56"></a>    ├── ingestion/                  #   API/Redis data ingestors, DataCollector
+<a href="#__codelineno-0-57" id="__codelineno-0-57" name="__codelineno-0-57"></a>    └── utils/                      #   model_generator (ONNX for CI)
+</code></pre></div>
+<h2 id="4-design-patterns">4. Design Patterns</h2>
+<h3 id="41-pattern-catalog">4.1 Pattern Catalog</h3>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Location</th>
+<th>Purpose</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Strategy</strong></td>
+<td><code>RoutingStrategy</code></td>
+<td>Model traffic routing</td>
+<td>4 strategies: <code>SingleModel</code> (100% champion), <code>ABTest</code> (split by ratio), <code>Canary</code> (small % to challenger), <code>Shadow</code> (mirror, only return champion)</td>
+</tr>
+<tr>
+<td><strong>Circuit Breaker</strong></td>
+<td><code>CircuitBreaker</code></td>
+<td>Fault tolerance</td>
+<td>3 states: CLOSED → OPEN (when error rate &gt; threshold) → HALF_OPEN (retry after timeout). Self-recovering</td>
+</tr>
+<tr>
+<td><strong>Chain of Responsibility</strong></td>
+<td><code>RequestPipeline</code></td>
+<td>Request processing</td>
+<td>Pipeline steps: Validation → Cache Check → Feature Enrichment → Inference → Logging</td>
+</tr>
+<tr>
+<td><strong>Command/CQRS</strong></td>
+<td><code>commands/</code>, <code>handlers/</code></td>
+<td>Read/write separation</td>
+<td>Commands: PredictCommand, BatchPredictCommand. Queries: GetModelQuery, GetDriftReportQuery</td>
+</tr>
+<tr>
+<td><strong>Repository</strong></td>
+<td><code>ModelRepository</code>, <code>FeatureStore</code></td>
+<td>Data access abstraction</td>
+<td>ABCs in domain, implementations in infrastructure</td>
+</tr>
+<tr>
+<td><strong>Observer</strong></td>
+<td><code>DomainEventBus</code></td>
+<td>Event-driven architecture</td>
+<td>Subscribers auto-react: PredictionCompleted → publish Prometheus metrics, DriftDetected → trigger alert</td>
+</tr>
+<tr>
+<td><strong>Adapter</strong></td>
+<td>Infrastructure layer</td>
+<td>Framework decoupling</td>
+<td><code>RedisFeatureStore</code> adapts Redis → <code>FeatureStore</code> ABC, <code>ONNXInferenceEngine</code> adapts <code>onnxruntime</code> → <code>InferenceEngine</code> ABC</td>
+</tr>
+<tr>
+<td><strong>Factory</strong></td>
+<td><code>container.py</code> engine factory</td>
+<td>Engine selection</td>
+<td>Dict-based factory: <code>{"onnx": ..., "tensorrt": ..., "triton": ...}</code> — OCP: adding a new engine = adding one entry</td>
+</tr>
+<tr>
+<td><strong>Plugin</strong></td>
+<td><code>PluginRegistry</code></td>
+<td>Model-specific processing</td>
+<td>Register preprocessor/postprocessor per model_id — extensible without modifying core</td>
+</tr>
+<tr>
+<td><strong>Singleton</strong></td>
+<td><code>get_settings()</code>, <code>container.py</code></td>
+<td>Shared instances</td>
+<td>Module-level singletons for settings and DI container objects</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-strategy-pattern-routing">4.2 Strategy Pattern — Routing</h3>
+<pre class="mermaid"><code>classDiagram
+    class RoutingStrategy {
+        &lt;&lt;abstract&gt;&gt;
+        +select(champion, challengers) Model
+    }
+    class SingleModelStrategy {
+        +select() → always champion
+    }
+    class ABTestStrategy {
+        -traffic_ratio: float
+        +select() → random split
+    }
+    class CanaryStrategy {
+        -canary_percentage: float
+        +select() → % small to challenger
+    }
+    class ShadowStrategy {
+        +select() → mirror to both
+    }
+
+    RoutingStrategy &lt;|-- SingleModelStrategy
+    RoutingStrategy &lt;|-- ABTestStrategy
+    RoutingStrategy &lt;|-- CanaryStrategy
+    RoutingStrategy &lt;|-- ShadowStrategy</code></pre>
+<h3 id="43-circuit-breaker-state-machine">4.3 Circuit Breaker — State Machine</h3>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; CLOSED
+    CLOSED --&gt; OPEN: failure_count &gt; threshold
+    OPEN --&gt; HALF_OPEN: after timeout period
+    HALF_OPEN --&gt; CLOSED: success
+    HALF_OPEN --&gt; OPEN: failure
+    CLOSED --&gt; CLOSED: success (reset counter)</code></pre>
+<h2 id="5-self-healing-flow">5. Self-Healing Flow</h2>
+<h3 id="51-detection-response-pipeline">5.1 Detection → Response Pipeline</h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant MLoop as Monitoring Loop (Background)
+    participant DC as DriftCalculator
+    participant AD as AnomalyDetector
+    participant AM as AlertManager
+    participant AN as AlertNotifier (Slack)
+    participant RM as RollbackManager
+    participant EB as DomainEventBus
+    participant AF as Airflow DAG
+
+    MLoop-&gt;&gt;DC: calculate_drift(reference, current)
+    DC--&gt;&gt;MLoop: DriftReport(score=0.45, is_drifted=true)
+
+    MLoop-&gt;&gt;AD: detect_anomaly(recent_latencies)
+    AD--&gt;&gt;MLoop: anomaly_indices=[42, 67, 89]
+
+    MLoop-&gt;&gt;AM: evaluate(rules, drift_score=0.45)
+
+    alt score &gt; 0.3 (CRITICAL threshold)
+        AM-&gt;&gt;AN: notify(Alert: "high_drift_score", severity=CRITICAL)
+        AN-&gt;&gt;AN: POST webhook → Slack
+        AM-&gt;&gt;RM: evaluate_rollback(model_id)
+        RM-&gt;&gt;RM: archive challengers, keep champion
+    else score &gt; 0.1 (WARNING threshold)
+        AM-&gt;&gt;AN: notify(Alert: "moderate_drift", severity=WARNING)
+    end
+
+    MLoop-&gt;&gt;EB: publish(DriftDetected)
+    EB-&gt;&gt;AF: trigger retrain_pipeline DAG</code></pre>
+<h3 id="52-multi-model-monitoring">5.2 Multi-Model Monitoring</h3>
+<p>The monitoring loop runs for <strong>all</strong> models configured in <code>model_configs/</code>:</p>
+<ul>
+<li>Each model has its <strong>own</strong> reference data (<code>models/&lt;id&gt;/v1/reference_data.json</code>)</li>
+<li>Each model has its <strong>own</strong> drift test type (<code>ks</code>, <code>psi</code>, <code>chi2</code> — from YAML config)</li>
+<li>Monitoring interval is configured via <code>MONITORING_INTERVAL_SECONDS</code> (default: 30 s in production)</li>
+</ul>
+<h2 id="6-infrastructure-services">6. Infrastructure Services</h2>
+<h3 id="61-docker-compose-stack">6.1 Docker Compose Stack</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Image</th>
+<th>Port(s)</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phoenix-api</code></td>
+<td>Custom (Dockerfile)</td>
+<td>8000→8001</td>
+<td>FastAPI API server + gRPC :50051</td>
+</tr>
+<tr>
+<td><code>phoenix-frontend</code></td>
+<td>Custom (Dockerfile.frontend)</td>
+<td>5173→5174</td>
+<td>React dashboard (Vite dev server)</td>
+</tr>
+<tr>
+<td><code>postgres</code></td>
+<td>postgres:15-alpine</td>
+<td>5432→5433</td>
+<td>Primary database (models, logs, reports)</td>
+</tr>
+<tr>
+<td><code>redis</code></td>
+<td>redis:7-alpine</td>
+<td>6379→6380</td>
+<td>Online feature store + cache</td>
+</tr>
+<tr>
+<td><code>kafka</code></td>
+<td>apache/kafka:latest</td>
+<td>9092→9094</td>
+<td>Event streaming (KRaft mode)</td>
+</tr>
+<tr>
+<td><code>zookeeper</code></td>
+<td>— (built into KRaft)</td>
+<td>—</td>
+<td>Integrated into Kafka</td>
+</tr>
+<tr>
+<td><code>kafka-ui</code></td>
+<td>provectuslabs/kafka-ui</td>
+<td>8080→8082</td>
+<td>Kafka cluster management UI</td>
+</tr>
+<tr>
+<td><code>mlflow</code></td>
+<td>ghcr.io/mlflow/mlflow</td>
+<td>5000→5001</td>
+<td>Experiment tracking + model registry</td>
+</tr>
+<tr>
+<td><code>prometheus</code></td>
+<td>prom/prometheus</td>
+<td>9090→9091</td>
+<td>Metrics scraping</td>
+</tr>
+<tr>
+<td><code>grafana</code></td>
+<td>grafana/grafana</td>
+<td>3000→3001</td>
+<td>Dashboards (auto-provisioned)</td>
+</tr>
+<tr>
+<td><code>jaeger</code></td>
+<td>jaegertracing/all-in-one</td>
+<td>16686</td>
+<td>Distributed tracing</td>
+</tr>
+<tr>
+<td><code>minio</code></td>
+<td>minio/minio</td>
+<td>9000/9001</td>
+<td>S3-compatible artifact storage</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-airflow-stack-docker-composeairflowyaml">6.2 Airflow Stack (docker-compose.airflow.yaml)</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Port</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>airflow-webserver</code></td>
+<td>8080</td>
+<td>Airflow UI</td>
+</tr>
+<tr>
+<td><code>airflow-scheduler</code></td>
+<td>—</td>
+<td>DAG scheduling</td>
+</tr>
+<tr>
+<td><code>airflow-init</code></td>
+<td>—</td>
+<td>Initialize DB + create admin user</td>
+</tr>
+<tr>
+<td><code>postgres-airflow</code></td>
+<td>5432</td>
+<td>Airflow metadata database</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-data-flow">7. Data Flow</h2>
+<h3 id="71-prediction-data-flow">7.1 Prediction Data Flow</h3>
+<pre class="mermaid"><code>graph TD
+    Client["Client Request"] --&gt; API["FastAPI Router (routes.py)"]
+    API --&gt; Handler["PredictHandler (application/handlers/predict_handler.py)"]
+
+    Handler --&gt; Features{"Feature Retrieval"}
+    Features --&gt;|entity_id provided| FS["FeatureStore.get(id)"]
+    Features --&gt;|raw features| Inference["InferenceService"]
+    FS --&gt; Inference
+
+    Inference --&gt; Router["RoutingStrategy → select model"]
+    Router --&gt; CB{"CircuitBreaker"}
+    CB --&gt;|Proceed| Engine["InferenceEngine.predict(model, features)"]
+    CB --&gt;|OPEN| Error["Return 503 Error"]
+    Engine --&gt; Prediction["Prediction Result"]
+
+    Prediction --&gt; BG["Background Tasks (async)"]
+    BG -.-&gt; PG["Log to PostgreSQL"]
+    BG -.-&gt; Kafka["Publish to Kafka 'inference-events'"]
+    BG -.-&gt; Prom["Publish Prometheus metrics"]
+    BG -.-&gt; EB["Update EventBus subscribers"]
+
+    Prediction --&gt; Return["Return PredictionResponse to Client"]</code></pre>
+<h3 id="72-training-data-flow">7.2 Training Data Flow</h3>
+<pre class="mermaid"><code>graph TD
+    DAG["Airflow DAG (dags/retrain_pipeline.py)"] --&gt; Gen["generate_datasets.py"]
+    Gen --&gt;|"data/{model}/dataset.csv or .npz"| Train["examples/{model}/train.py"]
+
+    Train --&gt; Loader["DataLoader"]
+    Loader --&gt; Fit["sklearn/xgboost model → ONNX export"]
+    Fit --&gt; Save["models/{model}/v1/model.onnx + metrics.json"]
+
+    Save --&gt; Flow["MLflow: log params, metrics, artifacts"]
+    Save --&gt; PG["PostgreSQL: register model version"]
+    PG --&gt; Promote["Promote to champion stage"]
+
+    subgraph "Self-Healing Retrain"
+        Drift["Drift detected"] --&gt; Export["POST /data/export-training"]
+        Export --&gt; Query["Query prediction_logs WHERE ground_truth = true"]
+        Query --&gt; Merge["Merge: baseline + fresh dataset"]
+        Merge --&gt; ReTrain["examples/{model}/train.py --data combined.csv"]
+        ReTrain --&gt; Register["POST /models/register (challenger)"]
+    end</code></pre>
+<h2 id="8-test-architecture">8. Test Architecture</h2>
+<h3 id="81-test-pyramid">8.1 Test Pyramid</h3>
+<table>
+<thead>
+<tr>
+<th>Test Type</th>
+<th>Files</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>E2E</strong></td>
+<td>1 file</td>
+<td>Full flow test across API, DB, and inference</td>
+</tr>
+<tr>
+<td><strong>Integration</strong></td>
+<td>11 files</td>
+<td>API routes and service orchestration</td>
+</tr>
+<tr>
+<td><strong>Unit</strong></td>
+<td>48 files</td>
+<td>Focused testing of Domain, App, Infrastructure layers</td>
+</tr>
+</tbody>
+</table>
+<h3 id="82-coverage">8.2 Coverage</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Files</th>
+<th>Tests</th>
+<th>Coverage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Domain (unit)</td>
+<td>18</td>
+<td>~120</td>
+<td>95%+</td>
+</tr>
+<tr>
+<td>Application (unit)</td>
+<td>8</td>
+<td>~60</td>
+<td>90%+</td>
+</tr>
+<tr>
+<td>Infrastructure (unit)</td>
+<td>24</td>
+<td>~180</td>
+<td>85%+</td>
+</tr>
+<tr>
+<td>Integration</td>
+<td>11</td>
+<td>~50</td>
+<td>—</td>
+</tr>
+<tr>
+<td>E2E</td>
+<td>1</td>
+<td>~10</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Frontend</strong></td>
+<td><strong>16</strong></td>
+<td><strong>104</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>78</strong></td>
+<td><strong>~524</strong></td>
+<td><strong>87% backend</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="83-quality-gates-ci">8.3 Quality Gates (CI)</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-1-1" id="__codelineno-1-1" name="__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>.<span class="w">           </span><span class="c1"># Lint: 0 errors</span>
+<a href="#__codelineno-1-2" id="__codelineno-1-2" name="__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>--check<span class="w"> </span>.<span class="w">  </span><span class="c1"># Format: 243 files consistent</span>
+<a href="#__codelineno-1-3" id="__codelineno-1-3" name="__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>phoenix_ml/<span class="w">               </span><span class="c1"># Type check: 0 issues</span>
+<a href="#__codelineno-1-4" id="__codelineno-1-4" name="__codelineno-1-4"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w">           </span><span class="c1"># Tests: all pass, 87% coverage</span>
+<a href="#__codelineno-1-5" id="__codelineno-1-5" name="__codelineno-1-5"></a>npx<span class="w"> </span>tsc<span class="w"> </span>--noEmit<span class="w">               </span><span class="c1"># Frontend type check: 0 errors</span>
+<a href="#__codelineno-1-6" id="__codelineno-1-6" name="__codelineno-1-6"></a>npx<span class="w"> </span>eslint<span class="w"> </span>phoenix_ml/<span class="w">                </span><span class="c1"># Frontend lint: 0 errors</span>
+<a href="#__codelineno-1-7" id="__codelineno-1-7" name="__codelineno-1-7"></a>npx<span class="w"> </span>vitest<span class="w"> </span>run<span class="w">                 </span><span class="c1"># Frontend tests: 104/104 pass</span>
+</code></pre></div>
+<hr/>
+<p><em>Document Status: v4.0 — Updated March 2026</em></p>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Back to top
+</button>
+</main>
+<footer class="md-footer">
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.sections", "navigation.expand", "content.code.copy", "content.tooltips", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+<script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+</body>
+</html>

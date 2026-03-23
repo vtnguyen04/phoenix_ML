@@ -1,0 +1,1755 @@
+
+<!DOCTYPE html>
+
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta content="High-Throughput Real-time ML Inference System" name="description"/>
+<meta content="Võ Thành Nguyễn" name="author"/>
+<link href="../../deployment/docker-stack/" rel="prev"/>
+<link href="../customization/" rel="next"/>
+<link href="../../assets/images/favicon.png" rel="icon"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.7.1" name="generator"/>
+<title>Monitoring &amp; Alerting - Phoenix ML Platform</title>
+<link href="../../assets/stylesheets/main.484c7ddc.min.css" rel="stylesheet"/>
+<link href="../../assets/stylesheets/palette.ab4e12ef.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CFira+Code:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font:"Inter";--md-code-font:"Fira Code"}</style>
+<script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+</head>
+<body data-md-color-accent="indigo" data-md-color-primary="black" data-md-color-scheme="slate" dir="ltr">
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#monitoring-alerting-guide">
+          Skip to content
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+<nav aria-label="Header" class="md-header__inner md-grid">
+<a aria-label="Phoenix ML Platform" class="md-header__button md-logo" data-md-component="logo" href="../.." title="Phoenix ML Platform">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            Phoenix ML Platform
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              Monitoring &amp; Alerting
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Switch to light mode" class="md-option" data-md-color-accent="indigo" data-md-color-media="" data-md-color-primary="black" data-md-color-scheme="slate" id="__palette_0" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Switch to light mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+<input aria-label="Switch to dark mode" class="md-option" data-md-color-accent="blue" data-md-color-media="" data-md-color-primary="indigo" data-md-color-scheme="default" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_0" hidden="" title="Switch to dark mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+</label>
+</form>
+<script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Search" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Search" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+</label>
+<nav aria-label="Search" class="md-search__options">
+<button aria-label="Clear" class="md-search__icon md-icon" tabindex="-1" title="Clear" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+</button>
+</nav>
+<div class="md-search__suggest" data-md-component="search-suggest"></div>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="" tabindex="0">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Initializing search
+          </div>
+<ol class="md-search-result__list" role="presentation"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="md-header__source">
+<a class="md-source" data-md-component="source" href="https://github.com/vtnguyen04/phoenix_ML" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+</div>
+<div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+</div>
+</nav>
+<nav aria-label="Tabs" class="md-tabs" data-md-component="tabs">
+<div class="md-grid">
+<ul class="md-tabs__list">
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../..">
+        
+  
+  
+    
+  
+  Welcome
+
+      </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../getting-started/">
+          
+  
+  
+  Getting Started
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../architecture/system-design/">
+          
+  
+  
+  Core Concepts
+
+        </a>
+</li>
+<li class="md-tabs__item md-tabs__item--active">
+<a class="md-tabs__link" href="../library-api/">
+          
+  
+  
+  Operations &amp; Guides
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../api/reference/">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../adr/002-use-onnx-runtime/">
+          
+  
+  
+  Architecture Decisions
+
+        </a>
+</li>
+<li class="md-tabs__item">
+<a class="md-tabs__link" href="../../blog/system-design-overview/">
+          
+  
+  
+  Engineering Blog
+
+        </a>
+</li>
+</ul>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Navigation" class="md-nav md-nav--primary md-nav--lifted" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="Phoenix ML Platform" class="md-nav__button md-logo" data-md-component="logo" href="../.." title="Phoenix ML Platform">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+</a>
+    Phoenix ML Platform
+  </label>
+<div class="md-nav__source">
+<a class="md-source" data-md-component="source" href="https://github.com/vtnguyen04/phoenix_ML" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+</div>
+<div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+</div>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../..">
+<span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../getting-started/">
+<span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_2_2" type="checkbox"/>
+<label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_2_2_label" class="md-nav" data-md-level="2">
+<label class="md-nav__title" for="__nav_2_2">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/sentiment-analysis/">
+<span class="md-ellipsis">
+    
+  
+    Sentiment Analysis
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/credit-risk/">
+<span class="md-ellipsis">
+    
+  
+    Credit Risk
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/fraud-detection/">
+<span class="md-ellipsis">
+    
+  
+    Fraud Detection
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/house-price/">
+<span class="md-ellipsis">
+    
+  
+    House Price
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../tutorials/image-classification/">
+<span class="md-ellipsis">
+    
+  
+    Image Classification
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_3" type="checkbox"/>
+<label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_3_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_3">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../architecture/system-design/">
+<span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../project-structure/">
+<span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../frontend/architecture/">
+<span class="md-ellipsis">
+    
+  
+    Frontend
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+<input checked="" class="md-nav__toggle md-toggle" id="__nav_4" type="checkbox"/>
+<label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+<span class="md-ellipsis">
+    
+  
+    Operations &amp; Guides
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="true" aria-labelledby="__nav_4_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_4">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Operations &amp; Guides
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../library-api/">
+<span class="md-ellipsis">
+    
+  
+    Library API
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../deployment/docker-stack/">
+<span class="md-ellipsis">
+    
+  
+    Deployment Stack
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--active">
+<input class="md-nav__toggle md-toggle" id="__toc" type="checkbox"/>
+<label class="md-nav__link md-nav__link--active" for="__toc">
+<span class="md-ellipsis">
+    
+  
+    Monitoring &amp; Alerting
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<a class="md-nav__link md-nav__link--active" href="./">
+<span class="md-ellipsis">
+    
+  
+    Monitoring &amp; Alerting
+  
+
+    
+  </span>
+</a>
+<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#overview">
+<span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#drift-detection">
+<span class="md-ellipsis">
+      
+        Drift Detection
+      
+    </span>
+</a>
+<nav aria-label="Drift Detection" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#algorithms">
+<span class="md-ellipsis">
+      
+        Algorithms
+      
+    </span>
+</a>
+<nav aria-label="Algorithms" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#1-kolmogorov-smirnov-test-ks">
+<span class="md-ellipsis">
+      
+        1. Kolmogorov-Smirnov Test (ks)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#2-population-stability-index-psi">
+<span class="md-ellipsis">
+      
+        2. Population Stability Index (psi)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#3-chi-squared-test-chi2">
+<span class="md-ellipsis">
+      
+        3. Chi-squared Test (chi2)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#configure-drift-detection">
+<span class="md-ellipsis">
+      
+        Configure Drift Detection
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#monitoring-loop">
+<span class="md-ellipsis">
+      
+        Monitoring Loop
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#anomaly-detection">
+<span class="md-ellipsis">
+      
+        Anomaly Detection
+      
+    </span>
+</a>
+<nav aria-label="Anomaly Detection" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#z-score-method">
+<span class="md-ellipsis">
+      
+        Z-Score Method
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#iqr-method">
+<span class="md-ellipsis">
+      
+        IQR Method
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#alerting-system">
+<span class="md-ellipsis">
+      
+        Alerting System
+      
+    </span>
+</a>
+<nav aria-label="Alerting System" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#alert-rules">
+<span class="md-ellipsis">
+      
+        Alert Rules
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#alert-notifier-webhooks">
+<span class="md-ellipsis">
+      
+        Alert Notifier (Webhooks)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#model-evaluation">
+<span class="md-ellipsis">
+      
+        Model Evaluation
+      
+    </span>
+</a>
+<nav aria-label="Model Evaluation" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#classification-metrics">
+<span class="md-ellipsis">
+      
+        Classification Metrics
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#regression-metrics">
+<span class="md-ellipsis">
+      
+        Regression Metrics
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#auto-rollback">
+<span class="md-ellipsis">
+      
+        Auto-Rollback
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#prometheus-metrics">
+<span class="md-ellipsis">
+      
+        Prometheus Metrics
+      
+    </span>
+</a>
+<nav aria-label="Prometheus Metrics" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#available-metrics">
+<span class="md-ellipsis">
+      
+        Available Metrics
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#promql-examples">
+<span class="md-ellipsis">
+      
+        PromQL Examples
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#grafana-dashboards">
+<span class="md-ellipsis">
+      
+        Grafana Dashboards
+      
+    </span>
+</a>
+<nav aria-label="Grafana Dashboards" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#auto-provisioned-dashboard">
+<span class="md-ellipsis">
+      
+        Auto-provisioned Dashboard
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#distributed-tracing-jaeger">
+<span class="md-ellipsis">
+      
+        Distributed Tracing (Jaeger)
+      
+    </span>
+</a>
+<nav aria-label="Distributed Tracing (Jaeger)" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#setup">
+<span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#trace-attributes">
+<span class="md-ellipsis">
+      
+        Trace Attributes
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#self-healing-pipeline">
+<span class="md-ellipsis">
+      
+        Self-Healing Pipeline
+      
+    </span>
+</a>
+<nav aria-label="Self-Healing Pipeline" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#full-flow">
+<span class="md-ellipsis">
+      
+        Full Flow
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#end-to-end-simulation">
+<span class="md-ellipsis">
+      
+        End-to-End Simulation
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#manual-trigger">
+<span class="md-ellipsis">
+      
+        Manual Trigger
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../customization/">
+<span class="md-ellipsis">
+    
+  
+    Customization
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../troubleshooting/">
+<span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../api/reference/">
+<span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_6" type="checkbox"/>
+<label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_6_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_6">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture Decisions
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/002-use-onnx-runtime/">
+<span class="md-ellipsis">
+    
+  
+    002 - ONNX Runtime
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/003-use-kafka-for-event-streaming/">
+<span class="md-ellipsis">
+    
+  
+    003 - Kafka Streaming
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/004-observability-with-prometheus-grafana/">
+<span class="md-ellipsis">
+    
+  
+    004 - Observability
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../adr/005-dvc-data-versioning/">
+<span class="md-ellipsis">
+    
+  
+    005 - DVC Versioning
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle md-toggle--indeterminate" id="__nav_7" type="checkbox"/>
+<label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+<span class="md-ellipsis">
+    
+  
+    Engineering Blog
+  
+
+    
+  </span>
+<span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-expanded="false" aria-labelledby="__nav_7_label" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_7">
+<span class="md-nav__icon md-icon"></span>
+            
+  
+    Engineering Blog
+  
+
+          </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../blog/system-design-overview/">
+<span class="md-ellipsis">
+    
+  
+    System Design
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../blog/self-healing-ml/">
+<span class="md-ellipsis">
+    
+  
+    Self-Healing ML
+  
+
+    
+  </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../blog/performance-optimization/">
+<span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#overview">
+<span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#drift-detection">
+<span class="md-ellipsis">
+      
+        Drift Detection
+      
+    </span>
+</a>
+<nav aria-label="Drift Detection" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#algorithms">
+<span class="md-ellipsis">
+      
+        Algorithms
+      
+    </span>
+</a>
+<nav aria-label="Algorithms" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#1-kolmogorov-smirnov-test-ks">
+<span class="md-ellipsis">
+      
+        1. Kolmogorov-Smirnov Test (ks)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#2-population-stability-index-psi">
+<span class="md-ellipsis">
+      
+        2. Population Stability Index (psi)
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#3-chi-squared-test-chi2">
+<span class="md-ellipsis">
+      
+        3. Chi-squared Test (chi2)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#configure-drift-detection">
+<span class="md-ellipsis">
+      
+        Configure Drift Detection
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#monitoring-loop">
+<span class="md-ellipsis">
+      
+        Monitoring Loop
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#anomaly-detection">
+<span class="md-ellipsis">
+      
+        Anomaly Detection
+      
+    </span>
+</a>
+<nav aria-label="Anomaly Detection" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#z-score-method">
+<span class="md-ellipsis">
+      
+        Z-Score Method
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#iqr-method">
+<span class="md-ellipsis">
+      
+        IQR Method
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#alerting-system">
+<span class="md-ellipsis">
+      
+        Alerting System
+      
+    </span>
+</a>
+<nav aria-label="Alerting System" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#alert-rules">
+<span class="md-ellipsis">
+      
+        Alert Rules
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#alert-notifier-webhooks">
+<span class="md-ellipsis">
+      
+        Alert Notifier (Webhooks)
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#model-evaluation">
+<span class="md-ellipsis">
+      
+        Model Evaluation
+      
+    </span>
+</a>
+<nav aria-label="Model Evaluation" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#classification-metrics">
+<span class="md-ellipsis">
+      
+        Classification Metrics
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#regression-metrics">
+<span class="md-ellipsis">
+      
+        Regression Metrics
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#auto-rollback">
+<span class="md-ellipsis">
+      
+        Auto-Rollback
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#prometheus-metrics">
+<span class="md-ellipsis">
+      
+        Prometheus Metrics
+      
+    </span>
+</a>
+<nav aria-label="Prometheus Metrics" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#available-metrics">
+<span class="md-ellipsis">
+      
+        Available Metrics
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#promql-examples">
+<span class="md-ellipsis">
+      
+        PromQL Examples
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#grafana-dashboards">
+<span class="md-ellipsis">
+      
+        Grafana Dashboards
+      
+    </span>
+</a>
+<nav aria-label="Grafana Dashboards" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#auto-provisioned-dashboard">
+<span class="md-ellipsis">
+      
+        Auto-provisioned Dashboard
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#distributed-tracing-jaeger">
+<span class="md-ellipsis">
+      
+        Distributed Tracing (Jaeger)
+      
+    </span>
+</a>
+<nav aria-label="Distributed Tracing (Jaeger)" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#setup">
+<span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#trace-attributes">
+<span class="md-ellipsis">
+      
+        Trace Attributes
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#self-healing-pipeline">
+<span class="md-ellipsis">
+      
+        Self-Healing Pipeline
+      
+    </span>
+</a>
+<nav aria-label="Self-Healing Pipeline" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#full-flow">
+<span class="md-ellipsis">
+      
+        Full Flow
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#end-to-end-simulation">
+<span class="md-ellipsis">
+      
+        End-to-End Simulation
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#manual-trigger">
+<span class="md-ellipsis">
+      
+        Manual Trigger
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<h1 id="monitoring-alerting-guide">Monitoring &amp; Alerting Guide</h1>
+<p>Detailed guide to the monitoring, drift detection, anomaly detection, alerting, and self-healing systems.</p>
+<h2 id="overview">Overview</h2>
+<pre class="mermaid"><code>graph TD
+    subgraph "Data Collection"
+        API["Phoenix API"] --&gt;|"/metrics"| PROM["Prometheus"]
+        API --&gt;|logs| PG["PostgreSQL&lt;br/&gt;(prediction_logs)"]
+    end
+
+    subgraph "Analysis"
+        LOOP["Monitoring Loop&lt;br/&gt;(every 30s)"] --&gt; DC["DriftCalculator"]
+        LOOP --&gt; AD["AnomalyDetector"]
+        LOOP --&gt; ME["ModelEvaluator"]
+    end
+
+    subgraph "Response"
+        DC --&gt; AM["AlertManager&lt;br/&gt;(Rules + Cooldown)"]
+        AD --&gt; AM
+        AM --&gt; AN["AlertNotifier&lt;br/&gt;(Slack/Discord)"]
+        AM --&gt; RM["RollbackManager"]
+    end
+
+    subgraph "Visualization"
+        PROM --&gt; GRAF["Grafana&lt;br/&gt;Dashboards"]
+        API --&gt; JAEG["Jaeger&lt;br/&gt;Tracing"]
+    end
+
+    PG --&gt; LOOP</code></pre>
+<h2 id="drift-detection">Drift Detection</h2>
+<h3 id="algorithms">Algorithms</h3>
+<p>Phoenix ML supports 3 drift detection algorithms, configurable per model:</p>
+<h4 id="1-kolmogorov-smirnov-test-ks">1. Kolmogorov-Smirnov Test (<code>ks</code>)</h4>
+<p><strong>When to use</strong>: Continuous features, general purpose</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.domain.monitoring.services.drift_calculator</span><span class="w"> </span><span class="kn">import</span> <span class="n">DriftCalculator</span>
+<a href="#__codelineno-0-2" id="__codelineno-0-2" name="__codelineno-0-2"></a>
+<a href="#__codelineno-0-3" id="__codelineno-0-3" name="__codelineno-0-3"></a><span class="n">calc</span> <span class="o">=</span> <span class="n">DriftCalculator</span><span class="p">()</span>
+<a href="#__codelineno-0-4" id="__codelineno-0-4" name="__codelineno-0-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">calc</span><span class="o">.</span><span class="n">calculate_ks</span><span class="p">(</span>
+<a href="#__codelineno-0-5" id="__codelineno-0-5" name="__codelineno-0-5"></a>    <span class="n">reference</span><span class="o">=</span><span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span>   <span class="c1"># training data distribution</span>
+<a href="#__codelineno-0-6" id="__codelineno-0-6" name="__codelineno-0-6"></a>    <span class="n">current</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.65</span><span class="p">]</span>       <span class="c1"># production data distribution</span>
+<a href="#__codelineno-0-7" id="__codelineno-0-7" name="__codelineno-0-7"></a><span class="p">)</span>
+<a href="#__codelineno-0-8" id="__codelineno-0-8" name="__codelineno-0-8"></a><span class="c1"># DriftResult(score=1.0, is_drifted=True)</span>
+</code></pre></div>
+<p><strong>Principle</strong>: Compares 2 cumulative distribution functions. Score = max distance between 2 CDFs.</p>
+<table>
+<thead>
+<tr>
+<th>Score</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.0 - 0.1</td>
+<td>No drift</td>
+</tr>
+<tr>
+<td>0.1 - 0.3</td>
+<td>Moderate drift</td>
+</tr>
+<tr>
+<td>&gt; 0.3</td>
+<td>Significant drift (default threshold)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="2-population-stability-index-psi">2. Population Stability Index (<code>psi</code>)</h4>
+<p><strong>When to use</strong>: Binned distributions, fraud detection</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-1-1" id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">calc</span><span class="o">.</span><span class="n">calculate_psi</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Principle</strong>: Bins data and compares the ratio of each bin between reference and current.</p>
+<table>
+<thead>
+<tr>
+<th>PSI</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt; 0.1</td>
+<td>No shift</td>
+</tr>
+<tr>
+<td>0.1 - 0.25</td>
+<td>Moderate shift</td>
+</tr>
+<tr>
+<td>&gt; 0.25</td>
+<td>Significant shift</td>
+</tr>
+</tbody>
+</table>
+<h4 id="3-chi-squared-test-chi2">3. Chi-squared Test (<code>chi2</code>)</h4>
+<p><strong>When to use</strong>: Categorical features</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-2-1" id="__codelineno-2-1" name="__codelineno-2-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">calc</span><span class="o">.</span><span class="n">calculate_chi2</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Principle</strong>: Compares observed vs expected frequencies. High chi2 = significant difference.</p>
+<h3 id="configure-drift-detection">Configure Drift Detection</h3>
+<p>Per-model config in <code>model_configs/&lt;model&gt;.yaml</code>:</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-3-1" id="__codelineno-3-1" name="__codelineno-3-1"></a><span class="c1"># model_configs/credit-risk.yaml</span>
+<a href="#__codelineno-3-2" id="__codelineno-3-2" name="__codelineno-3-2"></a><span class="nt">monitoring</span><span class="p">:</span>
+<a href="#__codelineno-3-3" id="__codelineno-3-3" name="__codelineno-3-3"></a><span class="w">  </span><span class="nt">drift_test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ks</span><span class="w">           </span><span class="c1"># Algorithm</span>
+<a href="#__codelineno-3-4" id="__codelineno-3-4" name="__codelineno-3-4"></a><span class="w">  </span><span class="nt">drift_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span><span class="w">     </span><span class="c1"># Threshold for alert</span>
+</code></pre></div>
+<p>Global config in <code>.env</code>:</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-4-1" id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="nv">MONITORING_INTERVAL_SECONDS</span><span class="o">=</span><span class="m">30</span><span class="w">   </span><span class="c1"># Check frequency</span>
+<a href="#__codelineno-4-2" id="__codelineno-4-2" name="__codelineno-4-2"></a><span class="nv">DRIFT_THRESHOLD</span><span class="o">=</span><span class="m">0</span>.3<span class="w">              </span><span class="c1"># Default threshold</span>
+</code></pre></div>
+<h3 id="monitoring-loop">Monitoring Loop</h3>
+<p><code>MonitoringService</code> runs a background loop in <code>lifespan.py</code>:</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-5-1" id="__codelineno-5-1" name="__codelineno-5-1"></a><span class="c1"># Every MONITORING_INTERVAL_SECONDS:</span>
+<a href="#__codelineno-5-2" id="__codelineno-5-2" name="__codelineno-5-2"></a><span class="k">for</span> <span class="n">model_id</span> <span class="ow">in</span> <span class="n">all_models</span><span class="p">:</span>
+<a href="#__codelineno-5-3" id="__codelineno-5-3" name="__codelineno-5-3"></a>    <span class="c1"># 1. Get recent prediction logs</span>
+<a href="#__codelineno-5-4" id="__codelineno-5-4" name="__codelineno-5-4"></a>    <span class="n">logs</span> <span class="o">=</span> <span class="k">await</span> <span class="n">log_repo</span><span class="o">.</span><span class="n">get_recent</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a href="#__codelineno-5-5" id="__codelineno-5-5" name="__codelineno-5-5"></a>
+<a href="#__codelineno-5-6" id="__codelineno-5-6" name="__codelineno-5-6"></a>    <span class="c1"># 2. Get reference data</span>
+<a href="#__codelineno-5-7" id="__codelineno-5-7" name="__codelineno-5-7"></a>    <span class="n">reference</span> <span class="o">=</span> <span class="n">load_reference_data</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span>
+<a href="#__codelineno-5-8" id="__codelineno-5-8" name="__codelineno-5-8"></a>
+<a href="#__codelineno-5-9" id="__codelineno-5-9" name="__codelineno-5-9"></a>    <span class="c1"># 3. Calculate drift</span>
+<a href="#__codelineno-5-10" id="__codelineno-5-10" name="__codelineno-5-10"></a>    <span class="n">drift</span> <span class="o">=</span> <span class="n">calculator</span><span class="o">.</span><span class="n">calculate</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">current_features</span><span class="p">)</span>
+<a href="#__codelineno-5-11" id="__codelineno-5-11" name="__codelineno-5-11"></a>
+<a href="#__codelineno-5-12" id="__codelineno-5-12" name="__codelineno-5-12"></a>    <span class="c1"># 4. Save report</span>
+<a href="#__codelineno-5-13" id="__codelineno-5-13" name="__codelineno-5-13"></a>    <span class="k">await</span> <span class="n">drift_repo</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">DriftReport</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+<a href="#__codelineno-5-14" id="__codelineno-5-14" name="__codelineno-5-14"></a>
+<a href="#__codelineno-5-15" id="__codelineno-5-15" name="__codelineno-5-15"></a>    <span class="c1"># 5. Publish metrics</span>
+<a href="#__codelineno-5-16" id="__codelineno-5-16" name="__codelineno-5-16"></a>    <span class="n">metrics_publisher</span><span class="o">.</span><span class="n">publish_drift_score</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">drift</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>
+<a href="#__codelineno-5-17" id="__codelineno-5-17" name="__codelineno-5-17"></a>
+<a href="#__codelineno-5-18" id="__codelineno-5-18" name="__codelineno-5-18"></a>    <span class="c1"># 6. Check alerts</span>
+<a href="#__codelineno-5-19" id="__codelineno-5-19" name="__codelineno-5-19"></a>    <span class="k">if</span> <span class="n">drift</span><span class="o">.</span><span class="n">is_drifted</span><span class="p">:</span>
+<a href="#__codelineno-5-20" id="__codelineno-5-20" name="__codelineno-5-20"></a>        <span class="n">event_bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">DriftDetected</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">drift</span><span class="o">.</span><span class="n">score</span><span class="p">))</span>
+</code></pre></div>
+<h2 id="anomaly-detection">Anomaly Detection</h2>
+<h3 id="z-score-method">Z-Score Method</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-6-1" id="__codelineno-6-1" name="__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.domain.monitoring.services.anomaly_detector</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnomalyDetector</span>
+<a href="#__codelineno-6-2" id="__codelineno-6-2" name="__codelineno-6-2"></a>
+<a href="#__codelineno-6-3" id="__codelineno-6-3" name="__codelineno-6-3"></a><span class="n">detector</span> <span class="o">=</span> <span class="n">AnomalyDetector</span><span class="p">()</span>
+<a href="#__codelineno-6-4" id="__codelineno-6-4" name="__codelineno-6-4"></a><span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">11</span><span class="p">]</span>  <span class="c1"># 100 is anomaly</span>
+<a href="#__codelineno-6-5" id="__codelineno-6-5" name="__codelineno-6-5"></a><span class="n">anomalies</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">detect_zscore</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+<a href="#__codelineno-6-6" id="__codelineno-6-6" name="__codelineno-6-6"></a><span class="c1"># Returns indices: [4]</span>
+</code></pre></div>
+<h3 id="iqr-method">IQR Method</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-7-1" id="__codelineno-7-1" name="__codelineno-7-1"></a><span class="n">anomalies</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">detect_iqr</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+<a href="#__codelineno-7-2" id="__codelineno-7-2" name="__codelineno-7-2"></a><span class="c1"># Uses Interquartile Range: Q1 - 1.5*IQR to Q3 + 1.5*IQR</span>
+</code></pre></div>
+<h2 id="alerting-system">Alerting System</h2>
+<h3 id="alert-rules">Alert Rules</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-8-1" id="__codelineno-8-1" name="__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.domain.monitoring.services.alert_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">AlertManager</span><span class="p">,</span> <span class="n">AlertRule</span>
+<a href="#__codelineno-8-2" id="__codelineno-8-2" name="__codelineno-8-2"></a>
+<a href="#__codelineno-8-3" id="__codelineno-8-3" name="__codelineno-8-3"></a><span class="n">rules</span> <span class="o">=</span> <span class="p">[</span>
+<a href="#__codelineno-8-4" id="__codelineno-8-4" name="__codelineno-8-4"></a>    <span class="n">AlertRule</span><span class="p">(</span>
+<a href="#__codelineno-8-5" id="__codelineno-8-5" name="__codelineno-8-5"></a>        <span class="n">name</span><span class="o">=</span><span class="s2">"high_drift_score"</span><span class="p">,</span>
+<a href="#__codelineno-8-6" id="__codelineno-8-6" name="__codelineno-8-6"></a>        <span class="n">metric</span><span class="o">=</span><span class="s2">"drift_score"</span><span class="p">,</span>
+<a href="#__codelineno-8-7" id="__codelineno-8-7" name="__codelineno-8-7"></a>        <span class="n">threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+<a href="#__codelineno-8-8" id="__codelineno-8-8" name="__codelineno-8-8"></a>        <span class="n">severity</span><span class="o">=</span><span class="s2">"CRITICAL"</span><span class="p">,</span>       <span class="c1"># INFO, WARNING, CRITICAL</span>
+<a href="#__codelineno-8-9" id="__codelineno-8-9" name="__codelineno-8-9"></a>        <span class="n">comparison</span><span class="o">=</span><span class="s2">"gt"</span><span class="p">,</span>           <span class="c1"># gt (greater than), lt (less than)</span>
+<a href="#__codelineno-8-10" id="__codelineno-8-10" name="__codelineno-8-10"></a>        <span class="n">cooldown_seconds</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>      <span class="c1"># Don't re-alert for 5 minutes</span>
+<a href="#__codelineno-8-11" id="__codelineno-8-11" name="__codelineno-8-11"></a>    <span class="p">),</span>
+<a href="#__codelineno-8-12" id="__codelineno-8-12" name="__codelineno-8-12"></a>    <span class="n">AlertRule</span><span class="p">(</span>
+<a href="#__codelineno-8-13" id="__codelineno-8-13" name="__codelineno-8-13"></a>        <span class="n">name</span><span class="o">=</span><span class="s2">"low_model_accuracy"</span><span class="p">,</span>
+<a href="#__codelineno-8-14" id="__codelineno-8-14" name="__codelineno-8-14"></a>        <span class="n">metric</span><span class="o">=</span><span class="s2">"accuracy"</span><span class="p">,</span>
+<a href="#__codelineno-8-15" id="__codelineno-8-15" name="__codelineno-8-15"></a>        <span class="n">threshold</span><span class="o">=</span><span class="mf">0.85</span><span class="p">,</span>
+<a href="#__codelineno-8-16" id="__codelineno-8-16" name="__codelineno-8-16"></a>        <span class="n">severity</span><span class="o">=</span><span class="s2">"WARNING"</span><span class="p">,</span>
+<a href="#__codelineno-8-17" id="__codelineno-8-17" name="__codelineno-8-17"></a>        <span class="n">comparison</span><span class="o">=</span><span class="s2">"lt"</span><span class="p">,</span>
+<a href="#__codelineno-8-18" id="__codelineno-8-18" name="__codelineno-8-18"></a>        <span class="n">cooldown_seconds</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+<a href="#__codelineno-8-19" id="__codelineno-8-19" name="__codelineno-8-19"></a>    <span class="p">),</span>
+<a href="#__codelineno-8-20" id="__codelineno-8-20" name="__codelineno-8-20"></a>    <span class="n">AlertRule</span><span class="p">(</span>
+<a href="#__codelineno-8-21" id="__codelineno-8-21" name="__codelineno-8-21"></a>        <span class="n">name</span><span class="o">=</span><span class="s2">"high_latency"</span><span class="p">,</span>
+<a href="#__codelineno-8-22" id="__codelineno-8-22" name="__codelineno-8-22"></a>        <span class="n">metric</span><span class="o">=</span><span class="s2">"latency_p99"</span><span class="p">,</span>
+<a href="#__codelineno-8-23" id="__codelineno-8-23" name="__codelineno-8-23"></a>        <span class="n">threshold</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>             <span class="c1"># ms</span>
+<a href="#__codelineno-8-24" id="__codelineno-8-24" name="__codelineno-8-24"></a>        <span class="n">severity</span><span class="o">=</span><span class="s2">"WARNING"</span><span class="p">,</span>
+<a href="#__codelineno-8-25" id="__codelineno-8-25" name="__codelineno-8-25"></a>        <span class="n">comparison</span><span class="o">=</span><span class="s2">"gt"</span><span class="p">,</span>
+<a href="#__codelineno-8-26" id="__codelineno-8-26" name="__codelineno-8-26"></a>    <span class="p">),</span>
+<a href="#__codelineno-8-27" id="__codelineno-8-27" name="__codelineno-8-27"></a><span class="p">]</span>
+</code></pre></div>
+<h3 id="alert-notifier-webhooks">Alert Notifier (Webhooks)</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-9-1" id="__codelineno-9-1" name="__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.infrastructure.monitoring.alert_notifier</span><span class="w"> </span><span class="kn">import</span> <span class="n">AlertNotifier</span>
+<a href="#__codelineno-9-2" id="__codelineno-9-2" name="__codelineno-9-2"></a>
+<a href="#__codelineno-9-3" id="__codelineno-9-3" name="__codelineno-9-3"></a><span class="n">notifier</span> <span class="o">=</span> <span class="n">AlertNotifier</span><span class="p">(</span><span class="n">webhook_url</span><span class="o">=</span><span class="s2">"https://hooks.slack.com/services/xxx"</span><span class="p">)</span>
+<a href="#__codelineno-9-4" id="__codelineno-9-4" name="__codelineno-9-4"></a><span class="k">await</span> <span class="n">notifier</span><span class="o">.</span><span class="n">notify</span><span class="p">(</span><span class="n">alert</span><span class="p">)</span>
+</code></pre></div>
+<p>Payload format (Slack-compatible):</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-10-1" id="__codelineno-10-1" name="__codelineno-10-1"></a><span class="p">{</span>
+<a href="#__codelineno-10-2" id="__codelineno-10-2" name="__codelineno-10-2"></a><span class="w">  </span><span class="nt">"blocks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a href="#__codelineno-10-3" id="__codelineno-10-3" name="__codelineno-10-3"></a><span class="w">    </span><span class="p">{</span>
+<a href="#__codelineno-10-4" id="__codelineno-10-4" name="__codelineno-10-4"></a><span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"header"</span><span class="p">,</span>
+<a href="#__codelineno-10-5" id="__codelineno-10-5" name="__codelineno-10-5"></a><span class="w">      </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"plain_text"</span><span class="p">,</span><span class="w"> </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"🚨 Phoenix ML Alert"</span><span class="p">}</span>
+<a href="#__codelineno-10-6" id="__codelineno-10-6" name="__codelineno-10-6"></a><span class="w">    </span><span class="p">},</span>
+<a href="#__codelineno-10-7" id="__codelineno-10-7" name="__codelineno-10-7"></a><span class="w">    </span><span class="p">{</span>
+<a href="#__codelineno-10-8" id="__codelineno-10-8" name="__codelineno-10-8"></a><span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"section"</span><span class="p">,</span>
+<a href="#__codelineno-10-9" id="__codelineno-10-9" name="__codelineno-10-9"></a><span class="w">      </span><span class="nt">"fields"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a href="#__codelineno-10-10" id="__codelineno-10-10" name="__codelineno-10-10"></a><span class="w">        </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mrkdwn"</span><span class="p">,</span><span class="w"> </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*Alert:* high_drift_score"</span><span class="p">},</span>
+<a href="#__codelineno-10-11" id="__codelineno-10-11" name="__codelineno-10-11"></a><span class="w">        </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mrkdwn"</span><span class="p">,</span><span class="w"> </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*Severity:* CRITICAL"</span><span class="p">},</span>
+<a href="#__codelineno-10-12" id="__codelineno-10-12" name="__codelineno-10-12"></a><span class="w">        </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mrkdwn"</span><span class="p">,</span><span class="w"> </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*Model:* credit-risk"</span><span class="p">},</span>
+<a href="#__codelineno-10-13" id="__codelineno-10-13" name="__codelineno-10-13"></a><span class="w">        </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mrkdwn"</span><span class="p">,</span><span class="w"> </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"*Value:* 0.45"</span><span class="p">}</span>
+<a href="#__codelineno-10-14" id="__codelineno-10-14" name="__codelineno-10-14"></a><span class="w">      </span><span class="p">]</span>
+<a href="#__codelineno-10-15" id="__codelineno-10-15" name="__codelineno-10-15"></a><span class="w">    </span><span class="p">}</span>
+<a href="#__codelineno-10-16" id="__codelineno-10-16" name="__codelineno-10-16"></a><span class="w">  </span><span class="p">]</span>
+<a href="#__codelineno-10-17" id="__codelineno-10-17" name="__codelineno-10-17"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="model-evaluation">Model Evaluation</h2>
+<h3 id="classification-metrics">Classification Metrics</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-11-1" id="__codelineno-11-1" name="__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.domain.monitoring.services.model_evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_evaluator</span>
+<a href="#__codelineno-11-2" id="__codelineno-11-2" name="__codelineno-11-2"></a>
+<a href="#__codelineno-11-3" id="__codelineno-11-3" name="__codelineno-11-3"></a><span class="n">evaluator</span> <span class="o">=</span> <span class="n">get_evaluator</span><span class="p">(</span><span class="s2">"classification"</span><span class="p">)</span>
+<a href="#__codelineno-11-4" id="__codelineno-11-4" name="__codelineno-11-4"></a><span class="n">metrics</span> <span class="o">=</span> <span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">)</span>
+<a href="#__codelineno-11-5" id="__codelineno-11-5" name="__codelineno-11-5"></a><span class="c1"># Returns: {"accuracy": 0.95, "f1_score": 0.93, "precision": 0.94, "recall": 0.92}</span>
+</code></pre></div>
+<h3 id="regression-metrics">Regression Metrics</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-12-1" id="__codelineno-12-1" name="__codelineno-12-1"></a><span class="n">evaluator</span> <span class="o">=</span> <span class="n">get_evaluator</span><span class="p">(</span><span class="s2">"regression"</span><span class="p">)</span>
+<a href="#__codelineno-12-2" id="__codelineno-12-2" name="__codelineno-12-2"></a><span class="n">metrics</span> <span class="o">=</span> <span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">)</span>
+<a href="#__codelineno-12-3" id="__codelineno-12-3" name="__codelineno-12-3"></a><span class="c1"># Returns: {"rmse": 0.15, "mae": 0.12, "r2": 0.95}</span>
+</code></pre></div>
+<h2 id="auto-rollback">Auto-Rollback</h2>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-13-1" id="__codelineno-13-1" name="__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.domain.monitoring.services.rollback_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">RollbackManager</span>
+<a href="#__codelineno-13-2" id="__codelineno-13-2" name="__codelineno-13-2"></a>
+<a href="#__codelineno-13-3" id="__codelineno-13-3" name="__codelineno-13-3"></a><span class="n">rollback_manager</span> <span class="o">=</span> <span class="n">RollbackManager</span><span class="p">()</span>
+<a href="#__codelineno-13-4" id="__codelineno-13-4" name="__codelineno-13-4"></a><span class="n">decision</span> <span class="o">=</span> <span class="n">rollback_manager</span><span class="o">.</span><span class="n">evaluate_rollback</span><span class="p">(</span>
+<a href="#__codelineno-13-5" id="__codelineno-13-5" name="__codelineno-13-5"></a>    <span class="n">model_id</span><span class="o">=</span><span class="s2">"credit-risk"</span><span class="p">,</span>
+<a href="#__codelineno-13-6" id="__codelineno-13-6" name="__codelineno-13-6"></a>    <span class="n">current_accuracy</span><span class="o">=</span><span class="mf">0.72</span><span class="p">,</span>      <span class="c1"># Below threshold</span>
+<a href="#__codelineno-13-7" id="__codelineno-13-7" name="__codelineno-13-7"></a>    <span class="n">threshold</span><span class="o">=</span><span class="mf">0.85</span><span class="p">,</span>
+<a href="#__codelineno-13-8" id="__codelineno-13-8" name="__codelineno-13-8"></a>    <span class="n">champion_version</span><span class="o">=</span><span class="s2">"v1"</span><span class="p">,</span>
+<a href="#__codelineno-13-9" id="__codelineno-13-9" name="__codelineno-13-9"></a>    <span class="n">challenger_versions</span><span class="o">=</span><span class="p">[</span><span class="s2">"v2"</span><span class="p">,</span> <span class="s2">"v3"</span><span class="p">]</span>
+<a href="#__codelineno-13-10" id="__codelineno-13-10" name="__codelineno-13-10"></a><span class="p">)</span>
+<a href="#__codelineno-13-11" id="__codelineno-13-11" name="__codelineno-13-11"></a><span class="c1"># decision.should_rollback = True</span>
+<a href="#__codelineno-13-12" id="__codelineno-13-12" name="__codelineno-13-12"></a><span class="c1"># Action: archive v2, v3 → keep v1 as champion</span>
+</code></pre></div>
+<h2 id="prometheus-metrics">Prometheus Metrics</h2>
+<h3 id="available-metrics">Available Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Type</th>
+<th>Prometheus Query Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phoenix_prediction_count</code></td>
+<td>Counter</td>
+<td><code>rate(phoenix_prediction_count[5m])</code></td>
+</tr>
+<tr>
+<td><code>phoenix_inference_latency_ms</code></td>
+<td>Histogram</td>
+<td><code>histogram_quantile(0.99, phoenix_inference_latency_ms_bucket)</code></td>
+</tr>
+<tr>
+<td><code>phoenix_drift_score</code></td>
+<td>Gauge</td>
+<td><code>phoenix_drift_score{model_id="credit-risk"}</code></td>
+</tr>
+<tr>
+<td><code>phoenix_model_accuracy</code></td>
+<td>Gauge</td>
+<td><code>phoenix_model_accuracy{model_id="credit-risk"}</code></td>
+</tr>
+<tr>
+<td><code>phoenix_drift_detected_total</code></td>
+<td>Counter</td>
+<td><code>increase(phoenix_drift_detected_total[1h])</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="promql-examples">PromQL Examples</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-14-1" id="__codelineno-14-1" name="__codelineno-14-1"></a><span class="c1"># P99 latency over last 5 minutes</span>
+<a href="#__codelineno-14-2" id="__codelineno-14-2" name="__codelineno-14-2"></a><span class="kr">histogram_quantile</span><span class="o">(</span><span class="mf">0.99</span><span class="p">,</span><span class="w"> </span><span class="kr">rate</span><span class="o">(</span><span class="nv">phoenix_inference_latency_ms_bucket</span><span class="p">[</span><span class="s">5m</span><span class="p">]</span><span class="o">))</span>
+<a href="#__codelineno-14-3" id="__codelineno-14-3" name="__codelineno-14-3"></a>
+<a href="#__codelineno-14-4" id="__codelineno-14-4" name="__codelineno-14-4"></a><span class="c1"># Requests per second</span>
+<a href="#__codelineno-14-5" id="__codelineno-14-5" name="__codelineno-14-5"></a><span class="kr">rate</span><span class="o">(</span><span class="nv">phoenix_prediction_count</span><span class="p">[</span><span class="s">1m</span><span class="p">]</span><span class="o">)</span>
+<a href="#__codelineno-14-6" id="__codelineno-14-6" name="__codelineno-14-6"></a>
+<a href="#__codelineno-14-7" id="__codelineno-14-7" name="__codelineno-14-7"></a><span class="c1"># Drift trend</span>
+<a href="#__codelineno-14-8" id="__codelineno-14-8" name="__codelineno-14-8"></a><span class="nv">phoenix_drift_score</span><span class="p">{</span><span class="nl">model_id</span><span class="o">=</span><span class="p">"</span><span class="s">credit-risk</span><span class="p">"}</span>
+<a href="#__codelineno-14-9" id="__codelineno-14-9" name="__codelineno-14-9"></a>
+<a href="#__codelineno-14-10" id="__codelineno-14-10" name="__codelineno-14-10"></a><span class="c1"># Error rate</span>
+<a href="#__codelineno-14-11" id="__codelineno-14-11" name="__codelineno-14-11"></a><span class="kr">rate</span><span class="o">(</span><span class="nv">phoenix_prediction_count</span><span class="p">{</span><span class="nl">status</span><span class="o">=</span><span class="p">"</span><span class="s">error</span><span class="p">"}[</span><span class="s">5m</span><span class="p">]</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="kr">rate</span><span class="o">(</span><span class="nv">phoenix_prediction_count</span><span class="p">[</span><span class="s">5m</span><span class="p">]</span><span class="o">)</span>
+</code></pre></div>
+<h2 id="grafana-dashboards">Grafana Dashboards</h2>
+<p>Access: <code>http://localhost:3001</code> (admin/admin)</p>
+<h3 id="auto-provisioned-dashboard">Auto-provisioned Dashboard</h3>
+<p>Dashboard <code>phoenix-ml.json</code> includes:</p>
+<table>
+<thead>
+<tr>
+<th>Panel</th>
+<th>Type</th>
+<th>Query</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prediction Rate</td>
+<td>Time series</td>
+<td><code>rate(phoenix_prediction_count[5m])</code></td>
+</tr>
+<tr>
+<td>Latency Distribution</td>
+<td>Histogram</td>
+<td><code>phoenix_inference_latency_ms</code></td>
+</tr>
+<tr>
+<td>Drift Score</td>
+<td>Gauge + Time series</td>
+<td><code>phoenix_drift_score</code></td>
+</tr>
+<tr>
+<td>Model Accuracy</td>
+<td>Gauge</td>
+<td><code>phoenix_model_accuracy</code></td>
+</tr>
+<tr>
+<td>F1 Score</td>
+<td>Gauge</td>
+<td><code>phoenix_model_f1_score</code></td>
+</tr>
+<tr>
+<td>Active Models</td>
+<td>Stat</td>
+<td>Count of models</td>
+</tr>
+</tbody>
+</table>
+<h2 id="distributed-tracing-jaeger">Distributed Tracing (Jaeger)</h2>
+<p>Access: <code>http://localhost:16686</code></p>
+<h3 id="setup">Setup</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-15-1" id="__codelineno-15-1" name="__codelineno-15-1"></a><span class="c1"># Automatically initialized in lifespan.py</span>
+<a href="#__codelineno-15-2" id="__codelineno-15-2" name="__codelineno-15-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">phoenix_ml.infrastructure.monitoring.tracing</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_tracing</span>
+<a href="#__codelineno-15-3" id="__codelineno-15-3" name="__codelineno-15-3"></a><span class="n">init_tracing</span><span class="p">()</span>  <span class="c1"># OTLP exporter → Jaeger</span>
+</code></pre></div>
+<h3 id="trace-attributes">Trace Attributes</h3>
+<p>Each prediction request creates a trace with spans:</p>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-16-1" id="__codelineno-16-1" name="__codelineno-16-1"></a>[predict] 5.2ms
+<a href="#__codelineno-16-2" id="__codelineno-16-2" name="__codelineno-16-2"></a>  ├── [resolve_model] 0.1ms
+<a href="#__codelineno-16-3" id="__codelineno-16-3" name="__codelineno-16-3"></a>  ├── [get_features] 0.8ms
+<a href="#__codelineno-16-4" id="__codelineno-16-4" name="__codelineno-16-4"></a>  ├── [inference] 3.5ms
+<a href="#__codelineno-16-5" id="__codelineno-16-5" name="__codelineno-16-5"></a>  └── [publish_events] 0.5ms
+</code></pre></div>
+<h2 id="self-healing-pipeline">Self-Healing Pipeline</h2>
+<h3 id="full-flow">Full Flow</h3>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Monitor as Monitoring Loop
+    participant Drift as DriftCalculator
+    participant Alert as AlertManager
+    participant Notify as Slack/Discord
+    participant Rollback as RollbackManager
+    participant Export as /data/export-training
+    participant Train as Retrain Pipeline
+    participant Register as /models/register
+
+    loop Every 30 seconds
+        Monitor-&gt;&gt;Drift: calculate_drift(reference, current)
+        Drift--&gt;&gt;Monitor: DriftReport
+
+        alt drift_score &gt; 0.3
+            Monitor-&gt;&gt;Alert: evaluate(rules)
+            Alert-&gt;&gt;Notify: webhook POST (Slack/PagerDuty)
+            Alert-&gt;&gt;Rollback: evaluate_rollback()
+            Rollback-&gt;&gt;Rollback: archive challengers (keep champion)
+            Monitor-&gt;&gt;Export: query labeled prediction_logs
+            Export--&gt;&gt;Train: fresh data CSV (logs + baseline)
+            Train-&gt;&gt;Train: retrain on fresh distribution
+            Train-&gt;&gt;Register: register as challenger
+        end
+    end</code></pre>
+<h3 id="end-to-end-simulation">End-to-End Simulation</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-17-1" id="__codelineno-17-1" name="__codelineno-17-1"></a><span class="c1"># Simulate the complete 8-week production lifecycle</span>
+<a href="#__codelineno-17-2" id="__codelineno-17-2" name="__codelineno-17-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/simulate_pipeline.py<span class="w"> </span>--fast
+</code></pre></div>
+<p>The simulation covers ALL 12 API endpoints:</p>
+<table>
+<thead>
+<tr>
+<th>Week</th>
+<th>What happens</th>
+<th>Endpoints used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-2</td>
+<td>Normal traffic, labels accumulate</td>
+<td><code>/predict</code>, <code>/feedback</code></td>
+</tr>
+<tr>
+<td>3-4</td>
+<td>Distribution shift, drift begins</td>
+<td><code>/predict</code>, <code>/monitoring/drift/{id}</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>🚨 Alert + ⏪ Rollback</td>
+<td><code>/models/rollback</code>, <code>/monitoring/reports/{id}</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Export fresh data</td>
+<td><code>/data/export-training</code>, <code>/models/{id}/retrain</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Retrain + register</td>
+<td><code>/models/register</code>, <code>/models</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Post-healing verification</td>
+<td><code>/models/{id}</code>, <code>/monitoring/performance/{id}</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="manual-trigger">Manual Trigger</h3>
+<div class="highlight"><pre><span></span><code><a href="#__codelineno-18-1" id="__codelineno-18-1" name="__codelineno-18-1"></a><span class="c1"># Trigger drift check manually</span>
+<a href="#__codelineno-18-2" id="__codelineno-18-2" name="__codelineno-18-2"></a>curl<span class="w"> </span>http://localhost:8001/monitoring/drift/credit-risk
+<a href="#__codelineno-18-3" id="__codelineno-18-3" name="__codelineno-18-3"></a>
+<a href="#__codelineno-18-4" id="__codelineno-18-4" name="__codelineno-18-4"></a><span class="c1"># View drift history</span>
+<a href="#__codelineno-18-5" id="__codelineno-18-5" name="__codelineno-18-5"></a>curl<span class="w"> </span>http://localhost:8001/monitoring/reports/credit-risk?limit<span class="o">=</span><span class="m">20</span>
+<a href="#__codelineno-18-6" id="__codelineno-18-6" name="__codelineno-18-6"></a>
+<a href="#__codelineno-18-7" id="__codelineno-18-7" name="__codelineno-18-7"></a><span class="c1"># Rollback model (archive challengers)</span>
+<a href="#__codelineno-18-8" id="__codelineno-18-8" name="__codelineno-18-8"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8001/models/rollback<span class="w"> </span><span class="se">\</span>
+<a href="#__codelineno-18-9" id="__codelineno-18-9" name="__codelineno-18-9"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+<a href="#__codelineno-18-10" id="__codelineno-18-10" name="__codelineno-18-10"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"model_id": "credit-risk", "reason": "Manual rollback"}'</span>
+<a href="#__codelineno-18-11" id="__codelineno-18-11" name="__codelineno-18-11"></a>
+<a href="#__codelineno-18-12" id="__codelineno-18-12" name="__codelineno-18-12"></a><span class="c1"># Export fresh data for retrain</span>
+<a href="#__codelineno-18-13" id="__codelineno-18-13" name="__codelineno-18-13"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8001/data/export-training<span class="w"> </span><span class="se">\</span>
+<a href="#__codelineno-18-14" id="__codelineno-18-14" name="__codelineno-18-14"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+<a href="#__codelineno-18-15" id="__codelineno-18-15" name="__codelineno-18-15"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"model_id": "credit-risk", "min_samples": 10, "include_baseline": true}'</span>
+<a href="#__codelineno-18-16" id="__codelineno-18-16" name="__codelineno-18-16"></a>
+<a href="#__codelineno-18-17" id="__codelineno-18-17" name="__codelineno-18-17"></a><span class="c1"># Trigger Airflow retrain pipeline</span>
+<a href="#__codelineno-18-18" id="__codelineno-18-18" name="__codelineno-18-18"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8001/models/credit-risk/retrain
+</code></pre></div>
+<hr/>
+<p><em>Document Status: v5.0 — Updated March 2026</em></p>
+</article>
+</div>
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+</div>
+<button class="md-top md-icon" data-md-component="top" hidden="" type="button">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Back to top
+</button>
+</main>
+<footer class="md-footer">
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.top", "navigation.sections", "navigation.expand", "content.code.copy", "content.tooltips", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+<script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+</body>
+</html>
