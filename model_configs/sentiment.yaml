@@ -1,0 +1,18 @@
+model_id: sentiment
+version: v1
+framework: onnx
+task_type: text_classification
+model_path: models/sentiment/v1/model.onnx
+train_script: examples/sentiment/train.py
+
+data_source:
+  type: file
+  path: data/sentiment/dataset.csv
+
+retrain:
+  trigger: manual
+  drift_detection: true
+
+monitoring:
+  drift_test: psi
+  primary_metric: accuracy

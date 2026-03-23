@@ -1,14 +1,8 @@
-"""
-DataLoader Registry — Unified plugin resolution via Chain-of-Responsibility.
+"""DataLoader plugin registry.
 
-Resolves the correct DataLoader for a model_id through a resolver chain:
-    1. ProgrammaticResolver  — Explicit registration via code
-    2. ConfigResolver         — YAML config: data_loader class path
-    3. TaskTypeResolver       — YAML config: task_type → default loader
-
-Custom loaders can be plugged in via:
-    1. YAML: `data_loader: my_package.MyLoader`
-    2. Code: `DataLoaderRegistry.register("my-model", MyLoader)`
+Resolves the appropriate ``IDataLoader`` for a given ``model_id``
+using a chain of resolvers: programmatic registration, YAML config
+``data_loader`` field, or ``task_type``-based default.
 """
 
 import importlib
@@ -30,6 +24,7 @@ _TASK_TYPE_LOADERS: dict[str, str] = {
     "classification": "phoenix_ml.infrastructure.data_loaders.tabular_loader.TabularDataLoader",
     "regression": "phoenix_ml.infrastructure.data_loaders.tabular_loader.TabularDataLoader",
     "image_classification": "phoenix_ml.infrastructure.data_loaders.image_loader.ImageDataLoader",
+    "text_classification": "phoenix_ml.infrastructure.data_loaders.text_loader.TextDataLoader",
 }
 
 

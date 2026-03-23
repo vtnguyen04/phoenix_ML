@@ -21,10 +21,12 @@ from phoenix_ml.infrastructure.data_loaders.registry import (
     resolve_data_loader,
 )
 from phoenix_ml.infrastructure.data_loaders.tabular_loader import TabularDataLoader
+from phoenix_ml.infrastructure.data_loaders.text_loader import TextDataLoader
 
 __all__ = [
     "DataLoaderRegistry",
     "ImageDataLoader",
     "TabularDataLoader",
+    "TextDataLoader",
     "resolve_data_loader",
 ]
