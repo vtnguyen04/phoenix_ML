@@ -35,6 +35,9 @@ from phoenix_ml.infrastructure.bootstrap.model_config_loader import (
     load_features_from_metrics,
 )
 from phoenix_ml.infrastructure.grpc.grpc_server import create_grpc_server
+from phoenix_ml.infrastructure.monitoring.system_metrics_collector import (
+    SystemMetricsCollector,
+)
 from phoenix_ml.infrastructure.persistence.database import Base, engine, get_db
 from phoenix_ml.infrastructure.persistence.models import ModelORM
 from phoenix_ml.infrastructure.persistence.postgres_drift_repo import (
@@ -50,10 +53,6 @@ from phoenix_ml.infrastructure.persistence.postgres_model_registry import (
 logger = logging.getLogger(__name__)
 
 # ── System metrics collector (CPU/GPU/Memory/Disk) ──
-from phoenix_ml.infrastructure.monitoring.system_metrics_collector import (
-    SystemMetricsCollector,
-)
-
 _system_metrics_collector = SystemMetricsCollector(interval_seconds=5.0)
 
 # --- Self-Healing: Alert rules for Prometheus metrics ---

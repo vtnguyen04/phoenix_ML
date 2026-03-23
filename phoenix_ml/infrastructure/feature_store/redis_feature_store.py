@@ -91,7 +91,7 @@ class RedisFeatureStore(FeatureStore):
     async def delete_features(self, entity_id: str) -> bool:
         """Delete all features for an entity. Returns True if key existed."""
         key = f"features:{entity_id}"
-        result = await self.redis.delete(key)
+        result: int = await self.redis.delete(key)
         return result > 0
 
     async def delete_features_batch(self, entity_ids: list[str]) -> int:
@@ -99,7 +99,8 @@ class RedisFeatureStore(FeatureStore):
         if not entity_ids:
             return 0
         keys = [f"features:{eid}" for eid in entity_ids]
-        return await self.redis.delete(*keys)
+        result: int = await self.redis.delete(*keys)
+        return result
 
     async def list_entities(self, pattern: str = "features:*", limit: int = 100) -> list[str]:
         """List entity IDs with features stored.
@@ -126,24 +127,27 @@ class RedisFeatureStore(FeatureStore):
     async def get_feature_names(self, entity_id: str) -> list[str]:
         """Get all feature field names for an entity."""
         key = f"features:{entity_id}"
-        fields = await self.redis.hkeys(key)
+        fields: list[str] = await self.redis.hkeys(key)  # type: ignore[misc]
         return list(fields)
 
     async def get_feature_count(self, entity_id: str) -> int:
         """Get the number of features stored for an entity."""
         key = f"features:{entity_id}"
-        return await self.redis.hlen(key)
+        result: int = await self.redis.hlen(key)  # type: ignore[misc]
+        return result
 
     async def get_ttl(self, entity_id: str) -> int:
         """Get remaining TTL in seconds (-1 = no TTL, -2 = key missing)."""
         key = f"features:{entity_id}"
-        return await self.redis.ttl(key)
+        result: int = await self.redis.ttl(key)
+        return result
 
     # ── Health Check ─────────────────────────────────────────────
 
     async def ping(self) -> bool:
         """Check Redis connectivity."""
         try:
-            return await self.redis.ping()
+            result: bool = await self.redis.ping()  # type: ignore[misc]
+            return result
         except Exception:
             return False

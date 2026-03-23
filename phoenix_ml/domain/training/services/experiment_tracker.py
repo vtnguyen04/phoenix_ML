@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import platform
 import time
@@ -238,7 +239,8 @@ class ExperimentTracker:
             # MLflow requires numeric values
             safe_metrics = {
                 k: float(v) for k, v in metrics.items()
-                if isinstance(v, (int, float)) and not (isinstance(v, float) and (v != v))
+                if isinstance(v, (int, float))
+                and not (isinstance(v, float) and math.isnan(v))
             }
             if safe_metrics:
                 mlflow.log_metrics(safe_metrics, step=step)
@@ -406,7 +408,8 @@ class ExperimentTracker:
             fig, ax = plt.subplots(figsize=(8, 6))
 
             # Handle binary vs multi-class
-            if y_proba.ndim == 2 and y_proba.shape[1] == 2:
+            _binary_class_count = 2
+            if y_proba.ndim == _binary_class_count and y_proba.shape[1] == _binary_class_count:
                 proba = y_proba[:, 1]
             elif y_proba.ndim == 1:
                 proba = y_proba

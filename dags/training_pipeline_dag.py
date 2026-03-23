@@ -32,6 +32,7 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,11 @@ logger = logging.getLogger(__name__)
 
 _API_URL = os.environ.get("API_URL", "http://api:8000")
 _MLFLOW_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
+
+# ── Validation constants ──
+_MIN_ROWS = 10
+_MAX_NULL_PERCENT = 50
+_HTTP_SUCCESS_MAX = 300
 
 _PROJECT_ROOT = Path(
     os.environ.get(
@@ -110,11 +116,11 @@ def validate_data(model_config: dict[str, Any], **kwargs: Any) -> dict[str, Any]
         result["column_count"] = len(df.columns)
         result["null_percent"] = round(df.isnull().sum().sum() / df.size * 100, 2)
 
-        if len(df) < 10:
+        if len(df) < _MIN_ROWS:
             result["validation_passed"] = False
             result["errors"].append(f"Insufficient data: {len(df)} rows")
 
-        if result["null_percent"] > 50:
+        if result["null_percent"] > _MAX_NULL_PERCENT:
             result["validation_passed"] = False
             result["errors"].append(f"Too many nulls: {result['null_percent']}%")
     else:
@@ -265,7 +271,7 @@ def register_model(model_config: dict[str, Any], **kwargs: Any) -> dict[str, Any
             json={"version": version, "strategy": "canary"},
             timeout=30,
         )
-        if response.status_code < 300:
+        if response.status_code < _HTTP_SUCCESS_MAX:
             result["registered"] = True
             logger.info("✅ Model registered: %s:%s", model_id, version)
         else:
@@ -295,7 +301,7 @@ for _model_id, _config in model_configs.items():
     schedule = _config.get("retrain_trigger", "manual")
 
     # Map trigger to Airflow schedule
-    schedule_interval = None
+    schedule_interval: str | timedelta | None = None
     if schedule == "daily":
         schedule_interval = "@daily"
     elif schedule == "weekly":
@@ -315,8 +321,10 @@ for _model_id, _config in model_configs.items():
     )
 
     # Capture config in closure
-    def _make_task_fn(fn, config):
-        def wrapper(**kwargs):
+    def _make_task_fn(
+        fn: Callable[..., Any], config: dict[str, Any],
+    ) -> Callable[..., Any]:
+        def wrapper(**kwargs: Any) -> Any:
             return fn(config, **kwargs)
         return wrapper
 
@@ -350,7 +358,7 @@ for _model_id, _config in model_configs.items():
         dag=dag,
     )
 
-    t1 >> t2 >> t3 >> t4 >> t5  # type: ignore[operator]
+    t1 >> t2 >> t3 >> t4 >> t5
 
     # Register in globals for Airflow to discover
     globals()[dag_id] = dag

@@ -39,6 +39,7 @@ import random
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -82,9 +83,10 @@ def _header(title: str) -> None:
 
 
 def _week(num: int, title: str) -> None:
-    print(f"\n{BOLD}{BLUE}  ╔══════════════════════════════════════════════════════════╗")
+    border = "══════════════════════════════════════════════════════════"
+    print(f"\n{BOLD}{BLUE}  ╔{border}╗")
     print(f"  ║  📅 Week {num}: {title:<46}║")
-    print(f"  ╚══════════════════════════════════════════════════════════╝{RESET}\n")
+    print(f"  ╚{border}╝{RESET}\n")
 
 
 def _step(msg: str) -> None:
@@ -116,9 +118,11 @@ def _progress(current: int, total: int) -> None:
     filled = int(bar_len * current / total)
     bar = "█" * filled + "░" * (bar_len - filled)
     pct = current / total * 100
-    print(f"\r  {DIM}   [{bar}] {pct:5.1f}% ({current}/{total}) {RESET}", end="")
-    if current == total:
-        print()
+    end = "\n" if current == total else ""
+    print(
+        f"\r  {DIM}   [{bar}] {pct:5.1f}% ({current}/{total}) {RESET}",
+        end=end,
+    )
 
 
 # ─── API Client ──────────────────────────────────────────────────
@@ -182,11 +186,15 @@ class PipelineStats:
 
     @property
     def avg_confidence(self) -> float:
-        return round(float(np.mean(self.confidences)), 4) if self.confidences else 0.0
+        if self.confidences:
+            return round(float(np.mean(self.confidences)), 4)
+        return 0.0
 
     @property
     def avg_latency(self) -> float:
-        return round(float(np.mean(self.latencies)), 2) if self.latencies else 0.0
+        if self.latencies:
+            return round(float(np.mean(self.latencies)), 2)
+        return 0.0
 
     @property
     def label_rate(self) -> float:
@@ -204,7 +212,7 @@ def phase_preflight(client: httpx.Client, model_id: str) -> None:
     _step("Checking API health...")
     resp = _api(client, "GET", "/health")
     if resp is None or resp.status_code != 200:
-        print(f"\n  {RED}❌ API is not healthy. Run: docker compose up -d{RESET}")
+        print(f"\n  {RED}❌ API not healthy. docker compose up -d{RESET}")
         sys.exit(1)
     _ok(f"API: {resp.json()['status']} (v{resp.json()['version']})")
 
@@ -219,13 +227,24 @@ def phase_preflight(client: httpx.Client, model_id: str) -> None:
     _step("Verifying prediction endpoint...")
     features = _random_features()
     resp = _api(client, "POST", "/predict", json={
-        "model_id": model_id, "model_version": "v1", "features": features,
+        "model_id": model_id, "model_version": "v1",
+        "features": features,
     })
     if resp is None or resp.status_code != 200:
-        print(f"\n  {RED}❌ Prediction failed. Model may not be loaded.{RESET}")
+        print(f"\n  {RED}❌ Prediction failed.{RESET}")
         sys.exit(1)
     r = resp.json()
-    _ok(f"Prediction works: result={r['result']}, confidence={r['confidence']['value']:.4f}")
+    conf = r['confidence']['value']
+    _ok(f"Prediction works: result={r['result']}, conf={conf:.4f}")
+
+
+@dataclass
+class TrafficConfig:
+    """Bundle traffic simulation parameters."""
+
+    drift_level: float = 0.0
+    label_ratio: float = 0.0
+    delay: float = 0.0
 
 
 def phase_traffic(
@@ -233,21 +252,22 @@ def phase_traffic(
     model_id: str,
     stats: PipelineStats,
     n_requests: int,
-    drift_level: float = 0.0,
-    label_ratio: float = 0.0,
-    delay: float = 0.0,
+    cfg: TrafficConfig | None = None,
 ) -> int:
     """TRAFFIC: POST /predict + POST /feedback"""
+    if cfg is None:
+        cfg = TrafficConfig()
     successes = 0
     new_ids: list[str] = []
 
-    drift_pct = int(drift_level * 100)
-    _step(f"Sending {n_requests} prediction requests (drift={drift_pct}%)...")
+    drift_pct = int(cfg.drift_level * 100)
+    _step(f"Sending {n_requests} requests (drift={drift_pct}%)...")
 
     for i in range(n_requests):
-        features = _random_features(drift_level)
+        features = _random_features(cfg.drift_level)
         resp = _api(client, "POST", "/predict", json={
-            "model_id": model_id, "model_version": "v1", "features": features,
+            "model_id": model_id, "model_version": "v1",
+            "features": features,
         })
         if resp is not None and resp.status_code == 200:
             stats.record(resp.json())
@@ -256,14 +276,15 @@ def phase_traffic(
         else:
             stats.total_errors += 1
         _progress(i + 1, n_requests)
-        if delay > 0:
-            time.sleep(delay)
+        if cfg.delay > 0:
+            time.sleep(cfg.delay)
 
     # Submit ground truth labels (simulates human review)
-    if label_ratio > 0 and new_ids:
-        n_to_label = int(len(new_ids) * label_ratio)
+    if cfg.label_ratio > 0 and new_ids:
+        n_to_label = int(len(new_ids) * cfg.label_ratio)
         labeled = 0
-        for pid in random.sample(new_ids, min(n_to_label, len(new_ids))):
+        sample_size = min(n_to_label, len(new_ids))
+        for pid in random.sample(new_ids, sample_size):
             ground_truth = random.choice([0, 1])
             resp = _api(client, "POST", "/feedback", json={
                 "prediction_id": pid,
@@ -272,20 +293,25 @@ def phase_traffic(
             if resp is not None and resp.status_code == 200:
                 stats.total_labeled += 1
                 labeled += 1
-        _step(f"Labeled {labeled} predictions (human review simulation)")
+        _step(f"Labeled {labeled} predictions (human review)")
 
     return successes
 
 
-def phase_drift_check(client: httpx.Client, model_id: str) -> dict[str, Any] | None:
+def phase_drift_check(
+    client: httpx.Client, model_id: str,
+) -> dict[str, Any] | None:
     """DRIFT: GET /monitoring/drift/{model_id}"""
     resp = _api(client, "GET", f"/monitoring/drift/{model_id}")
     if resp is not None and resp.status_code == 200:
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
     return None
 
 
-def phase_drift_reports(client: httpx.Client, model_id: str) -> list[dict[str, Any]]:
+def phase_drift_reports(
+    client: httpx.Client, model_id: str,
+) -> list[dict[str, Any]]:
     """REPORTS: GET /monitoring/reports/{model_id}"""
     resp = _api(client, "GET", f"/monitoring/reports/{model_id}")
     if resp is not None and resp.status_code == 200:
@@ -294,26 +320,34 @@ def phase_drift_reports(client: httpx.Client, model_id: str) -> list[dict[str, A
     return []
 
 
-def phase_performance(client: httpx.Client, model_id: str) -> dict[str, Any] | None:
+def phase_performance(
+    client: httpx.Client, model_id: str,
+) -> dict[str, Any] | None:
     """PERFORMANCE: GET /monitoring/performance/{model_id}"""
     resp = _api(client, "GET", f"/monitoring/performance/{model_id}")
     if resp is not None and resp.status_code == 200:
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
     return None
 
 
-def phase_rollback(client: httpx.Client, model_id: str) -> dict[str, Any] | None:
+def phase_rollback(
+    client: httpx.Client, model_id: str,
+) -> dict[str, Any] | None:
     """ROLLBACK: POST /models/rollback"""
+    reason = "Drift detected — archiving challengers"
     resp = _api(client, "POST", "/models/rollback", json={
-        "model_id": model_id,
-        "reason": "Drift detected — archiving challengers to protect champion",
+        "model_id": model_id, "reason": reason,
     })
     if resp is not None and resp.status_code == 200:
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
     return None
 
 
-def phase_export_data(client: httpx.Client, model_id: str) -> dict[str, Any] | None:
+def phase_export_data(
+    client: httpx.Client, model_id: str,
+) -> dict[str, Any] | None:
     """EXPORT: POST /data/export-training"""
     resp = _api(client, "POST", "/data/export-training", json={
         "model_id": model_id,
@@ -322,13 +356,16 @@ def phase_export_data(client: httpx.Client, model_id: str) -> dict[str, Any] | N
         "max_fresh_samples": 10000,
     })
     if resp is not None and resp.status_code == 200:
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
     if resp is not None:
         _warn(f"Export failed: {resp.text[:200]}")
     return None
 
 
-def phase_retrain(data_path: str | None) -> dict[str, Any] | None:
+def phase_retrain(
+    data_path: str | None,
+) -> dict[str, Any] | None:
     """RETRAIN: local train.py subprocess"""
     timestamp = int(time.time())
     version = f"v{timestamp}"
@@ -347,352 +384,415 @@ def phase_retrain(data_path: str | None) -> dict[str, Any] | None:
             "--metrics", metrics_path,
             "--data", data,
         ],
-        check=False, capture_output=True, text=True, cwd=str(PROJECT_ROOT),
+        check=False, capture_output=True, text=True,
+        cwd=str(PROJECT_ROOT),
     )
 
     if result.returncode == 0 and Path(metrics_path).exists():
         with open(metrics_path) as f:
             metrics = json.load(f)
-        return {"version": version, "metrics": metrics, "data_path": data}
+        return {
+            "version": version,
+            "metrics": metrics,
+            "data_path": data,
+        }
     return None
 
 
 def phase_register(
-    client: httpx.Client, model_id: str, version: str, metrics: dict[str, Any],
+    client: httpx.Client, model_id: str,
+    version: str, metrics: dict[str, Any],
 ) -> bool:
     """REGISTER: POST /models/register"""
+    uri = f"local:///models/credit_risk/{version}/model.onnx"
     resp = _api(client, "POST", "/models/register", json={
-        "model_id": model_id,
-        "version": version,
-        "uri": f"local:///models/credit_risk/{version}/model.onnx",
-        "framework": "onnx",
-        "stage": "challenger",
-        "metrics": metrics,
+        "model_id": model_id, "version": version,
+        "uri": uri, "framework": "onnx",
+        "stage": "challenger", "metrics": metrics,
     })
     return resp is not None and resp.status_code == 200
 
 
-def phase_retrain_trigger(client: httpx.Client, model_id: str) -> dict[str, Any] | None:
-    """TRIGGER: POST /models/{model_id}/retrain  (Airflow DAG)"""
+def phase_retrain_trigger(
+    client: httpx.Client, model_id: str,
+) -> dict[str, Any] | None:
+    """TRIGGER: POST /models/{model_id}/retrain (Airflow DAG)"""
     resp = _api(client, "POST", f"/models/{model_id}/retrain")
     if resp is not None and resp.status_code == 200:
-        return resp.json()
-    # Airflow may not be running — that's OK in local simulation
+        result: dict[str, Any] = resp.json()
+        return result
     return None
 
 
-def phase_model_info(client: httpx.Client, model_id: str) -> dict[str, Any] | None:
+def phase_model_info(
+    client: httpx.Client, model_id: str,
+) -> dict[str, Any] | None:
     """INFO: GET /models/{model_id}"""
     resp = _api(client, "GET", f"/models/{model_id}")
     if resp is not None and resp.status_code == 200:
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
     return None
 
 
-# ─── Main Simulation ─────────────────────────────────────────────
+# ─── Week Simulations ────────────────────────────────────────────
 
 
-def run_simulation(api_url: str, model_id: str, fast: bool = False) -> None:
-    """Run realistic production lifecycle simulation covering ALL API endpoints."""
-    stats = PipelineStats()
-    delay = 0 if fast else 0.02
-    start_time = time.time()
+def _sim_week1(
+    client: httpx.Client, model_id: str,
+    stats: PipelineStats, delay: float,
+) -> None:
+    _week(1, "Initial Deployment — Normal Traffic")
+    _step("Model deployed. Normal traffic begins...")
+    tc = TrafficConfig(drift_level=0.0, label_ratio=0.3, delay=delay)
+    ok = phase_traffic(client, model_id, stats, 40, tc)
+    _ok(f"{ok} predictions served")
+    _stat("Cumulative predictions", stats.total_predictions)
+    _stat("Cumulative labeled", stats.total_labeled)
+    _stat("Avg confidence", f"{stats.avg_confidence:.4f}")
 
+
+def _sim_week2(
+    client: httpx.Client, model_id: str,
+    stats: PipelineStats, delay: float,
+) -> None:
+    _week(2, "Growing Traffic — Labels Accumulate")
+    _step("Traffic increases. Labeling team reviews...")
+    tc = TrafficConfig(drift_level=0.0, label_ratio=0.4, delay=delay)
+    ok = phase_traffic(client, model_id, stats, 60, tc)
+    _ok(f"{ok} predictions served")
+    _stat("Cumulative predictions", stats.total_predictions)
+    _stat("Cumulative labeled", stats.total_labeled)
+
+    _step("Routine drift check (should be clean)...")
+    drift = phase_drift_check(client, model_id)
+    if drift:
+        detected = drift.get("drift_detected", False)
+        p_val = drift.get("p_value", 1.0)
+        if detected:
+            _warn(f"Drift check: DETECTED (p={p_val:.4f})")
+        else:
+            _ok(f"Drift check: clean (p={p_val:.4f})")
+
+    _step("Checking model performance baseline...")
+    perf = phase_performance(client, model_id)
+    if perf:
+        _ok("Performance baseline recorded")
+        for k, v in list(perf.items())[:4]:
+            fmt = f"{v:.4f}" if isinstance(v, float) else v
+            _stat(k, fmt)
+    else:
+        _info("Performance not yet available")
+
+
+def _sim_week3(
+    client: httpx.Client, model_id: str,
+    stats: PipelineStats, delay: float,
+) -> None:
+    _week(3, "Distribution Shift Begins (Subtle)")
+    _step("Market conditions change. Distributions shifting...")
+    tc = TrafficConfig(drift_level=0.15, label_ratio=0.35, delay=delay)
+    ok = phase_traffic(client, model_id, stats, 50, tc)
+    _ok(f"{ok} predictions served (some shifted)")
+    _stat("Cumulative predictions", stats.total_predictions)
+    _stat("Cumulative labeled", stats.total_labeled)
+
+
+def _sim_week4(
+    client: httpx.Client, model_id: str,
+    stats: PipelineStats, delay: float,
+) -> None:
+    _week(4, "Drift Intensifies")
+    _step("Distribution shift becomes more pronounced...")
+    tc = TrafficConfig(drift_level=0.30, label_ratio=0.3, delay=delay)
+    ok = phase_traffic(client, model_id, stats, 50, tc)
+    _ok(f"{ok} predictions served")
+    _stat("Cumulative predictions", stats.total_predictions)
+    _stat("Cumulative labeled", stats.total_labeled)
+    if stats.total_errors > 0:
+        _stat("Total errors", stats.total_errors)
+
+    _step("Drift check (should start showing)...")
+    drift = phase_drift_check(client, model_id)
+    if drift:
+        detected = drift.get("drift_detected", False)
+        p_val = drift.get("p_value", 1.0)
+        if detected:
+            _alert(f"DRIFT DETECTED! p_value={p_val:.4f}")
+        else:
+            _warn(f"p_value={p_val:.4f} (approaching threshold)")
+
+
+def _sim_week5(
+    client: httpx.Client, model_id: str,
+    stats: PipelineStats, delay: float,
+) -> None:
+    _week(5, "Drift Confirmed — ALERT & ROLLBACK")
+    _step("Strong distribution shift. Accuracy degrading...")
+    tc = TrafficConfig(drift_level=0.50, label_ratio=0.25, delay=delay)
+    ok = phase_traffic(client, model_id, stats, 40, tc)
+    _ok(f"{ok} predictions served under drift")
+    _stat("Cumulative predictions", stats.total_predictions)
+    _stat("Cumulative labeled", stats.total_labeled)
+
+    _step("Running drift detection...")
+    drift = phase_drift_check(client, model_id)
+    if drift:
+        detected = drift.get("drift_detected", False)
+        p_val = drift.get("p_value", 1.0)
+        rec = drift.get("recommendation", "")
+        if detected:
+            _alert(f"DRIFT CONFIRMED! p_value={p_val:.4f}")
+            _alert(f"Recommendation: {rec}")
+        else:
+            _warn(f"Statistical test: p_value={p_val:.4f}")
+
+    _step("AlertManager fires webhook notification...")
+    _alert(f"ALERT: Drift for {model_id} (severity=CRITICAL)")
+    _alert("→ Slack/Discord webhook would be sent here")
+    _alert("→ PagerDuty incident created")
+
+    _step("Initiating rollback — archiving challengers...")
+    rollback = phase_rollback(client, model_id)
+    if rollback:
+        champion = rollback.get("champion", "none")
+        archived = rollback.get("archived_challengers", [])
+        _ok("Rollback complete!")
+        _stat("Champion (preserved)", champion or "v1 (default)")
+        _stat(
+            "Archived challengers",
+            archived if archived else "none currently",
+        )
+    else:
+        _warn("Rollback: no challengers to archive")
+
+    _step("Checking drift report audit trail...")
+    reports = phase_drift_reports(client, model_id)
+    if reports:
+        _ok(f"{len(reports)} drift report(s) in audit trail")
+        latest = reports[0] if isinstance(reports[0], dict) else {}
+        if "drift_detected" in latest:
+            p = latest.get("p_value", "?")
+            d = latest.get("drift_detected")
+            _stat("Latest report", f"drift={d}, p={p}")
+    else:
+        _info("No historical drift reports yet")
+
+
+def _sim_week6(
+    client: httpx.Client, model_id: str,
+) -> dict[str, Any] | None:
+    _week(6, "Self-Healing: Export Fresh Data")
+    _step("Exporting labeled prediction logs from DB...")
+
+    log_count = "~unknown"
+    perf_url = f"/monitoring/performance/{model_id}"
+    resp = _api(client, "GET", perf_url)
+    if resp and resp.status_code == 200:
+        total = resp.json().get("total_predictions", "?")
+        log_count = f"~{total}"
+    _step(f"Total labeled predictions in DB: {log_count}")
+
+    export_result = phase_export_data(client, model_id)
+    if export_result:
+        _ok("Fresh data exported!")
+        _stat("Export path", export_result["export_path"])
+        _stat("Total samples", export_result["total_samples"])
+        fresh = export_result.get("fresh_samples", 0)
+        baseline = export_result.get("baseline_samples", 0)
+        total = export_result.get("total_samples", 0)
+        _stat("Fresh from logs", f"{fresh} (NEW production data)")
+        _stat("Baseline", f"{baseline} (original training data)")
+        if total > 0:
+            ratio = fresh / total * 100
+            _stat("Fresh data ratio", f"{ratio:.1f}%")
+    else:
+        _warn("Export failed or insufficient labeled data")
+        _info("Will fall back to baseline dataset for retrain")
+
+    _step("Attempting Airflow DAG trigger...")
+    airflow_result = phase_retrain_trigger(client, model_id)
+    if airflow_result:
+        dag_id = airflow_result.get("dag_run_id", "?")
+        _ok(f"Airflow DAG triggered: {dag_id}")
+    else:
+        _info("Airflow not available — local retrain instead")
+
+    return export_result
+
+
+def _sim_week7(
+    client: httpx.Client, model_id: str,
+    export_result: dict[str, Any] | None,
+) -> None:
+    _week(7, "Self-Healing: Retrain & Deploy")
+    export_path = (
+        export_result["export_path"] if export_result else None
+    )
+
+    src = "FRESH exported data" if export_path else "baseline"
+    _step(f"Retraining on: {src}...")
+    if export_path:
+        _step(f"  Data: {export_path}")
+
+    train_result = phase_retrain(export_path)
+    if train_result:
+        _ok(f"Model retrained: {train_result['version']}")
+        _stat("Data used", train_result["data_path"])
+        for k, v in list(train_result["metrics"].items())[:6]:
+            _stat(k, v)
+
+        _step("Registering new version as challenger...")
+        ver = train_result["version"]
+        metrics = train_result["metrics"]
+        if phase_register(client, model_id, ver, metrics):
+            _ok(f"Registered {model_id}:{ver} as challenger")
+        else:
+            _warn("Registration failed")
+
+        _step("Current model versions:")
+        resp = _api(client, "GET", "/models")
+        if resp and resp.status_code == 200:
+            for m in resp.json():
+                if m["model_id"] == model_id:
+                    _stat(f"{m['version']}", m["status"])
+    else:
+        _warn("Retrain failed")
+
+
+def _sim_week8(
+    client: httpx.Client, model_id: str,
+    stats: PipelineStats, delay: float,
+) -> None:
+    _week(8, "Verification — Post-Healing Checks")
+
+    _step("Checking model info after healing...")
+    model_info = phase_model_info(client, model_id)
+    if model_info and isinstance(model_info, dict):
+        _ok(f"Model info retrieved for {model_id}")
+        for k in ["model_id", "version", "status"]:
+            if k in model_info:
+                _stat(k, model_info[k])
+
+    _step("Post-healing performance check...")
+    perf = phase_performance(client, model_id)
+    if perf:
+        _ok("Performance metrics available")
+        for k, v in list(perf.items())[:4]:
+            fmt = f"{v:.4f}" if isinstance(v, float) else v
+            _stat(k, fmt)
+    else:
+        _info("Performance metrics need more data")
+
+    _step("Final drift report audit...")
+    reports = phase_drift_reports(client, model_id)
+    _ok(f"Total drift reports: {len(reports)}")
+
+    _step("Post-healing traffic to verify model works...")
+    tc = TrafficConfig(drift_level=0.0, label_ratio=0.5, delay=delay)
+    ok = phase_traffic(client, model_id, stats, 20, tc)
+    _ok(f"{ok} predictions served successfully post-healing")
+
+
+# ─── Summary & Banner ────────────────────────────────────────────
+
+
+def _print_summary(stats: PipelineStats, elapsed: float) -> None:
+    """Print final simulation summary."""
+    preds = stats.total_predictions
+    labeled = stats.total_labeled
+    rate = stats.label_rate
+    errs = stats.total_errors
+    conf = stats.avg_confidence
+    lat = stats.avg_latency
     print(f"""
-{BOLD}╔══════════════════════════════════════════════════════════════════════╗
-║                                                                      ║
-║   🔥  Phoenix ML — Self-Healing Pipeline Simulation                  ║
-║                                                                      ║
-║   Simulating the COMPLETE production lifecycle:                       ║
-║     • Normal traffic → labels accumulate → drift builds              ║
-║     • Drift detected → ALERT → ROLLBACK challengers                  ║
-║     • Export fresh data → retrain → register challenger               ║
-║     • Performance check → drift reports audit                        ║
-║                                                                      ║
-║   Endpoints: /predict /feedback /monitoring/drift /models/rollback   ║
-║              /data/export-training /models/register /models/retrain  ║
-║              /monitoring/reports /monitoring/performance              ║
-║                                                                      ║
-╚══════════════════════════════════════════════════════════════════════╝{RESET}
-
-  {DIM}API: {api_url}   Model: {model_id}   Mode: {'fast' if fast else 'realistic'}{RESET}
-""")
-
-    with httpx.Client(base_url=api_url) as client:
-
-        # ── Pre-flight ──────────────────────────────────────────
-        phase_preflight(client, model_id)
-
-        # ── Week 1: Normal traffic ──────────────────────────────
-        _week(1, "Initial Deployment — Normal Traffic")
-        _step("Model deployed to production. Normal traffic begins...")
-        ok = phase_traffic(client, model_id, stats, 40, drift_level=0.0, label_ratio=0.3, delay=delay)
-        _ok(f"{ok} predictions served")
-        _stat("Cumulative predictions", stats.total_predictions)
-        _stat("Cumulative labeled", stats.total_labeled)
-        _stat("Avg confidence", f"{stats.avg_confidence:.4f}")
-
-        # ── Week 2: More traffic, labels accumulate ─────────────
-        _week(2, "Growing Traffic — Labels Accumulate")
-        _step("Traffic increases. Labeling team reviews more predictions...")
-        ok = phase_traffic(client, model_id, stats, 60, drift_level=0.0, label_ratio=0.4, delay=delay)
-        _ok(f"{ok} predictions served")
-        _stat("Cumulative predictions", stats.total_predictions)
-        _stat("Cumulative labeled", stats.total_labeled)
-
-        _step("Routine drift check (should be clean)...")
-        drift = phase_drift_check(client, model_id)
-        if drift:
-            detected = drift.get("drift_detected", False)
-            p_val = drift.get("p_value", 1.0)
-            if detected:
-                _warn(f"Drift check: DETECTED (p={p_val:.4f}) — early detection")
-            else:
-                _ok(f"Drift check: clean (p={p_val:.4f})")
-
-        _step("Checking model performance baseline...")
-        perf = phase_performance(client, model_id)
-        if perf:
-            _ok("Performance baseline recorded")
-            for k, v in list(perf.items())[:4]:
-                if isinstance(v, float):
-                    _stat(k, f"{v:.4f}")
-                else:
-                    _stat(k, v)
-        else:
-            _info("Performance metrics not yet available (need more ground truth)")
-
-        # ── Week 3: Subtle drift begins ─────────────────────────
-        _week(3, "Distribution Shift Begins (Subtle)")
-        _step("Market conditions change. Feature distributions start shifting...")
-        ok = phase_traffic(client, model_id, stats, 50, drift_level=0.15, label_ratio=0.35, delay=delay)
-        _ok(f"{ok} predictions served (some with shifted features)")
-        _stat("Cumulative predictions", stats.total_predictions)
-        _stat("Cumulative labeled", stats.total_labeled)
-
-        # ── Week 4: Drift intensifies ───────────────────────────
-        _week(4, "Drift Intensifies")
-        _step("Distribution shift becomes more pronounced...")
-        ok = phase_traffic(client, model_id, stats, 50, drift_level=0.30, label_ratio=0.3, delay=delay)
-        _ok(f"{ok} predictions served")
-        _stat("Cumulative predictions", stats.total_predictions)
-        _stat("Cumulative labeled", stats.total_labeled)
-        if stats.total_errors > 0:
-            _stat("Total errors", stats.total_errors)
-
-        _step("Drift check (should start showing)...")
-        drift = phase_drift_check(client, model_id)
-        if drift:
-            detected = drift.get("drift_detected", False)
-            p_val = drift.get("p_value", 1.0)
-            if detected:
-                _alert(f"DRIFT DETECTED! p_value={p_val:.4f}")
-            else:
-                _warn(f"p_value={p_val:.4f} (approaching threshold)")
-
-        # ── Week 5: Significant drift + ALERT + ROLLBACK ────────
-        _week(5, "Drift Confirmed — ALERT & ROLLBACK")
-        _step("Strong distribution shift. Model accuracy degrading...")
-        ok = phase_traffic(client, model_id, stats, 40, drift_level=0.50, label_ratio=0.25, delay=delay)
-        _ok(f"{ok} predictions served under drift")
-        _stat("Cumulative predictions", stats.total_predictions)
-        _stat("Cumulative labeled", stats.total_labeled)
-
-        _step("Running drift detection...")
-        drift = phase_drift_check(client, model_id)
-        if drift:
-            detected = drift.get("drift_detected", False)
-            p_val = drift.get("p_value", 1.0)
-            rec = drift.get("recommendation", "")
-            if detected:
-                _alert(f"DRIFT CONFIRMED! p_value={p_val:.4f}")
-                _alert(f"Recommendation: {rec}")
-            else:
-                _warn(f"Statistical test: p_value={p_val:.4f}")
-
-        # 🚨 ALERT: In production, AlertManager would fire webhook
-        _step("AlertManager fires webhook notification...")
-        _alert("ALERT: Drift detected for credit-risk (severity=CRITICAL)")
-        _alert("→ Slack/Discord webhook would be sent here")
-        _alert("→ PagerDuty incident created")
-
-        # ⏪ ROLLBACK: Archive all challengers, keep champion safe
-        _step("Initiating rollback — archiving challengers...")
-        rollback = phase_rollback(client, model_id)
-        if rollback:
-            champion = rollback.get("champion", "none")
-            archived = rollback.get("archived_challengers", [])
-            _ok(f"Rollback complete!")
-            _stat("Champion (preserved)", champion or "v1 (default)")
-            _stat("Archived challengers", archived if archived else "none currently")
-        else:
-            _warn("Rollback endpoint returned no data (no challengers to archive)")
-
-        # Check drift reports audit trail
-        _step("Checking drift report audit trail...")
-        reports = phase_drift_reports(client, model_id)
-        if reports:
-            _ok(f"{len(reports)} drift report(s) in audit trail")
-            latest = reports[0] if isinstance(reports[0], dict) else {}
-            if "drift_detected" in latest:
-                _stat("Latest report", f"drift={latest.get('drift_detected')}, p={latest.get('p_value', '?')}")
-        else:
-            _info("No historical drift reports yet")
-
-        # ── Week 6: Export fresh data ────────────────────────────
-        _week(6, "Self-Healing: Export Fresh Data")
-        _step("Pipeline triggered: exporting labeled prediction logs from DB...")
-        _step(f"Total labeled predictions in DB: ~{stats.total_labeled}")
-
-        export_result = phase_export_data(client, model_id)
-        if export_result:
-            _ok("Fresh data exported!")
-            _stat("Export path", export_result["export_path"])
-            _stat("Total samples", export_result["total_samples"])
-            _stat("Fresh from logs", f"{export_result['fresh_samples']} (NEW production data)")
-            _stat("Baseline", f"{export_result['baseline_samples']} (original training data)")
-            total = export_result["total_samples"]
-            fresh_pct = export_result["fresh_samples"] / total * 100 if total > 0 else 0
-            _stat("Fresh data ratio", f"{fresh_pct:.1f}%")
-        else:
-            _warn("Export failed — falling back to baseline data")
-
-        # Try Airflow trigger (may not be running locally)
-        _step("Attempting Airflow DAG trigger (POST /models/{model_id}/retrain)...")
-        airflow_result = phase_retrain_trigger(client, model_id)
-        if airflow_result:
-            _ok(f"Airflow DAG triggered: {airflow_result.get('dag_run_id', '?')}")
-        else:
-            _info("Airflow not available — proceeding with local retrain")
-
-        # ── Week 7: Retrain + register ───────────────────────────
-        _week(7, "Self-Healing: Retrain & Deploy")
-        export_path = export_result["export_path"] if export_result else None
-
-        _step(f"Retraining on: {'FRESH exported data' if export_path else 'baseline (fallback)'}...")
-        if export_path:
-            _step(f"  Data: {export_path}")
-
-        train_result = phase_retrain(export_path)
-        if train_result:
-            _ok(f"Model retrained: {train_result['version']}")
-            _stat("Data used", train_result["data_path"])
-            for k, v in list(train_result["metrics"].items())[:6]:
-                _stat(k, v)
-
-            # Register as challenger
-            _step("Registering new version as challenger...")
-            if phase_register(client, model_id, train_result["version"], train_result["metrics"]):
-                _ok(f"Registered {model_id}:{train_result['version']} as challenger")
-            else:
-                _warn("Registration failed")
-
-            # List model versions
-            _step("Current model versions:")
-            resp = _api(client, "GET", "/models")
-            if resp and resp.status_code == 200:
-                for m in resp.json():
-                    if m["model_id"] == model_id:
-                        _stat(f"{m['version']}", m['status'])
-        else:
-            _warn("Retrain failed")
-
-        # ── Week 8: Verify healing ───────────────────────────────
-        _week(8, "Verification — Post-Healing Checks")
-
-        _step("Checking model info after healing...")
-        model_info = phase_model_info(client, model_id)
-        if model_info:
-            _ok(f"Model info retrieved for {model_id}")
-            if isinstance(model_info, dict):
-                for k in ["model_id", "version", "status"]:
-                    if k in model_info:
-                        _stat(k, model_info[k])
-
-        _step("Post-healing performance check...")
-        perf = phase_performance(client, model_id)
-        if perf:
-            _ok("Performance metrics available")
-            for k, v in list(perf.items())[:4]:
-                if isinstance(v, float):
-                    _stat(k, f"{v:.4f}")
-                else:
-                    _stat(k, v)
-        else:
-            _info("Performance metrics need more production data to compute")
-
-        _step("Final drift report audit...")
-        reports = phase_drift_reports(client, model_id)
-        _ok(f"Total drift reports in audit trail: {len(reports)}")
-
-        _step("Sending post-healing traffic to verify model still works...")
-        ok = phase_traffic(client, model_id, stats, 20, drift_level=0.0, label_ratio=0.5, delay=delay)
-        _ok(f"{ok} predictions served successfully post-healing")
-
-    # ── Final Summary ─────────────────────────────────────────────
-
-    elapsed = time.time() - start_time
-
-    print(f"""
-{BOLD}╔══════════════════════════════════════════════════════════════════════╗
-║  ✨  SIMULATION COMPLETE — Full Lifecycle Summary                     ║
-╚══════════════════════════════════════════════════════════════════════╝{RESET}
+{BOLD}═══════════════════════════════════════════════════════
+  ✨  SIMULATION COMPLETE — Full Lifecycle Summary
+══════════════════════════════════════════════════════={RESET}
 
   {BOLD}Lifecycle Timeline:{RESET}
-    Week 1-2:  Normal traffic         → {stats.total_predictions} predictions, {stats.total_labeled} labeled
-    Week 3-4:  Drift begins           → Distribution shift 15-30%
-    Week 5:    Drift confirmed        → 🚨 Alert + ⏪ Rollback challengers
-    Week 6:    Export fresh data       → Labeled logs from DB
-    Week 7:    Retrain + register     → New challenger deployed
-    Week 8:    Verification           → Post-healing health check
+    Week 1-2:  Normal traffic    → {preds} preds, {labeled} labeled
+    Week 3-4:  Drift begins      → Shift 15-30%
+    Week 5:    Drift confirmed   → 🚨 Alert + ⏪ Rollback
+    Week 6:    Export fresh data  → Labeled logs from DB
+    Week 7:    Retrain + register → New challenger deployed
+    Week 8:    Verification      → Post-healing check
 
   {BOLD}Cumulative Stats:{RESET}
-    Total predictions:    {stats.total_predictions}
-    Labeled (ground truth): {stats.total_labeled}  ({stats.label_rate:.0f}% label rate)
-    Prediction errors:    {stats.total_errors}
-    Avg confidence:       {stats.avg_confidence}
-    Avg latency:          {stats.avg_latency}ms
-
-  {BOLD}API Endpoints Exercised:{RESET}
-    ✅ GET  /health                        — Pre-flight
-    ✅ POST /predict                       — {stats.total_predictions} requests
-    ✅ POST /feedback                      — {stats.total_labeled} labels
-    ✅ GET  /models                        — List all versions
-    ✅ GET  /models/{{model_id}}             — Model info
-    ✅ GET  /monitoring/drift/{{model_id}}   — Drift detection
-    ✅ GET  /monitoring/reports/{{model_id}} — Audit trail
-    ✅ GET  /monitoring/performance/{{id}}   — Performance metrics
-    ✅ POST /models/rollback               — Archive challengers
-    ✅ POST /data/export-training          — Fresh data export
-    ✅ POST /models/register               — Register retrained model
-    ✅ POST /models/{{model_id}}/retrain    — Airflow trigger (if available)
-
-  {BOLD}Self-Healing Loop:{RESET}
-    ┌─── traffic ──→ predict ──→ log to DB ───┐
-    │                                          │
-    │   drift detected ← monitoring ← logs     │
-    │        │                                 │
-    │   🚨 ALERT ──→ webhook/Slack/PagerDuty   │
-    │        │                                 │
-    │   ⏪ ROLLBACK ──→ archive challengers     │
-    │        │                                 │
-    │   📤 export fresh data ← prediction_logs │
-    │        │                                 │
-    │   🏋️ retrain on FRESH data               │
-    │        │                                 │
-    │   📦 register as challenger              │
-    │        │                                 │
-    └── deploy new model ←─────────────────────┘
+    Total predictions:    {preds}
+    Labeled (ground truth): {labeled}  ({rate:.0f}% label rate)
+    Prediction errors:    {errs}
+    Avg confidence:       {conf}
+    Avg latency:          {lat}ms
 
   Total simulation time: {elapsed:.1f}s
 """)
 
 
+def _print_banner(
+    api_url: str, model_id: str, fast: bool,
+) -> None:
+    mode = "fast" if fast else "standard"
+    print(f"""
+{BOLD}═══════════════════════════════════════════════════════
+  🔬  Phoenix ML — Self-Healing Pipeline Simulation
+═══════════════════════════════════════════════════════{RESET}
+
+  Full 8-week production lifecycle:
+    Week 1-2: Normal traffic + labeling
+    Week 3-4: Distribution shift (subtle → strong)
+    Week 5:   Drift confirmed → alert + rollback
+    Week 6:   Export fresh data from prediction_logs
+    Week 7:   Retrain on fresh data + register model
+    Week 8:   Post-healing verification
+
+  API: {api_url}   Model: {model_id}   Mode: {mode}
+""")
+
+
+# ─── Main Simulation ─────────────────────────────────────────────
+
+
+def run_simulation(
+    api_url: str, model_id: str, fast: bool = False,
+) -> None:
+    """Run realistic production lifecycle simulation."""
+    stats = PipelineStats()
+    delay = 0 if fast else 0.02
+    start_time = time.time()
+
+    _print_banner(api_url, model_id, fast)
+
+    with httpx.Client(base_url=api_url) as client:
+        phase_preflight(client, model_id)
+        _sim_week1(client, model_id, stats, delay)
+        _sim_week2(client, model_id, stats, delay)
+        _sim_week3(client, model_id, stats, delay)
+        _sim_week4(client, model_id, stats, delay)
+        _sim_week5(client, model_id, stats, delay)
+        export_result = _sim_week6(client, model_id)
+        _sim_week7(client, model_id, export_result)
+        _sim_week8(client, model_id, stats, delay)
+
+    _print_summary(stats, time.time() - start_time)
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Simulate self-healing ML pipeline")
-    parser.add_argument("--api-url", default="http://localhost:8001", help="API base URL")
-    parser.add_argument("--model-id", default="credit-risk", help="Model ID")
-    parser.add_argument("--fast", action="store_true", help="Skip delays for speed")
+    parser = argparse.ArgumentParser(
+        description="Simulate self-healing ML pipeline",
+    )
+    parser.add_argument(
+        "--api-url", default="http://localhost:8001",
+        help="API base URL",
+    )
+    parser.add_argument(
+        "--model-id", default="credit-risk",
+        help="Model ID",
+    )
+    parser.add_argument(
+        "--fast", action="store_true",
+        help="Skip delays for speed",
+    )
     args = parser.parse_args()
 
     run_simulation(args.api_url, args.model_id, args.fast)

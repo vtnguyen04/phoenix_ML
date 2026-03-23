@@ -185,7 +185,7 @@ class SystemMetricsCollector:
 
     def __init__(self, interval_seconds: float = 5.0) -> None:
         self._interval = interval_seconds
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[None] | None = None
         self._running = False
 
     def start(self) -> None:

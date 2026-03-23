@@ -1,6 +1,6 @@
 # Library API Guide
 
-Phoenix ML Platform có thể dùng như **Python library** — import trực tiếp, không cần Docker.
+Phoenix ML Platform can be used as a **Python library** — import directly, no Docker required.
 
 ## Installation
 
@@ -18,12 +18,12 @@ uv sync
 ```python
 import asyncio
 import numpy as np
-from src.infrastructure.bootstrap.container import (
+from phoenix_ml.infrastructure.bootstrap.container import (
     inference_engine,
     feature_store,
 )
-from src.domain.inference.entities.model import Model
-from src.domain.inference.value_objects.feature_vector import FeatureVector
+from phoenix_ml.domain.inference.entities.model import Model
+from phoenix_ml.domain.inference.value_objects.feature_vector import FeatureVector
 
 async def main():
     # 1. Define model
@@ -56,15 +56,15 @@ asyncio.run(main())
 
 ```python
 import asyncio
-from src.application.commands.predict_command import PredictCommand
-from src.application.handlers.predict_handler import PredictHandler
-from src.infrastructure.bootstrap.container import (
+from phoenix_ml.application.commands.predict_command import PredictCommand
+from phoenix_ml.application.handlers.predict_handler import PredictHandler
+from phoenix_ml.infrastructure.bootstrap.container import (
     inference_engine,
     event_bus,
     feature_store,
     plugin_registry,
 )
-from src.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
+from phoenix_ml.infrastructure.persistence.in_memory_model_repo import InMemoryModelRepository
 
 async def main():
     # 1. Setup handler with DI
@@ -78,7 +78,7 @@ async def main():
     )
     
     # 2. Register a model
-    from src.domain.inference.entities.model import Model
+    from phoenix_ml.domain.inference.entities.model import Model
     model = Model(id="credit-risk", version="v1", ...)
     await model_repo.save(model)
     
@@ -96,7 +96,7 @@ asyncio.run(main())
 ## Feature Store API
 
 ```python
-from src.infrastructure.feature_store.in_memory_feature_store import InMemoryFeatureStore
+from phoenix_ml.infrastructure.feature_store.in_memory_feature_store import InMemoryFeatureStore
 
 async def feature_example():
     store = InMemoryFeatureStore()
@@ -119,7 +119,7 @@ async def feature_example():
 ## Drift Detection API
 
 ```python
-from src.domain.monitoring.services.drift_calculator import DriftCalculator
+from phoenix_ml.domain.monitoring.services.drift_calculator import DriftCalculator
 
 calculator = DriftCalculator()
 
@@ -145,7 +145,7 @@ print(f"Chi2 Score: {result.score:.4f}")
 ## Model Evaluation API
 
 ```python
-from src.domain.monitoring.services.model_evaluator import get_evaluator
+from phoenix_ml.domain.monitoring.services.model_evaluator import get_evaluator
 
 # Classification
 evaluator = get_evaluator("classification")
@@ -167,7 +167,7 @@ print(metrics)  # {"rmse": 0.3, "mae": 0.27, "r2": 0.89}
 ## Alert Management API
 
 ```python
-from src.domain.monitoring.services.alert_manager import AlertManager, AlertRule
+from phoenix_ml.domain.monitoring.services.alert_manager import AlertManager, AlertRule
 
 manager = AlertManager()
 
@@ -199,7 +199,7 @@ for alert in alerts:
 ## Circuit Breaker API
 
 ```python
-from src.domain.inference.services.circuit_breaker import CircuitBreaker
+from phoenix_ml.domain.inference.services.circuit_breaker import CircuitBreaker
 
 cb = CircuitBreaker(
     failure_threshold=5,     # Open after 5 failures
@@ -221,7 +221,7 @@ else:
 ## Batch Prediction
 
 ```python
-from src.domain.inference.services.batch_manager import BatchManager, BatchConfig
+from phoenix_ml.domain.inference.services.batch_manager import BatchManager, BatchConfig
 
 config = BatchConfig(max_batch_size=32, max_wait_time_ms=10)
 batch_manager = BatchManager(config=config, engine=inference_engine)
@@ -233,7 +233,7 @@ results = await batch_manager.submit(model, [features_1, features_2, features_3]
 ## Routing Strategies
 
 ```python
-from src.domain.inference.services.routing_strategy import (
+from phoenix_ml.domain.inference.services.routing_strategy import (
     SingleModelStrategy,
     ABTestStrategy,
     CanaryStrategy,

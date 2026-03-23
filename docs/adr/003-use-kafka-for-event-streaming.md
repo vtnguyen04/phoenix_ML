@@ -5,18 +5,18 @@
 
 ## Context
 
-ML inference platform generates high-volume events: predictions, drift detections, model updates, training completions. These events cần được xử lý async để không block main inference path.
+ML inference platform generates high-volume events: predictions, drift detections, model updates, training completions. These events need to be processed asynchronously so as not to block the main inference path.
 
-### Vấn đề
+### Problem
 
-- Synchronous processing: prediction logging → tăng latency
-- Tight coupling: inference service trực tiếp gọi monitoring service
-- Single point of failure: nếu logger chết → inference cũng chết
-- Scale vertically only: tất cả processing trên 1 process
+- Synchronous processing: prediction logging → increases latency
+- Tight coupling: inference service directly calls monitoring service
+- Single point of failure: if logger dies → inference dies too
+- Scale vertically only: all processing on 1 process
 
 ## Decision
 
-Sử dụng **Apache Kafka** (KRaft mode, no Zookeeper) cho async event streaming.
+Use **Apache Kafka** (KRaft mode, no Zookeeper) cho async event streaming.
 
 ### Event Flow
 
@@ -36,12 +36,12 @@ graph LR
 **Producer** (`kafka_producer.py`):
 - `AIOKafkaProducer` (async)
 - JSON serialization
-- No-op fallback khi Kafka offline → development/CI không cần Kafka
+- No-op fallback khi Kafka offline → development/CI no need for Kafka
 
 **Consumer** (`kafka_consumer.py`):
 - `AIOKafkaConsumer` (async)
 - Consumer group: `phoenix-ml-consumers`
-- Per-message error handling (1 message lỗi ≠ crash cả consumer)
+- Per-message error handling (1 bad message ≠ crash entire consumer)
 - Auto-commit offsets
 - No-op fallback
 

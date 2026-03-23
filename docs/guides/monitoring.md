@@ -1,8 +1,8 @@
 # Monitoring & Alerting Guide
 
-Hướng dẫn chi tiết hệ thống monitoring, drift detection, anomaly detection, alerting, và self-healing.
+Detailed guide to the monitoring, drift detection, anomaly detection, alerting, and self-healing systems.
 
-## Tổng quan
+## Overview
 
 ```mermaid
 graph TD
@@ -40,10 +40,10 @@ Phoenix ML supports 3 drift detection algorithms, configurable per model:
 
 #### 1. Kolmogorov-Smirnov Test (`ks`)
 
-**Khi nào dùng**: Continuous features, general purpose
+**When to use**: Continuous features, general purpose
 
 ```python
-from src.domain.monitoring.services.drift_calculator import DriftCalculator
+from phoenix_ml.domain.monitoring.services.drift_calculator import DriftCalculator
 
 calc = DriftCalculator()
 result = calc.calculate_ks(
@@ -53,7 +53,7 @@ result = calc.calculate_ks(
 # DriftResult(score=1.0, is_drifted=True)
 ```
 
-**Nguyên lý**: So sánh 2 cumulative distribution functions. Score = max distance giữa 2 CDFs.
+**Principle**: Compares 2 cumulative distribution functions. Score = max distance between 2 CDFs.
 
 | Score | Interpretation |
 |-------|---------------|
@@ -63,13 +63,13 @@ result = calc.calculate_ks(
 
 #### 2. Population Stability Index (`psi`)
 
-**Khi nào dùng**: Binned distributions, fraud detection
+**When to use**: Binned distributions, fraud detection
 
 ```python
 result = calc.calculate_psi(reference, current)
 ```
 
-**Nguyên lý**: Chia data thành bins, so sánh tỷ lệ của mỗi bin giữa reference và current.
+**Principle**: Bins data and compares the ratio of each bin between reference and current.
 
 | PSI | Interpretation |
 |-----|---------------|
@@ -79,15 +79,15 @@ result = calc.calculate_psi(reference, current)
 
 #### 3. Chi-squared Test (`chi2`)
 
-**Khi nào dùng**: Categorical features
+**When to use**: Categorical features
 
 ```python
 result = calc.calculate_chi2(reference, current)
 ```
 
-**Nguyên lý**: So sánh observed vs expected frequencies. High chi2 = significant difference.
+**Principle**: Compares observed vs expected frequencies. High chi2 = significant difference.
 
-### Cấu hình Drift Detection
+### Configure Drift Detection
 
 Per-model trong `model_configs/<model>.yaml`:
 
@@ -107,10 +107,10 @@ DRIFT_THRESHOLD=0.3              # Default threshold
 
 ### Monitoring Loop
 
-`MonitoringService` chạy background loop trong `lifespan.py`:
+`MonitoringService` runs a background loop in `lifespan.py`:
 
 ```python
-# Mỗi MONITORING_INTERVAL_SECONDS:
+# Every MONITORING_INTERVAL_SECONDS:
 for model_id in all_models:
     # 1. Get recent prediction logs
     logs = await log_repo.get_recent(model_id, limit=100)
@@ -137,7 +137,7 @@ for model_id in all_models:
 ### Z-Score Method
 
 ```python
-from src.domain.monitoring.services.anomaly_detector import AnomalyDetector
+from phoenix_ml.domain.monitoring.services.anomaly_detector import AnomalyDetector
 
 detector = AnomalyDetector()
 values = [10, 12, 11, 13, 100, 12, 11]  # 100 is anomaly
@@ -157,7 +157,7 @@ anomalies = detector.detect_iqr(values)
 ### Alert Rules
 
 ```python
-from src.domain.monitoring.services.alert_manager import AlertManager, AlertRule
+from phoenix_ml.domain.monitoring.services.alert_manager import AlertManager, AlertRule
 
 rules = [
     AlertRule(
@@ -189,7 +189,7 @@ rules = [
 ### Alert Notifier (Webhooks)
 
 ```python
-from src.infrastructure.monitoring.alert_notifier import AlertNotifier
+from phoenix_ml.infrastructure.monitoring.alert_notifier import AlertNotifier
 
 notifier = AlertNotifier(webhook_url="https://hooks.slack.com/services/xxx")
 await notifier.notify(alert)
@@ -222,7 +222,7 @@ Payload format (Slack-compatible):
 ### Classification Metrics
 
 ```python
-from src.domain.monitoring.services.model_evaluator import get_evaluator
+from phoenix_ml.domain.monitoring.services.model_evaluator import get_evaluator
 
 evaluator = get_evaluator("classification")
 metrics = evaluator.evaluate(predictions, ground_truth)
@@ -240,7 +240,7 @@ metrics = evaluator.evaluate(predictions, ground_truth)
 ## Auto-Rollback
 
 ```python
-from src.domain.monitoring.services.rollback_manager import RollbackManager
+from phoenix_ml.domain.monitoring.services.rollback_manager import RollbackManager
 
 rollback_manager = RollbackManager()
 decision = rollback_manager.evaluate_rollback(
@@ -288,7 +288,7 @@ Access: `http://localhost:3001` (admin/admin)
 
 ### Auto-provisioned Dashboard
 
-Dashboard `phoenix-ml.json` bao gồm:
+Dashboard `phoenix-ml.json` includes:
 
 | Panel | Type | Query |
 |-------|------|-------|
@@ -306,14 +306,14 @@ Access: `http://localhost:16686`
 ### Setup
 
 ```python
-# Tự động initialize trong lifespan.py
-from src.infrastructure.monitoring.tracing import init_tracing
+# Automatic initialize trong lifespan.py
+from phoenix_ml.infrastructure.monitoring.tracing import init_tracing
 init_tracing()  # OTLP exporter → Jaeger
 ```
 
 ### Trace Attributes
 
-Mỗi prediction request tạo trace với spans:
+Each prediction request creates a trace with spans:
 
 ```
 [predict] 5.2ms
@@ -334,7 +334,9 @@ sequenceDiagram
     participant Alert as AlertManager
     participant Notify as Slack/Discord
     participant Rollback as RollbackManager
-    participant Airflow as Airflow DAG
+    participant Export as /data/export-training
+    participant Train as Retrain Pipeline
+    participant Register as /models/register
     
     loop Every 30 seconds
         Monitor->>Drift: calculate_drift(reference, current)
@@ -342,13 +344,34 @@ sequenceDiagram
         
         alt drift_score > 0.3
             Monitor->>Alert: evaluate(rules)
-            Alert->>Notify: webhook POST
+            Alert->>Notify: webhook POST (Slack/PagerDuty)
             Alert->>Rollback: evaluate_rollback()
-            Rollback->>Rollback: archive challengers
-            Monitor->>Airflow: trigger retrain DAG
+            Rollback->>Rollback: archive challengers (keep champion)
+            Monitor->>Export: query labeled prediction_logs
+            Export-->>Train: fresh data CSV (logs + baseline)
+            Train->>Train: retrain on fresh distribution
+            Train->>Register: register as challenger
         end
     end
 ```
+
+### End-to-End Simulation
+
+```bash
+# Simulate the complete 8-week production lifecycle
+uv run python scripts/simulate_pipeline.py --fast
+```
+
+The simulation covers ALL 12 API endpoints:
+
+| Week | What happens | Endpoints used |
+|------|-------------|----------------|
+| 1-2 | Normal traffic, labels accumulate | `/predict`, `/feedback` |
+| 3-4 | Distribution shift, drift begins | `/predict`, `/monitoring/drift/{id}` |
+| 5 | 🚨 Alert + ⏪ Rollback | `/models/rollback`, `/monitoring/reports/{id}` |
+| 6 | Export fresh data | `/data/export-training`, `/models/{id}/retrain` |
+| 7 | Retrain + register | `/models/register`, `/models` |
+| 8 | Post-healing verification | `/models/{id}`, `/monitoring/performance/{id}` |
 
 ### Manual Trigger
 
@@ -359,9 +382,19 @@ curl http://localhost:8001/monitoring/drift/credit-risk
 # View drift history
 curl http://localhost:8001/monitoring/reports/credit-risk?limit=20
 
-# Rollback model
-curl -X POST http://localhost:8001/models/rollback -d '{"model_id": "credit-risk"}'
+# Rollback model (archive challengers)
+curl -X POST http://localhost:8001/models/rollback \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "credit-risk", "reason": "Manual rollback"}'
+
+# Export fresh data for retrain
+curl -X POST http://localhost:8001/data/export-training \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "credit-risk", "min_samples": 10, "include_baseline": true}'
+
+# Trigger Airflow retrain pipeline
+curl -X POST http://localhost:8001/models/credit-risk/retrain
 ```
 
 ---
-*Document Status: v4.0 — Updated March 2026*
+*Document Status: v5.0 — Updated March 2026*

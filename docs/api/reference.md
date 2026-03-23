@@ -2,9 +2,9 @@
 
 Base URL: `http://localhost:8001` (Docker) · `http://localhost:8000` (local dev)
 
-## Tổng quan
+## Overview
 
-Phoenix ML cung cấp RESTful API qua FastAPI và gRPC (port 50051). Tất cả endpoints trả JSON.
+Phoenix ML exposes a RESTful API via FastAPI and gRPC (port 50051). All endpoints return JSON.
 
 ---
 
@@ -12,7 +12,7 @@ Phoenix ML cung cấp RESTful API qua FastAPI và gRPC (port 50051). Tất cả 
 
 ### `GET /health`
 
-Kiểm tra API server đang hoạt động.
+Checks that the API server is running.
 
 **Response:**
 ```json
@@ -28,15 +28,15 @@ Kiểm tra API server đang hoạt động.
 
 ### `POST /predict`
 
-Thực hiện single prediction.
+Performs a single prediction.
 
 **Request Body:**
 ```json
 {
   "model_id": "credit-risk",
-  "model_version": "v1",        // Optional, mặc định champion
-  "entity_id": "customer_42",   // Optional, lấy features từ Redis
-  "features": [0.5, 1.2, 0.8, 3.4, 0.1, 2.5, 1.0]  // Optional nếu có entity_id
+  "model_version": "v1",        // Optional, defaults to champion
+  "entity_id": "customer_42",   // Optional, fetches features from Redis
+  "features": [0.5, 1.2, 0.8, 3.4, 0.1, 2.5, 1.0]  // Optional if entity_id provided
 }
 ```
 
@@ -59,23 +59,23 @@ Thực hiện single prediction.
 | 422 | Invalid features / missing required fields |
 | 503 | Circuit breaker OPEN (model overloaded) |
 
-**Luồng xử lý:**
+**Processing flow:**
 
-1. Router nhận request → tạo `PredictCommand`
+1. Router receives request → creates `PredictCommand`
 2. `PredictHandler.handle(command)`:
-   - Resolve model (champion hoặc version cụ thể)
-   - Get features: từ entity_id (Redis) hoặc raw features trong request
-   - Chạy inference qua `InferenceEngine.predict(model, features)`
+   - Resolves model (champion or specific version)
+   - Gets features: from entity_id (Redis) or raw features in request
+   - Runs inference via `InferenceEngine.predict(model, features)`
 3. Background tasks:
-   - Log prediction vào PostgreSQL
-   - Publish event lên Kafka topic `inference-events`
-4. Trả `PredictionResponse`
+   - Logs prediction to PostgreSQL
+   - Publishes event to Kafka topic `inference-events`
+4. Returns `PredictionResponse`
 
 ---
 
 ### `POST /predict/batch`
 
-Thực hiện batch prediction cho nhiều inputs cùng lúc.
+Performs batch prediction for multiple inputs at once.
 
 **Request Body:**
 ```json
@@ -110,7 +110,7 @@ Thực hiện batch prediction cho nhiều inputs cùng lúc.
 
 ### `POST /feedback`
 
-Submit ground truth cho prediction đã thực hiện (dùng cho model evaluation).
+Submits ground truth for a completed prediction (used for model evaluation).
 
 **Request Body:**
 ```json
@@ -134,7 +134,7 @@ Submit ground truth cho prediction đã thực hiện (dùng cho model evaluatio
 
 ### `GET /models`
 
-Liệt kê tất cả models đang active trong registry.
+Lists all active models in the registry.
 
 **Response (200 OK):**
 ```json
@@ -148,7 +148,7 @@ Liệt kê tất cả models đang active trong registry.
       "is_active": true,
       "metadata": {
         "metrics": {"accuracy": 0.95, "f1_score": 0.93},
-        "features": ["income", "age", "credit_score", ...]
+        "features": ["income", "age", "credit_score", "..."]
       },
       "created_at": "2026-03-19T10:30:00Z"
     },
@@ -168,13 +168,13 @@ Liệt kê tất cả models đang active trong registry.
 
 ### `GET /models/{model_id}`
 
-Lấy thông tin chi tiết 1 model (champion version).
+Returns detailed information for a single model (champion version).
 
 **Parameters:**
 
 | Param | Type | Description |
 |-------|------|-------------|
-| `model_id` | path | ID của model (e.g., `credit-risk`) |
+| `model_id` | path | Model identifier (e.g., `credit-risk`) |
 
 **Response (200 OK):**
 ```json
@@ -201,7 +201,7 @@ Lấy thông tin chi tiết 1 model (champion version).
 
 ### `POST /models/register`
 
-Register model version mới.
+Registers a new model version.
 
 **Request Body:**
 ```json
@@ -229,7 +229,7 @@ Register model version mới.
 
 ### `POST /models/rollback`
 
-Rollback: archive tất cả challenger versions, giữ champion.
+Archives all challenger versions and keeps the current champion.
 
 **Request Body:**
 ```json
@@ -254,13 +254,13 @@ Rollback: archive tất cả challenger versions, giữ champion.
 
 ### `GET /monitoring/drift/{model_id}`
 
-Chạy drift detection cho model, trả kết quả realtime.
+Runs drift detection for a model and returns real-time results.
 
 **Parameters:**
 
 | Param | Type | Description |
 |-------|------|-------------|
-| `model_id` | path | ID của model |
+| `model_id` | path | Model identifier |
 
 **Response (200 OK):**
 ```json
@@ -277,7 +277,7 @@ Chạy drift detection cho model, trả kết quả realtime.
 
 **Drift Methods:**
 
-| Method | Algorithm | Khi nào dùng |
+| Method | Algorithm | When to use |
 |--------|-----------|-------------|
 | `ks` | Kolmogorov-Smirnov test | Continuous features, general purpose |
 | `psi` | Population Stability Index | Binned distributions, fraud detection |
@@ -285,13 +285,13 @@ Chạy drift detection cho model, trả kết quả realtime.
 
 ### `GET /monitoring/reports/{model_id}`
 
-Lấy lịch sử drift reports.
+Returns historical drift reports.
 
 **Query Parameters:**
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `limit` | int | 10 | Số reports tối đa |
+| `limit` | int | 10 | Maximum number of reports |
 
 **Response (200 OK):**
 ```json
@@ -316,7 +316,7 @@ Lấy lịch sử drift reports.
 
 ### `GET /monitoring/performance/{model_id}`
 
-Lấy performance metrics của model (tính từ logs có ground truth).
+Returns performance metrics for a model (computed from logs with ground truth).
 
 **Response (200 OK):**
 ```json
@@ -335,11 +335,95 @@ Lấy performance metrics của model (tính từ logs có ground truth).
 
 ---
 
-## Feature Store
+## Data Pipeline
+
+### `POST /data/ingest`
+
+Runs the data pipeline: load → validate → clean → store.
+
+**Request Body:**
+```json
+{
+  "source_path": "data/credit_risk/dataset.csv",
+  "target_column": "target",
+  "output_path": "data/credit_risk/cleaned.csv",
+  "feature_ranges": {"age": [18, 75], "income": [0, 500000]}
+}
+```
+
+### `POST /data/validate`
+
+Validates data quality without ingesting.
+
+**Request Body:**
+```json
+{
+  "source_path": "data/credit_risk/dataset.csv",
+  "target_column": "target"
+}
+```
+
+### `POST /data/export-training`
+
+Exports fresh labeled data from prediction logs for self-healing retrain.
+
+**Request Body:**
+```json
+{
+  "model_id": "credit-risk",
+  "min_samples": 500,
+  "include_baseline": true,
+  "max_fresh_samples": 10000
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "export_path": "data/credit_risk/retrain_1774283667.csv",
+  "total_samples": 1042,
+  "fresh_samples": 42,
+  "baseline_samples": 1000,
+  "model_id": "credit-risk"
+}
+```
+
+**How it works:**
+1. Queries `prediction_logs` WHERE `ground_truth IS NOT NULL` (labeled by humans via `/feedback`)
+2. Loads baseline training CSV from model config
+3. Aligns column names between fresh logs and baseline
+4. Merges: `baseline + fresh → combined dataset`
+5. Writes timestamped CSV for the retrain pipeline
+
+---
+
+## Retrain Trigger
+
+### `POST /models/{model_id}/retrain`
+
+Manually triggers model retraining via Airflow self-healing DAG.
+
+**Response (200 OK):**
+```json
+{
+  "model_id": "credit-risk",
+  "status": "triggered",
+  "dag_run_id": "manual__2026-03-23T15:30:00",
+  "message": "Retrain pipeline triggered for credit-risk"
+}
+```
+
+**Errors:**
+
+| Status | Reason |
+|--------|--------|
+| 502 | Airflow not available or DAG not found |
+
+---
 
 ### `GET /features/{entity_id}`
 
-Lấy features cho entity từ online store.
+Retrieves features for an entity from the online store.
 
 **Response (200 OK):**
 ```json
@@ -356,7 +440,7 @@ Lấy features cho entity từ online store.
 
 ### `POST /features/{entity_id}`
 
-Thêm/cập nhật features cho entity.
+Adds or updates features for an entity.
 
 **Request Body:**
 ```json
@@ -401,7 +485,7 @@ message PredictResponse {
 
 ```python
 import grpc
-from src.infrastructure.grpc.proto import inference_pb2, inference_pb2_grpc
+from phoenix_ml.infrastructure.grpc.proto import inference_pb2, inference_pb2_grpc
 
 channel = grpc.insecure_channel("localhost:50051")
 stub = inference_pb2_grpc.InferenceServiceStub(channel)

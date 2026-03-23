@@ -1,6 +1,6 @@
 # Performance Optimization: Latency, Throughput, and Batching
 
-*Engineering sub-millisecond predictions at scale với dynamic batching, caching, và ONNX Runtime.*
+*Engineering sub-millisecond predictions at scale with dynamic batching, caching, and ONNX Runtime.*
 
 ## Performance Goals
 
@@ -218,4 +218,4 @@ spec:
 ```
 
 ---
-*Published: March 2026 · Author: Võ Thành Nguyễn*
+*Published: March 2026*

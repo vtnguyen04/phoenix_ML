@@ -364,7 +364,8 @@ class TrainingPipeline:
         """
         # Auto-delegate to tracker if available
         if self._tracker is not None:
-            return await self._tracker.tracked_run(self, context)
+            result: PipelineContext = await self._tracker.tracked_run(self, context)
+            return result
 
         return await self._execute_steps(context)
 

@@ -1,25 +1,25 @@
 # Getting Started — Build Your ML System with Phoenix ML
 
-Hướng dẫn từ A đến Z: cách sử dụng Phoenix ML framework để xây dựng hệ thống ML production cho **bài toán của bạn**.
+Step-by-step guide to building a production ML system with the Phoenix ML framework for **your use case**.
 
-!!! info "Bạn chỉ cần 2 thứ"
-    1. **YAML config** — Định nghĩa bài toán
+!!! info "You only need 2 things"
+    1. **YAML config** — Define your use case
     2. **Training script** — Train + export ONNX
 
-    Framework lo hết phần còn lại: inference, monitoring, drift detection, auto-retrain, A/B testing, logging.
+    The framework handles the rest: inference, monitoring, drift detection, auto-retrain, A/B testing, logging.
 
 ---
 
-## Tổng quan: User Flow
+## Overview: User Flow
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  1. Cài đặt framework                                  │
-│  2. Tạo model_configs/my-model.yaml   ← Bài toán       │
-│  3. Viết my_project/train.py          ← Train + ONNX   │
-│  4. Chạy framework (docker/local)                       │
+│  1. Install framework                                  │
+│  2. Create model_configs/my-model.yaml ← Your use case  │
+│  3. Write my_project/train.py          ← Train + ONNX   │
+│  4. Run framework (docker/local)                        │
 │  5. POST /predict → inference                           │
-│     ↓ Framework tự lo:                                  │
+│     ↓ Framework handles:                                │
 │     ├── ONNX inference (sub-50ms)                       │
 │     ├── Drift monitoring                                │
 │     ├── Auto retrain (drift/schedule/manual/data_change)│
@@ -31,33 +31,33 @@ Hướng dẫn từ A đến Z: cách sử dụng Phoenix ML framework để xâ
 
 ---
 
-## Bước 1: Cài đặt
+## Step 1: Install
 
 ```bash
 # Clone repo + install
 git clone https://github.com/vtnguyen04/phoenix_ML.git
 cd phoenix_ML
-uv sync   # hoặc pip install -e .
+uv sync   # or pip install -e .
 ```
 
 ---
 
-## Bước 2: Định nghĩa bài toán (YAML Config)
+## Step 2: Define Your Use Case (YAML Config)
 
-Tạo file `model_configs/<model-id>.yaml`:
+Create file `model_configs/<model-id>.yaml`:
 
-### Cấu trúc config
+### Config Structure
 
 ```yaml
 # ── BẮT BUỘC ──────────────────────────────
-model_id: my-model              # ID duy nhất
+model_id: my-model              # Unique ID
 version: v1
 framework: onnx                 # onnx | tensorrt | triton
 task_type: classification       # classification | regression | object_detection | nlp | custom
 model_path: models/my_model/v1/model.onnx
 train_script: my_project/train.py
 
-# ── FEATURES (bỏ trống nếu raw input) ────
+# ── FEATURES (leave empty if raw input) ────
 feature_names:
   - feature_1
   - feature_2
@@ -65,16 +65,16 @@ feature_names:
 # ── DATA SOURCE ──────────────────────────
 data_source:
   type: file                    # file | database | dvc
-  # type: database → thêm:
+  # type: database → add:
   #   query: "SELECT * FROM features WHERE ..."
   #   connection: "my_postgres"
-  # type: dvc → thêm:
+  # type: dvc → add:
   #   path: data/images/
 
 # ── RETRAIN STRATEGY ─────────────────────
 retrain:
   trigger: drift                # drift | manual | data_change | scheduled
-  # trigger: scheduled → thêm:
+  # trigger: scheduled → add:
   #   schedule: "0 0 * * 0"    # Cron expression
   drift_detection: true         # false cho object_detection, NLP
 
@@ -86,19 +86,19 @@ monitoring:
 
 ---
 
-## Bước 3: Viết Training Script
+## Step 3: Write Training Script
 
-Framework yêu cầu 1 function: `train_and_export(output_path, **kwargs)`
+Framework requires 1 function: `train_and_export(output_path, **kwargs)`
 
 ```python
 # my_project/train.py
 def train_and_export(output_path, metrics_path=None, data_path=None):
-    """Train model và export ra ONNX.
+    """Train model and export to ONNX.
 
     Args:
-        output_path: Đường dẫn save model.onnx
-        metrics_path: (Optional) Đường dẫn save metrics.json
-        data_path: (Optional) Đường dẫn đến training data
+        output_path: Path to save model.onnx
+        metrics_path: (Optional) Path to save metrics.json
+        data_path: (Optional) Path to training data
     """
     import json
     import pandas as pd
@@ -123,7 +123,7 @@ def train_and_export(output_path, metrics_path=None, data_path=None):
     with open(output_path, "wb") as f:
         f.write(onnx_model.SerializeToString())
 
-    # 4. Save metrics (optional, dùng cho MLflow logging)
+    # 4. Save metrics (optional, used for MLflow logging)
     if metrics_path:
         metrics = {"accuracy": float(model.score(X, y)), "n_samples": len(y)}
         with open(metrics_path, "w") as f:
@@ -132,12 +132,12 @@ def train_and_export(output_path, metrics_path=None, data_path=None):
 
 ---
 
-## Bước 4: Chạy Framework
+## Step 4: Run Framework
 
-### Option A: Docker Compose (khuyến nghị)
+### Option A: Docker Compose (recommended)
 
 ```bash
-# Khởi động toàn bộ stack: API, PostgreSQL, Redis, Kafka, MLflow, Airflow, Grafana
+# Start all stack: API, PostgreSQL, Redis, Kafka, MLflow, Airflow, Grafana
 docker compose up -d
 
 # Xem logs
@@ -147,14 +147,14 @@ docker compose logs -f api
 ### Option B: Local (dev)
 
 ```bash
-# Chạy server trực tiếp
+# Run server directly
 uv run python -m src.infrastructure.http.fastapi_server
 # → http://localhost:8000
 ```
 
 ---
 
-## Bước 5: Sử dụng API
+## Step 5: Use API
 
 ### Predict
 
@@ -192,14 +192,27 @@ curl -X POST http://localhost:8000/models/my-model/retrain
 ### Check Drift
 
 ```bash
-curl http://localhost:8000/monitoring/drift-report?model_id=my-model
+curl http://localhost:8000/monitoring/drift/my-model
+
+# View drift history
+curl http://localhost:8000/monitoring/reports/my-model
+
+# Export fresh data for retrain
+curl -X POST http://localhost:8000/data/export-training \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "my-model", "min_samples": 10, "include_baseline": true}'
+
+# Rollback challengers
+curl -X POST http://localhost:8000/models/rollback \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "my-model", "reason": "Manual rollback"}'
 ```
 
 ---
 
-## Ví dụ thực tế
+## Practical Examples
 
-### Ví dụ 1: Sentiment Analysis
+### Example 1: Sentiment Analysis
 
 ```yaml
 # model_configs/sentiment.yaml
@@ -223,14 +236,14 @@ feature_names:
   - tfidf_0
   - tfidf_1
   - tfidf_2
-  # ... (TF-IDF hoặc embedding features)
+  # ... (TF-IDF or embedding features)
 
 data_source:
   type: file
 
 retrain:
   trigger: scheduled
-  schedule: "0 0 * * 0"       # Mỗi chủ nhật
+  schedule: "0 0 * * 0"       # Every Sunday
   drift_detection: true
 
 monitoring:
@@ -253,12 +266,12 @@ def predict_sentiment(text: str) -> dict:
     return resp.json()
     # → {"result": 1, "confidence": 0.94}  ← 1 = positive
 
-predict_sentiment("Sản phẩm rất tốt, giao hàng nhanh!")
+predict_sentiment("Great product, fast delivery!")
 ```
 
 ---
 
-### Ví dụ 2: Product Recommendation
+### Example 2: Product Recommendation
 
 ```yaml
 # model_configs/product-recommend.yaml
@@ -307,20 +320,20 @@ score = resp.json()["result"]  # 0.92 → highly relevant
 
 ---
 
-## Retrain Triggers — Chi tiết
+## Retrain Triggers — Details
 
-| Trigger | Khi nào dùng | Cách hoạt động |
+| Trigger | When to use | How it works |
 |---------|-------------|----------------|
-| `drift` | Tabular data, production traffic | Framework tự detect drift → trigger Airflow DAG |
-| `manual` | Khi user muốn kiểm soát hoàn toàn | `POST /models/{id}/retrain` hoặc Airflow UI |
-| `data_change` | DVC datasets (images, text corpora) | DAG check `dvc status` mỗi 6h → retrain nếu data thay đổi |
-| `scheduled` | Retrain định kỳ | Cron expression: `"0 0 * * 0"` = mỗi chủ nhật |
+| `drift` | Tabular data, production traffic | Framework auto-detects drift → triggers Airflow DAG |
+| `manual` | When user wants full control | `POST /models/{id}/retrain` or Airflow UI |
+| `data_change` | DVC datasets (images, text corpora) | DAG checks `dvc status` every 6h → retrains if data changed |
+| `scheduled` | Periodic retrain | Cron expression: `"0 0 * * 0"` = every Sunday |
 
 ---
 
-## Setup DVC (cho datasets lớn)
+## Setup DVC (for large datasets)
 
-Nếu bài toán cần version dữ liệu lớn (ảnh, text corpora):
+If your use case needs to version large data (images, text corpora):
 
 ```bash
 # 1. Init DVC
@@ -346,28 +359,31 @@ dvc push
 
 ## Monitoring Dashboard
 
-Sau khi deploy, truy cập:
+After deployment, access:
 
-| Service | URL | Chức năng |
+| Service | URL | Function |
 |---------|-----|-----------|
-| **API** | `http://localhost:8000/docs` | Swagger UI |
-| **Grafana** | `http://localhost:3000` | Metrics dashboards |
-| **MLflow** | `http://localhost:5000` | Experiment tracking |
+| **API** | `http://localhost:8001/docs` | Swagger UI |
+| **Grafana** | `http://localhost:3001` | Metrics dashboards |
+| **MLflow** | `http://localhost:5001` | Experiment tracking |
 | **Airflow** | `http://localhost:8080` | Pipeline management |
-| **Frontend** | `http://localhost:5173` | React dashboard |
+| **Frontend** | `http://localhost:5174` | React dashboard |
 
 ---
 
 ## FAQ
 
-**Q: Framework hỗ trợ framework ML nào?**
-Bất kỳ framework nào export được ONNX: scikit-learn, XGBoost, LightGBM, PyTorch, TensorFlow, Keras.
+**Q: What ML frameworks does it support?**
+Any framework that can export ONNX: scikit-learn, XGBoost, LightGBM, PyTorch, TensorFlow, Keras.
 
-**Q: Input format là gì?**
-Array of floats: `[f1, f2, f3, ...]`. User tự preprocessing (text → TF-IDF, image → embedding, etc.) trước khi gọi API.
+**Q: What is the input format?**
+Array of floats: `[f1, f2, f3, ...]`. User handles preprocessing (text → TF-IDF, image → embedding, etc.) before calling API.
 
-**Q: Có thể chạy nhiều model cùng lúc không?**
-Có. Mỗi YAML config = 1 model. Framework load tất cả model configs khi khởi động.
+**Q: Can I run multiple models simultaneously?**
+Yes. Each YAML config = 1 model. Framework loads all model configs at startup.
 
-**Q: Model tự retrain thế nào?**
-Framework detect drift → trigger Airflow DAG → chạy `train_script` → export ONNX mới → log MLflow → register challenger → so sánh với champion.
+**Q: How does auto-retraining work?**
+Framework detects drift → exports fresh labeled data from prediction_logs → merges with baseline → retrains on new distribution → registers challenger → compares with champion.
+
+**Q: How many models are included?**
+5 examples: credit-risk, fraud-detection, house-price, image-classification, sentiment.

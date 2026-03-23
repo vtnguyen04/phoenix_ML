@@ -5,18 +5,18 @@
 
 ## Context
 
-ML platform cần serve models trained bằng nhiều frameworks khác nhau: scikit-learn, XGBoost, PyTorch, TensorFlow. Mỗi framework có API inference riêng, dependencies riêng, performance characteristics riêng.
+ML platform needs to serve models trained with various frameworks: scikit-learn, XGBoost, PyTorch, TensorFlow. Each framework has its own inference API, dependencies, and performance characteristics.
 
-### Vấn đề
+### Problem
 
-- Quản lý multiple runtime dependencies phức tạp
-- Inconsistent inference API giữa frameworks
-- Khó optimize performance khi mỗi framework có batching/threading strategy khác nhau
-- Deployment size tăng khi bundle nhiều ML frameworks
+- Managing multiple runtime dependencies is complex
+- Inconsistent inference API across frameworks
+- Hard to optimize performance when each framework has different batching/threading strategies
+- Deployment size increases when bundling multiple ML frameworks
 
 ## Decision
 
-Standardize trên **ONNX Runtime** như unified inference engine:
+Standardize on **ONNX Runtime** as the unified inference engine:
 
 ### Architecture
 
@@ -29,9 +29,9 @@ TensorFlow → tf2onnx → model.onnx → ONNXInferenceEngine
 
 ### Implementation
 
-3 engine implementations, tất cả share interface `InferenceEngine`:
+3 engine implementations, all sharing the `InferenceEngine` interface:
 
-| Engine | File | Mục đích | Fallback |
+| Engine | File | Purpose | Fallback |
 |--------|------|----------|----------|
 | `ONNXInferenceEngine` | `onnx_engine.py` | Default CPU/GPU inference | — |
 | `TensorRTExecutor` | `tensorrt_executor.py` | High-performance GPU (FP16) | CPU via ONNX Runtime |
@@ -58,17 +58,17 @@ _ENGINE_FACTORIES = {
 ## Consequences
 
 ### Positive
-- ✅ Single dependency (`onnxruntime`) thay vì nhiều ML frameworks
-- ✅ Consistent interface cho tất cả model types
-- ✅ Hardware acceleration tự động (CPU, CUDA, TensorRT, DirectML)
-- ✅ Model size giảm (ONNX protobuf compact hơn pickle)
-- ✅ Cross-platform: train trên GPU, deploy trên CPU/edge
+- ✅ Single dependency (`onnxruntime`) instead of multiple ML frameworks
+- ✅ Consistent interface for all model types
+- ✅ Hardware acceleration automatic (CPU, CUDA, TensorRT, DirectML)
+- ✅ Smaller model size (ONNX protobuf more compact than pickle)
+- ✅ Cross-platform: train on GPU, deploy on CPU/edge
 - ✅ ONNX ecosystem: onnxruntime-gpu, onnxruntime-web, onnxruntime-mobile
 
 ### Negative
-- ❌ Conversion step cần thiết (sklearn → ONNX) — nhưng automated trong training scripts
-- ❌ Một số model operations không support (custom layers) — rare
-- ❌ Debug difficulty: ONNX graph opaque hơn native framework
+- ❌ Conversion step required (sklearn → ONNX) — but automated in training scripts
+- ❌ Some model operations not supported (custom layers) — rare
+- ❌ Debug difficulty: ONNX graph more opaque than native framework
 
 ## References
 

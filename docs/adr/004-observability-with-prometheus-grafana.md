@@ -5,17 +5,17 @@
 
 ## Context
 
-ML inference system cần monitoring toàn diện: prediction latency, throughput, model accuracy, data drift, error rates. Cần alert khi metrics vượt ngưỡng.
+ML inference system needs comprehensive monitoring: prediction latency, throughput, model accuracy, data drift, error rates. Alerting is needed when metrics exceed thresholds.
 
-### Vấn đề
-- Không có visibility vào model performance in production
-- Không biết khi nào data drift xảy ra
-- Không detect được latency spikes hay error rate increases
+### Problem
+- No visibility into model performance in production
+- Cannot detect when data drift occurs
+- Cannot detect latency spikes or error rate increases
 - Manual monitoring = human bottleneck
 
 ## Decision
 
-Sử dụng **Prometheus** (metrics collection) + **Grafana** (visualization) + **Jaeger** (distributed tracing).
+Use **Prometheus** (metrics collection) + **Grafana** (visualization) + **Jaeger** (distributed tracing).
 
 ### Observability Stack
 
@@ -28,7 +28,7 @@ graph LR
 
 ### Metrics Published
 
-| Metric | Type | Labels | Mục đích |
+| Metric | Type | Labels | Purpose |
 |--------|------|--------|----------|
 | `phoenix_prediction_count` | Counter | `model_id`, `version` | Total predictions |
 | `phoenix_inference_latency_ms` | Histogram | `model_id` | Latency distribution (p50/p95/p99) |

@@ -1,195 +1,257 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "-- Grafana --",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
   "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 1,
-  "links": [],
-  "liveNow": false,
+  "graphTooltip": 1,
+  "liveNow": true,
   "panels": [
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "System Resources",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 60},
+            {"color": "orange", "value": 80},
+            {"color": "red", "value": 90}
+          ]},
+          "unit": "percent", "min": 0, "max": 100
         }
       },
-      "title": "Throughput (RPS) per Model",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 1},
+      "id": 1,
+      "title": "CPU Usage",
+      "type": "gauge",
+      "targets": [{"expr": "system_cpu_usage_percent", "refId": "A"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 60},
+            {"color": "orange", "value": 80},
+            {"color": "red", "value": 90}
+          ]},
+          "unit": "percent", "min": 0, "max": 100
+        }
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 1},
+      "id": 2,
+      "title": "Memory Usage",
+      "type": "gauge",
+      "targets": [{"expr": "system_memory_usage_percent", "refId": "A"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 60},
+            {"color": "red", "value": 90}
+          ]},
+          "unit": "percent", "min": 0, "max": 100
+        }
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 1},
+      "id": 3,
+      "title": "GPU Utilization",
+      "type": "gauge",
+      "targets": [{"expr": "system_gpu_utilization_percent", "legendFormat": "{{gpu_name}}", "refId": "A"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 70},
+            {"color": "red", "value": 90}
+          ]},
+          "unit": "percent", "min": 0, "max": 100
+        }
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 1},
+      "id": 4,
+      "title": "Disk Usage",
+      "type": "gauge",
+      "targets": [{"expr": "system_disk_usage_percent", "refId": "A"}]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 7},
+      "id": 101,
+      "title": "Inference Performance",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "gradientMode": "scheme"}
+        }
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+      "id": 5,
+      "title": "Prediction Throughput (RPS)",
+      "type": "timeseries",
+      "targets": [{
+        "expr": "sum(rate(prediction_count_total{model_id=~\"$model_id\"}[1m])) by (model_id)",
+        "legendFormat": "{{model_id}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "s",
+          "custom": {"drawStyle": "line", "fillOpacity": 5, "lineWidth": 2}
+        }
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+      "id": 6,
+      "title": "Latency (P50 / P95 / P99)",
       "type": "timeseries",
       "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(prediction_count_total[1m])) by (model_id, version)",
-          "legendFormat": "{{model_id}}:{{version}}",
-          "range": true,
-          "refId": "A"
-        }
+        {"expr": "histogram_quantile(0.50, sum(rate(inference_latency_seconds_bucket{model_id=~\"$model_id\"}[5m])) by (le, model_id))", "legendFormat": "P50 {{model_id}}", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum(rate(inference_latency_seconds_bucket{model_id=~\"$model_id\"}[5m])) by (le, model_id))", "legendFormat": "P95 {{model_id}}", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum(rate(inference_latency_seconds_bucket{model_id=~\"$model_id\"}[5m])) by (le, model_id))", "legendFormat": "P99 {{model_id}}", "refId": "C"}
       ]
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 2,
-      "title": "P99 Latency (seconds)",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum(rate(inference_latency_seconds_bucket[1m])) by (le, model_id))",
-          "legendFormat": "{{model_id}}",
-          "refId": "A"
-        }
-      ],
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 0.01},
+            {"color": "red", "value": 0.05}
+          ]},
+          "unit": "percentunit"
         }
-      }
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+      "id": 7,
+      "title": "Error Rate",
+      "type": "stat",
+      "targets": [{
+        "expr": "sum(rate(prediction_count_total{status=\"error\",model_id=~\"$model_id\"}[5m])) / sum(rate(prediction_count_total{model_id=~\"$model_id\"}[5m]))",
+        "refId": "A"
+      }]
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 8
-      },
-      "id": 3,
-      "title": "Feature Drift Score",
-      "type": "gauge",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "expr": "feature_drift_score",
-          "legendFormat": "{{feature_name}}",
-          "refId": "A"
-        }
-      ],
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 16},
+      "id": 102,
+      "title": "Drift Detection",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
       "fieldConfig": {
         "defaults": {
-          "max": 1,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.1 },
-              { "color": "red", "value": 0.25 }
-            ]
-          }
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "green", "value": null},
+            {"color": "yellow", "value": 0.1},
+            {"color": "red", "value": 0.25}
+          ]},
+          "min": 0, "max": 1
         }
-      }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 17},
+      "id": 8,
+      "title": "Feature Drift Scores",
+      "type": "gauge",
+      "targets": [{
+        "expr": "feature_drift_score{model_id=~\"$model_id\"}",
+        "legendFormat": "{{model_id}} / {{feature_name}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 2}
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 17},
+      "id": 9,
+      "title": "Drift Events",
+      "type": "timeseries",
+      "targets": [{
+        "expr": "sum(rate(drift_detected_events_total{model_id=~\"$model_id\"}[5m])) by (model_id, feature_name)",
+        "legendFormat": "{{model_id}} / {{feature_name}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 25},
+      "id": 103,
+      "title": "Model Health",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [
+            {"color": "red", "value": null},
+            {"color": "yellow", "value": 0.7},
+            {"color": "green", "value": 0.85}
+          ]},
+          "min": 0, "max": 1, "decimals": 3
+        }
+      },
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 26},
+      "id": 10,
+      "title": "Primary Metric (Alertable)",
+      "type": "stat",
+      "targets": [{
+        "expr": "model_primary_metric{model_id=~\"$model_id\"}",
+        "legendFormat": "{{model_id}} ({{metric_name}})",
+        "refId": "A"
+      }]
     }
   ],
-  "schemaVersion": 36,
+  "schemaVersion": 39,
   "style": "dark",
-  "tags": ["mlops"],
+  "tags": ["mlops", "phoenix-ml"],
   "templating": {
-    "list": []
+    "list": [{
+      "current": {"selected": true, "text": "All", "value": "$__all"},
+      "datasource": {"type": "prometheus", "uid": "Prometheus"},
+      "definition": "label_values(prediction_count_total, model_id)",
+      "includeAll": true,
+      "multi": true,
+      "name": "model_id",
+      "query": "label_values(prediction_count_total, model_id)",
+      "refresh": 1,
+      "type": "query"
+    }]
   },
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
+  "time": {"from": "now-1h", "to": "now"},
   "title": "Phoenix ML Platform - Production",
   "uid": "phoenix-ml-prod",
-  "version": 1
+  "version": 3,
+  "refresh": "10s"
 }

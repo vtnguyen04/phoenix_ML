@@ -42,7 +42,7 @@ Phoenix ML is a **production-grade, model-agnostic ML inference framework** (Pyt
 | 🛡️ **Circuit Breaker** | Fault tolerance with automatic failover and recovery |
 | 📊 **Full Observability** | Pluggable monitoring: Prometheus, Grafana, Jaeger integrations |
 | 🔬 **Drift Detection** | KS, PSI, Chi², Wasserstein tests — configurable per model |
-| 🌀 **Flexible Retrain** | Triggers: drift / manual / data-change (DVC) / scheduled |
+| 🌀 **Fresh Data Retrain** | Export labeled prediction logs → merge with baseline → retrain on new distribution |
 | 📦 **Batch Prediction** | `/predict/batch` endpoint with concurrent processing |
 | 🧩 **Model-Agnostic** | Any ONNX-exportable framework — scikit-learn, XGBoost, PyTorch, etc. |
 
@@ -50,7 +50,7 @@ Phoenix ML is a **production-grade, model-agnostic ML inference framework** (Pyt
 
 ## 🧩 Model Examples
 
-The platform ships with **4 production-ready examples** demonstrating model-agnostic capabilities:
+The platform ships with **5 production-ready examples** demonstrating model-agnostic capabilities:
 
 | Example | ML Framework | Task | Features | Accuracy |
 |---------|-------------|------|----------|----------|
@@ -58,6 +58,7 @@ The platform ships with **4 production-ready examples** demonstrating model-agno
 | **House Price** | scikit-learn (Ridge) | Regression | 8 (tabular) | R² 0.61 |
 | **Fraud Detection** | XGBoost | Imbalanced Classification | 12 (tabular) | 98.2% |
 | **Image Classification** | sklearn MLP (256→128) | Multi-class (10 classes) | 784 (28×28 pixels) | 87.0% |
+| **Sentiment Analysis** | scikit-learn (TF-IDF + LR) | NLP Binary Classification | Text (TF-IDF) | ~85% |
 
 Each example lives in `examples/<problem>/train.py` with a corresponding `model_configs/<name>.yaml`.
 
@@ -246,7 +247,10 @@ uv run python examples/credit_risk/train.py
 uv run python examples/house_price/train.py
 uv run python examples/fraud_detection/train.py
 uv run python examples/image_classification/train.py
+uv run python examples/sentiment/train.py
 
+# Run end-to-end simulation (demonstrates full self-healing lifecycle)
+uv run python scripts/simulate_pipeline.py --fast
 ```
 
 | Service | URL | Purpose |
@@ -303,9 +307,12 @@ cd frontend && npm install && npm run dev
 
 ```bash
 # All quality gates (last run: all pass ✅)
-uv run ruff check src/ tests/ scripts/ dags/    # Linting — 0 errors
-uv run mypy src/ --ignore-missing-imports        # Type checking — 0 errors (142 files)
-uv run pytest tests/ --cov=src                   # Tests — 87% coverage
+uv run ruff check phoenix_ml/ tests/ scripts/ dags/    # Linting — 0 errors
+uv run mypy phoenix_ml/ --ignore-missing-imports        # Type checking — 0 errors
+uv run pytest tests/ --cov=phoenix_ml                   # Tests — all pass
+
+# End-to-end pipeline simulation
+uv run python scripts/simulate_pipeline.py --fast       # 7-week lifecycle demo
 
 # Frontend tests
 cd frontend && npx vitest run                    # 104 tests, 16 test files
@@ -324,13 +331,18 @@ uv run locust -f benchmarks/load_test.py --host http://localhost:8001
 | GET | `/health` | Health check |
 | POST | `/predict` | Single prediction |
 | POST | `/predict/batch` | Batch predictions |
-| POST | `/feedback` | Submit ground truth |
+| POST | `/feedback` | Submit ground truth for a prediction |
+| GET | `/models` | List all registered models |
 | GET | `/models/{model_id}` | Get model info |
 | POST | `/models/register` | Register new model version |
 | POST | `/models/rollback` | Rollback challengers |
+| POST | `/models/{model_id}/retrain` | Trigger retrain pipeline |
 | GET | `/monitoring/drift/{model_id}` | Trigger drift check |
 | GET | `/monitoring/reports/{model_id}` | Drift reports history |
 | GET | `/monitoring/performance/{model_id}` | Performance metrics |
+| POST | `/data/ingest` | Run data pipeline (load → validate → clean) |
+| POST | `/data/validate` | Validate data quality |
+| POST | `/data/export-training` | Export fresh labeled data for retrain |
 | GET | `/metrics` | Prometheus metrics |
 
 ---

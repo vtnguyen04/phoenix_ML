@@ -1,8 +1,8 @@
 # Deployment Guide: Docker Compose Stack
 
-## Tổng quan
+## Overview
 
-Phoenix ML triển khai qua **Docker Compose** với 14+ containers, hoặc **Kubernetes** via Helm chart.
+Phoenix ML deploys via **Docker Compose** with 14+ containers, or **Kubernetes** via Helm chart.
 
 ## Quick Start
 
@@ -92,7 +92,7 @@ graph LR
 
 ### docker-compose.airflow.yaml — Airflow Stack
 
-| Service | Image | Port | Mục đích |
+| Service | Image | Port | Purpose |
 |---------|-------|------|----------|
 | `airflow-webserver` | Build from `Dockerfile.airflow` | 8080 | Airflow Web UI |
 | `airflow-scheduler` | Build from `Dockerfile.airflow` | — | DAG scheduling |
@@ -160,6 +160,10 @@ uv run python examples/credit_risk/train.py
 uv run python examples/house_price/train.py
 uv run python examples/fraud_detection/train.py
 uv run python examples/image_classification/train.py
+uv run python examples/sentiment/train.py
+
+# Run end-to-end simulation
+uv run python scripts/simulate_pipeline.py --fast
 
 # Or trigger via Airflow UI (http://localhost:8080)
 ```
@@ -250,7 +254,7 @@ drift_reports
 
 ## Grafana (Auto-provisioned)
 
-Dashboards và datasources auto-provisioned on startup:
+Dashboards and datasources auto-provisioned on startup:
 
 - **Datasource**: Prometheus (`http://prometheus:9090`)
 - **Dashboard**: `phoenix-ml.json` — panels: prediction count, latency histogram, drift score, model accuracy

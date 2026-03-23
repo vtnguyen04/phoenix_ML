@@ -5,18 +5,18 @@
 
 ## Context
 
-Dự án MLOps platform cần quản lý nhiều domain phức tạp chồng chéo: inference, monitoring, training, feature store, model registry. Mỗi domain có business logic riêng biệt, yêu cầu riêng, và lifecycle riêng.
+The MLOps platform project needs to manage multiple complex, overlapping domains: inference, monitoring, training, feature store, model registry. Each domain has its own business logic, requirements, and lifecycle.
 
-### Vấn đề
+### Problem
 
-- Code monolithic nhanh chóng trở nên **unmaintainable** khi features tăng
-- Business logic bị trộn lẫn với framework code (FastAPI, SQLAlchemy, Redis)
-- Khó test domain logic vì phụ thuộc infrastructure
-- Thay đổi database/framework ảnh hưởng toàn bộ codebase
+- Monolithic code quickly becomes **unmaintainable** as features grow
+- Business logic is mixed with framework code (FastAPI, SQLAlchemy, Redis)
+- Domain logic is hard to test due to infrastructure dependencies
+- Changing database/framework affects the entire codebase
 
 ## Decision
 
-Áp dụng **Domain-Driven Design (DDD)** kết hợp **Clean Architecture**:
+Adopt **Domain-Driven Design (DDD)** combined with **Clean Architecture**:
 
 ### Bounded Contexts
 - **Inference**: Model, Prediction, InferenceEngine, RoutingStrategy, CircuitBreaker
@@ -45,13 +45,13 @@ Infrastructure → Application → Domain → Shared
 ### Positive
 - ✅ Domain logic testable **without** any framework or infrastructure
 - ✅ Infrastructure swap (Redis → Memcached, PostgreSQL → MongoDB) without touching domain
-- ✅ Team có thể work on different bounded contexts independently
+- ✅ Team can work on different bounded contexts independently
 - ✅ Ubiquitous Language: code names match domain concepts
 - ✅ 87% test coverage achieved easily due to testable architecture
 
 ### Negative
-- ❌ More files và directories (40+ domain files)
-- ❌ Steeper learning curve cho developers mới
+- ❌ More files and directories (40+ domain files)
+- ❌ Steeper learning curve for new developers
 - ❌ Some boilerplate (ABC definitions, dependency injection setup)
 
 ## References
