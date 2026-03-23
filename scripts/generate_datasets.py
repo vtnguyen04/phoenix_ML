@@ -237,6 +237,77 @@ def generate_image_classification() -> None:
         json.dump({"class_names": class_names, "n_classes": 10, "image_size": "28x28"}, f, indent=2)
 
 
+def generate_sentiment() -> None:
+    """Download real IMDB movie reviews dataset → CSV.
+
+    Downloads the IMDB Large Movie Review Dataset (50K reviews)
+    from Stanford AI Lab. This is a standard NLP benchmark with
+    real movie review text and binary sentiment labels.
+
+    Source: https://ai.stanford.edu/~amaas/data/sentiment/
+    """
+    import tarfile
+    import urllib.request
+
+    print("📥 [sentiment] Downloading IMDB movie reviews (real dataset)...")
+
+    url = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+    tar_path = DATA_DIR / "aclImdb_v1.tar.gz"
+    extract_dir = DATA_DIR / "aclImdb"
+
+    # Download if not cached
+    if not tar_path.exists():
+        print(f"   Downloading from {url}...")
+        urllib.request.urlretrieve(url, tar_path)
+        print(f"   Downloaded: {tar_path.stat().st_size / 1024 / 1024:.1f} MB")
+    else:
+        print(f"   Using cached: {tar_path}")
+
+    # Extract if not already extracted
+    if not extract_dir.exists():
+        print("   Extracting...")
+        with tarfile.open(tar_path, "r:gz") as tar:
+            tar.extractall(DATA_DIR)
+
+    # Read reviews from directory structure:
+    #   aclImdb/train/pos/*.txt  → positive reviews
+    #   aclImdb/train/neg/*.txt  → negative reviews
+    #   aclImdb/test/pos/*.txt   → positive reviews
+    #   aclImdb/test/neg/*.txt   → negative reviews
+    reviews = []
+    labels = []
+
+    for split in ["train", "test"]:
+        for label_name, label_val in [("pos", 1), ("neg", 0)]:
+            review_dir = extract_dir / split / label_name
+            if not review_dir.exists():
+                print(f"   ⚠️ Missing: {review_dir}")
+                continue
+            for txt_file in sorted(review_dir.glob("*.txt")):
+                text = txt_file.read_text(encoding="utf-8").strip()
+                # Clean HTML tags
+                text = text.replace("<br />", " ").replace("<br/>", " ")
+                reviews.append(text)
+                labels.append(label_val)
+
+    if not reviews:
+        print("   ❌ No reviews found. Falling back to synthetic data.")
+        return
+
+    out_dir = DATA_DIR / "sentiment"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    out_df = pd.DataFrame({"review": reviews, "sentiment": labels})
+    # Shuffle with fixed seed for reproducibility
+    out_df = out_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
+    out_df.to_csv(out_dir / "dataset.csv", index=False)
+
+    n_pos = out_df["sentiment"].sum()
+    n_neg = len(out_df) - n_pos
+    print(f"   ✅ {len(out_df)} real reviews → {out_dir / 'dataset.csv'}")
+    print(f"      Positive: {n_pos}, Negative: {n_neg}")
+
+
 # ─── Registry ───────────────────────────────────────────────────
 
 GENERATORS: dict[str, tuple[str, object]] = {
@@ -244,6 +315,7 @@ GENERATORS: dict[str, tuple[str, object]] = {
     "fraud-detection": ("Fraud Detection (Synthetic)", generate_fraud_detection),
     "house-price": ("House Price (California Housing)", generate_house_price),
     "image-class": ("Image Classification (Fashion-MNIST)", generate_image_classification),
+    "sentiment": ("Sentiment Analysis (Synthetic)", generate_sentiment),
 }
 
 
@@ -276,6 +348,7 @@ def main() -> None:
     print("✅ Done! Train models with:")
     print("   uv run python examples/credit_risk/train.py")
     print("   uv run python examples/house_price/train.py")
+    print("   uv run python examples/sentiment/train.py")
 
 
 if __name__ == "__main__":
