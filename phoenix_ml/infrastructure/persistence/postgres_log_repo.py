@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,9 +18,15 @@ class PostgresPredictionLogRepository(PredictionLogRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def log(self, command: PredictCommand, prediction: Prediction) -> None:
+    async def log(
+        self,
+        command: PredictCommand,
+        prediction: Prediction,
+        *,
+        prediction_id: str | None = None,
+    ) -> None:
         orm = PredictionLogORM(
-            id=str(uuid.uuid4()),
+            id=prediction_id or str(uuid.uuid4()),
             model_id=prediction.model_id,
             model_version=prediction.model_version,
             features=command.features if command.features else [],
@@ -69,5 +76,37 @@ class PostgresPredictionLogRepository(PredictionLogRepository):
                     latency_ms=o.latency_ms,
                 ),
             )
+            for o in orms
+        ]
+
+    async def export_labeled_logs(
+        self, model_id: str, *, limit: int = 10000
+    ) -> list[dict[str, Any]]:
+        """Export labeled prediction logs as flat dicts for training.
+
+        Only returns logs where ground_truth IS NOT NULL — these are
+        the production samples that have been verified/labeled and
+        represent the current data distribution.
+        """
+        query = (
+            select(PredictionLogORM)
+            .where(
+                PredictionLogORM.model_id == model_id,
+                PredictionLogORM.ground_truth.isnot(None),
+            )
+            .order_by(PredictionLogORM.created_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(query)
+        orms = result.scalars().all()
+
+        return [
+            {
+                "features": o.features,
+                "target": o.ground_truth,
+                "prediction": o.result,
+                "confidence": o.confidence,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+            }
             for o in orms
         ]
