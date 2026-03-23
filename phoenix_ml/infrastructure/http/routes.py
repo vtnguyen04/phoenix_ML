@@ -62,7 +62,7 @@ async def _log_prediction_background(
 ) -> None:
     try:
         repo = PostgresPredictionLogRepository(db)
-        await repo.log(command, prediction)
+        await repo.log(command, prediction, prediction_id=prediction_id)
     except Exception as e:
         logger.error("⚠️ DB Log failed: %s", e)
 

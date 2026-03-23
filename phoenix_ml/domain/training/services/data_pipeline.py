@@ -1,6 +1,7 @@
-"""Data Pipeline — Orchestrate: collect → validate → transform → store.
+"""Data ingestion pipeline: collect → validate → transform → store.
 
-Provides end-to-end real data ingestion with quality gates.
+Orchestrates loading CSV/DataFrame data, running ``DataValidator``
+quality checks, applying cleaning transforms, and persisting results.
 """
 
 from __future__ import annotations

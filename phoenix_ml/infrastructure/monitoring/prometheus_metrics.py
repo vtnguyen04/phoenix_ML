@@ -1,22 +1,34 @@
 from prometheus_client import Counter, Gauge, Histogram
 
+# ── Inference ────────────────────────────────────────────────────
+
 PREDICTION_COUNT = Counter(
-    "prediction_count", "Total number of predictions", ["model_id", "version", "status"]
+    "prediction_count",
+    "Total number of predictions",
+    ["model_id", "version", "status"],
 )
 
 INFERENCE_LATENCY = Histogram(
     "inference_latency_seconds",
     "Time spent processing inference request",
     ["model_id", "version"],
-    buckets=(0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0),
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0),
 )
 
 MODEL_CONFIDENCE = Histogram(
     "model_confidence",
-    "Confidence score of predictions",
+    "Confidence score distribution of predictions",
     ["model_id", "version"],
     buckets=(0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99, 1.0),
 )
+
+PREDICTION_ERROR_RATE = Gauge(
+    "prediction_error_rate",
+    "Ratio of failed predictions to total",
+    ["model_id"],
+)
+
+# ── Drift Detection ──────────────────────────────────────────────
 
 DRIFT_SCORE = Gauge(
     "feature_drift_score",
@@ -30,24 +42,10 @@ DRIFT_DETECTED_COUNT = Counter(
     ["model_id", "feature_name"],
 )
 
-MODEL_ACCURACY = Gauge("model_accuracy", "Overall accuracy of the model", ["model_id", "version"])
+# ── Production Model Health ──────────────────────────────────────
 
-MODEL_F1_SCORE = Gauge("model_f1_score", "F1 Score of the model", ["model_id", "version"])
-
-MODEL_PRECISION = Gauge("model_precision", "Precision of the model", ["model_id", "version"])
-
-MODEL_RECALL = Gauge("model_recall", "Recall of the model", ["model_id", "version"])
-
-# ── Regression metrics ─────────────────────────────────────────────
-MODEL_RMSE = Gauge("model_rmse", "Root-mean-square error (regression)", ["model_id", "version"])
-
-MODEL_MAE = Gauge("model_mae", "Mean absolute error (regression)", ["model_id", "version"])
-
-MODEL_R2 = Gauge("model_r2_score", "R-squared score (regression)", ["model_id", "version"])
-
-# ── Task-agnostic primary metric ───────────────────────────────────
 MODEL_PRIMARY_METRIC = Gauge(
     "model_primary_metric",
-    "Primary evaluation metric value (metric_name label indicates the actual metric)",
+    "Primary evaluation metric for the deployed model",
     ["model_id", "version", "metric_name"],
 )
