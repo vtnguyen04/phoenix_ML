@@ -16,13 +16,13 @@ Phoenix ML is an **end-to-end MLOps** system built with **Domain-Driven Design (
 
 ```mermaid
 graph TD
-    Client[External Client] -->|REST/gRPC| API[Phoenix API Gateway<br/>FastAPI + gRPC]
+    Client["External Client"] -->|REST/gRPC| API["Phoenix API Gateway<br/>FastAPI + gRPC"]
 
     subgraph "Inference Core"
-        API --> Handler[PredictHandler<br/>CQRS Command Handler]
-        Handler --> Pipeline[Request Pipeline<br/>Chain of Responsibility]
-        Pipeline --> Router[Routing Strategy<br/>A/B · Canary · Shadow]
-        Router --> CB[Circuit Breaker<br/>Closed/Open/Half-Open]
+        API --> Handler["PredictHandler<br/>CQRS Command Handler"]
+        Handler --> Pipeline["Request Pipeline<br/>Chain of Responsibility"]
+        Pipeline --> Router["Routing Strategy<br/>A/B · Canary · Shadow"]
+        Router --> CB["Circuit Breaker<br/>Closed/Open/Half-Open"]
         CB --> Engines
 
         subgraph Engines["Model Executors"]
@@ -41,8 +41,8 @@ graph TD
 
     subgraph "Event Streaming"
         Handler -.->|"JSON publish"| Kafka{"Apache Kafka<br/>(KRaft mode)"}
-        Kafka -->|"Consumer group"| Logger[Prediction Logger]
-        Kafka -->|"Consumer group"| Analytics[Stream Analytics]
+        Kafka -->|"Consumer group"| Logger["Prediction Logger"]
+        Kafka -->|"Consumer group"| Analytics["Stream Analytics"]
     end
 
     subgraph "Self-Healing Subsystem"
@@ -78,7 +78,7 @@ sequenceDiagram
     participant C as Client
     participant API as FastAPI Router
     participant PH as PredictHandler
-    participant FS as FeatureStore (Redis)
+    participant FS as FeatureStore
     participant IS as InferenceService
     participant RS as RoutingStrategy
     participant CB as CircuitBreaker
@@ -90,7 +90,7 @@ sequenceDiagram
     C->>API: POST /predict {model_id, features}
     API->>PH: handle(PredictCommand)
     
-    alt entity_id provided (no raw features)
+    opt entity_id provided (no raw features)
         PH->>FS: get_online_features(entity_id)
         FS-->>PH: [0.5, 1.2, 0.8, ...]
     end
@@ -109,9 +109,11 @@ sequenceDiagram
     
     IS-->>PH: Prediction
     
-    par Async Background Tasks
+    par Async Task 1
         PH->>EB: publish(PredictionCompleted)
+    and Async Task 2
         EB->>KF: publish("inference-events", event)
+    and Async Task 3
         PH->>PG: log_prediction(command, prediction)
     end
     
@@ -121,33 +123,30 @@ sequenceDiagram
 
 ## 3. Layer Architecture
 
-Phoenix ML follows **Clean Architecture** — dependency rule: outer layers depend on inner layers, NEVER the reverse.
+Phoenix ML uses a **layered architecture** — dependency rule: outer layers depend on inner layers, never the reverse.
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  Infrastructure Layer               │
-│  FastAPI · gRPC · PostgreSQL · Redis · Kafka ·      │
-│  ONNX Runtime · Prometheus · S3 · MLflow            │
-├─────────────────────────────────────────────────────┤
-│                  Application Layer                  │
-│  PredictHandler · BatchPredictHandler ·             │
-│  MonitoringService · Commands · Queries · DTOs      │
-├─────────────────────────────────────────────────────┤
-│                    Domain Layer                     │
-│  Model · Prediction · InferenceService ·            │
-│  DriftCalculator · AlertManager · RoutingStrategy   │
-│  CircuitBreaker · FeatureStore (ABC) · EventBus     │
-├─────────────────────────────────────────────────────┤
-│                   Shared Layer                      │
-│  Exceptions · Interfaces · Utilities                │
-└─────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Infrastructure
+        I["FastAPI · gRPC · PostgreSQL · Redis · Kafka<br/>ONNX Runtime · Prometheus · S3 · MLflow"]
+    end
+    subgraph Application
+        A["PredictHandler · BatchPredictHandler<br/>MonitoringService · Commands · Queries · DTOs"]
+    end
+    subgraph Domain
+        D["Model · Prediction · InferenceService<br/>DriftCalculator · AlertManager · RoutingStrategy<br/>CircuitBreaker · FeatureStore (ABC) · EventBus"]
+    end
+    subgraph Shared
+        S["Exceptions · Interfaces · Utilities"]
+    end
+    Infrastructure --> Application --> Domain --> Shared
 ```
 
 ### 3.1 Dependency Rule
 
-```
-Infrastructure → Application → Domain → Shared
-     ↓ depends on      ↓ depends on    ↓ depends on
+```mermaid
+graph LR
+    Infrastructure --> Application --> Domain --> Shared
 ```
 
 - **Domain Layer** does NOT import FastAPI, SQLAlchemy, Redis, Kafka, or ONNX Runtime
@@ -280,22 +279,22 @@ stateDiagram-v2
 
 ```mermaid
 sequenceDiagram
-    participant Loop as Monitoring Loop<br/>(Background, every 30s)
+    participant MLoop as Monitoring Loop (Background)
     participant DC as DriftCalculator
     participant AD as AnomalyDetector
     participant AM as AlertManager
-    participant AN as AlertNotifier<br/>(Slack/Discord)
+    participant AN as AlertNotifier (Slack)
     participant RM as RollbackManager
     participant EB as DomainEventBus
-    participant AF as Airflow<br/>(Retrain DAG)
+    participant AF as Airflow DAG
 
-    Loop->>DC: calculate_drift(reference_data, current_predictions)
-    DC-->>Loop: DriftReport(score=0.45, is_drifted=true)
+    MLoop->>DC: calculate_drift(reference, current)
+    DC-->>MLoop: DriftReport(score=0.45, is_drifted=true)
     
-    Loop->>AD: detect_anomaly(recent_latencies)
-    AD-->>Loop: anomaly_indices=[42, 67, 89]
+    MLoop->>AD: detect_anomaly(recent_latencies)
+    AD-->>MLoop: anomaly_indices=[42, 67, 89]
     
-    Loop->>AM: evaluate(alert_rules, drift_score=0.45)
+    MLoop->>AM: evaluate(rules, drift_score=0.45)
     
     alt score > 0.3 (CRITICAL threshold)
         AM->>AN: notify(Alert: "high_drift_score", severity=CRITICAL)
@@ -306,7 +305,7 @@ sequenceDiagram
         AM->>AN: notify(Alert: "moderate_drift", severity=WARNING)
     end
     
-    Loop->>EB: publish(DriftDetected)
+    MLoop->>EB: publish(DriftDetected)
     EB->>AF: trigger retrain_pipeline DAG
 ```
 
@@ -350,83 +349,64 @@ The monitoring loop runs for **all** models configured in `model_configs/`:
 
 ### 7.1 Prediction Data Flow
 
-```
-Client Request
-    ↓
-FastAPI Router (routes.py)
-    ↓
-PredictHandler (application/handlers/predict_handler.py)
-    ↓
-┌─── Feature Retrieval ──────────────────┐
-│  entity_id → FeatureStore.get(id)      │
-│  OR raw features from request body     │
-└────────────────────────────────────────┘
-    ↓
-InferenceService (domain/inference/services/inference_service.py)
-    ↓
-RoutingStrategy → select model (champion or challenger)
-    ↓
-CircuitBreaker → check state (proceed or reject)
-    ↓
-InferenceEngine.predict(model, features) → Prediction
-    ↓
-┌─── Background Tasks (async) ──────────┐
-│  • Log to PostgreSQL                   │
-│  • Publish to Kafka "inference-events" │
-│  • Publish Prometheus metrics          │
-│  • Update EventBus subscribers         │
-└────────────────────────────────────────┘
-    ↓
-Return PredictionResponse to Client
+```mermaid
+graph TD
+    Client["Client Request"] --> API["FastAPI Router (routes.py)"]
+    API --> Handler["PredictHandler (application/handlers/predict_handler.py)"]
+    
+    Handler --> Features{"Feature Retrieval"}
+    Features -->|entity_id provided| FS["FeatureStore.get(id)"]
+    Features -->|raw features| Inference["InferenceService"]
+    FS --> Inference
+    
+    Inference --> Router["RoutingStrategy → select model"]
+    Router --> CB{"CircuitBreaker"}
+    CB -->|Proceed| Engine["InferenceEngine.predict(model, features)"]
+    CB -->|OPEN| Error["Return 503 Error"]
+    Engine --> Prediction["Prediction Result"]
+    
+    Prediction --> BG["Background Tasks (async)"]
+    BG -.-> PG["Log to PostgreSQL"]
+    BG -.-> Kafka["Publish to Kafka 'inference-events'"]
+    BG -.-> Prom["Publish Prometheus metrics"]
+    BG -.-> EB["Update EventBus subscribers"]
+    
+    Prediction --> Return["Return PredictionResponse to Client"]
 ```
 
 ### 7.2 Training Data Flow
 
-```
-Airflow DAG (dags/retrain_pipeline.py)
-    ↓
-generate_datasets.py → data/{model}/dataset.csv or .npz
-    ↓
-examples/{model}/train.py
-    ↓
-DataLoader (tabular_loader.py or image_loader.py)
-    ↓
-sklearn/xgboost model → ONNX export
-    ↓
-models/{model}/v1/model.onnx + metrics.json
-    ↓
-MLflow: log params, metrics, artifacts
-    ↓
-PostgreSQL: register model version
-    ↓
-Promote to champion stage
-
---- OR self-healing retrain ---
-
-Drift detected → POST /data/export-training
-    ↓
-Query prediction_logs WHERE ground_truth IS NOT NULL
-    ↓
-Merge: baseline + fresh labeled data → combined CSV
-    ↓
-examples/{model}/train.py --data combined.csv
-    ↓
-POST /models/register (challenger)
+```mermaid
+graph TD
+    DAG["Airflow DAG (dags/retrain_pipeline.py)"] --> Gen["generate_datasets.py"]
+    Gen -->|"data/{model}/dataset.csv or .npz"| Train["examples/{model}/train.py"]
+    
+    Train --> Loader["DataLoader"]
+    Loader --> Fit["sklearn/xgboost model → ONNX export"]
+    Fit --> Save["models/{model}/v1/model.onnx + metrics.json"]
+    
+    Save --> Flow["MLflow: log params, metrics, artifacts"]
+    Save --> PG["PostgreSQL: register model version"]
+    PG --> Promote["Promote to champion stage"]
+    
+    subgraph "Self-Healing Retrain"
+        Drift["Drift detected"] --> Export["POST /data/export-training"]
+        Export --> Query["Query prediction_logs WHERE ground_truth = true"]
+        Query --> Merge["Merge: baseline + fresh dataset"]
+        Merge --> ReTrain["examples/{model}/train.py --data combined.csv"]
+        ReTrain --> Register["POST /models/register (challenger)"]
+    end
 ```
 
 ## 8. Test Architecture
 
 ### 8.1 Test Pyramid
 
-```
-            ┌──────────┐
-            │   E2E    │  1 file  — Full flow test
-            ├──────────┤
-            │ Integr.  │  11 files — API + service integration
-            ├──────────┤
-            │   Unit   │  48 files — Domain, Application, Infrastructure
-            └──────────┘
-```
+| Test Type | Files | Description |
+|-----------|-------|-------------|
+| **E2E** | 1 file | Full flow test across API, DB, and inference |
+| **Integration** | 11 files | API routes and service orchestration |
+| **Unit** | 48 files | Focused testing of Domain, App, Infrastructure layers |
 
 ### 8.2 Coverage
 

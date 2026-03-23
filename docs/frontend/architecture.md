@@ -209,7 +209,7 @@ npx eslint phoenix_ml/
 
 ## Styling
 
-Global styles trong `index.css`:
+Global styles in `index.css`:
 
 - **Dark theme** with gradient backgrounds
 - **CSS Variables** for colors and spacing

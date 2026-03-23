@@ -1,6 +1,6 @@
 # Phoenix ML Platform Documentation
 
-Technical documentation for the **Phoenix ML Platform** — a self-healing, model-agnostic real-time ML inference system built with Domain-Driven Design and Clean Architecture.
+Technical documentation for the **Phoenix ML Platform** — a self-healing, model-agnostic real-time ML inference system built for modularity and production reliability.
 
 ## What is Phoenix ML?
 
@@ -75,7 +75,6 @@ graph TD
 ### 🏗 Architecture
 
 - **[System Design](architecture/system-design.md)** — Full architecture: layer structure, data flow, infrastructure services, design patterns, self-healing flow
-- **[DDD Overview](architecture/ddd-overview.md)** — Bounded contexts, entities, value objects, domain services, repository interfaces, CQRS, event sourcing
 - **[Frontend Architecture](frontend/architecture.md)** — React dashboard: components, state management, API integration, testing strategy
 
 ### 📡 API & Deployment
@@ -95,7 +94,6 @@ graph TD
 
 | # | Decision | Status |
 |---|----------|--------|
-| [001](adr/001-use-ddd-architecture.md) | Domain-Driven Design + Clean Architecture | ✅ Accepted |
 | [002](adr/002-use-onnx-runtime.md) | ONNX Runtime as unified inference engine | ✅ Accepted |
 | [003](adr/003-use-kafka-for-event-streaming.md) | Apache Kafka for event streaming | ✅ Accepted |
 | [004](adr/004-observability-with-prometheus-grafana.md) | Prometheus + Grafana for observability | ✅ Accepted |

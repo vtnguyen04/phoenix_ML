@@ -1,7 +1,7 @@
 # Phoenix ML Platform — Detailed Project Structure
 
 > Documentation describing **all directories and files** in the project (excluding `__pycache__`, `data/`, `models/`, `.venv/`, `.git/`).
-> Architecture: **Domain-Driven Design (DDD)** + Clean Architecture + CQRS
+> Architecture: **Layered modular architecture** with clear separation of concerns
 
 ---
 
@@ -56,9 +56,10 @@ phoenix_ML/
 | `QUICKSTART.md` | Quick start guide: clone → setup → run |
 | `CONTRIBUTING.md` | Contributing guide: branching, commit convention, CI checks |
 | `project.md` | Detailed internal documentation (72KB) — design, architecture decisions |
-| `PROJECT_STRUCTURE.md` | This file — project structure description |
 
-### `.github/workflows/` — CI/CD
+<h3>CI/CD</h3>
+
+**Path:** `.github/workflows/`
 
 | File | Purpose |
 |------|-----------|
@@ -67,17 +68,25 @@ phoenix_ML/
 
 ---
 
-## 📂 `phoenix_ml/` — Backend Source Code
+## 📂 Backend Source Code
 
-### `phoenix_ml/__init__.py`
+**Path:** `phoenix_ml/`
+
+<h3>`__init__.py`</h3>
+
+**Path:** `phoenix_ml/__init__.py`
 Package init.
 
-### `phoenix_ml/py.typed`
+<h3>`py.typed`</h3>
+
+**Path:** `phoenix_ml/py.typed`
 PEP 561 marker — allows mypy to type-check this package when used as library.
 
 ---
 
-### `phoenix_ml/config/` — Application Configuration
+<h3>Application Configuration</h3>
+
+**Path:** `phoenix_ml/config/`
 
 Reads environment variables from `.env` and returns Pydantic Settings objects.
 
@@ -99,17 +108,23 @@ print(settings.KAFKA_URL)      # kafka:9092
 
 ---
 
-### `phoenix_ml/domain/` — Domain Layer (Business Logic)
+<h3>Domain Layer (Business Logic)</h3>
+
+**Path:** `phoenix_ml/domain/`
 
 > Pure Python layer, does **NOT import** any framework (FastAPI, SQLAlchemy, Kafka, etc.)
 > Contains entities, value objects, domain services, and repository interfaces (ABCs).
 
-#### `phoenix_ml/domain/__init__.py`
+<h4>`__init__.py`</h4>
+
+**Path:** `phoenix_ml/domain/__init__.py`
 Package init.
 
 ---
 
-#### `phoenix_ml/domain/inference/` — Bounded Context: Inference
+<h4>Bounded Context: Inference</h4>
+
+**Path:** `phoenix_ml/domain/inference/`
 
 **Responsibility**: Managing models, performing predictions, routing traffic, circuit breaking.
 
@@ -117,7 +132,9 @@ Package init.
 |------|-----------|
 | `__init__.py` | Package init |
 
-##### `phoenix_ml/domain/inference/entities/`
+<h5>Entities</h5>
+
+**Path:** `phoenix_ml/domain/inference/entities/`
 
 | File | Purpose |
 |------|-----------|
@@ -125,7 +142,9 @@ Package init.
 | `model.py` | **Model entity**: `id`, `version`, `uri`, `framework`, `stage` (PRODUCTION/STAGING/ARCHIVED/DEVELOPMENT), `metadata`, `is_active`, `created_at`. **ModelStage enum**. Property `unique_key` = `"{id}:{version}"` |
 | `prediction.py` | **Prediction entity**: `model_id`, `model_version`, `result`, `confidence` (ConfidenceScore), `latency_ms`. Result of a single inference |
 
-##### `phoenix_ml/domain/inference/value_objects/`
+<h5>Value Objects</h5>
+
+**Path:** `phoenix_ml/domain/inference/value_objects/`
 
 | File | Purpose |
 |------|-----------|
@@ -136,7 +155,9 @@ Package init.
 | `model_config.py` | **ModelConfig dataclass**: per-model configuration from YAML — `model_id`, `version`, `feature_names`, `data_loader`, `train_script`, `monitoring_drift_test`, `has_named_features` |
 | `model_version.py` | **ModelVersion**: parses semantic version string (v1, v2.1), supports comparison operators |
 
-##### `phoenix_ml/domain/inference/events/`
+<h5>Events</h5>
+
+**Path:** `phoenix_ml/domain/inference/events/`
 
 | File | Purpose |
 |------|-----------|
@@ -144,7 +165,9 @@ Package init.
 | `model_loaded.py` | **ModelLoaded event**: `model_id`, `version`, `timestamp` — emitted when a model is loaded into the engine |
 | `prediction_made.py` | **PredictionMade event**: `model_id`, `result`, `confidence`, `latency` — emitted after each prediction |
 
-##### `phoenix_ml/domain/inference/services/`
+<h5>Services</h5>
+
+**Path:** `phoenix_ml/domain/inference/services/`
 
 | File | Purpose |
 |------|-----------|
@@ -159,7 +182,9 @@ Package init.
 
 ---
 
-#### `phoenix_ml/domain/monitoring/` — Bounded Context: Monitoring
+<h4>Bounded Context: Monitoring</h4>
+
+**Path:** `phoenix_ml/domain/monitoring/`
 
 **Responsibility**: Detecting data drift, evaluating model performance, automatic alerting and rollback.
 
@@ -167,14 +192,18 @@ Package init.
 |------|-----------|
 | `__init__.py` | Package init |
 
-##### `phoenix_ml/domain/monitoring/entities/`
+<h5>Entities</h5>
+
+**Path:** `phoenix_ml/domain/monitoring/entities/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
 | `drift_report.py` | **DriftReport entity**: `model_id`, `feature_name`, `method` (ks/psi/chi2), `score`, `is_drifted`, `threshold`, `timestamp` |
 
-##### `phoenix_ml/domain/monitoring/repositories/`
+<h5>Repositories</h5>
+
+**Path:** `phoenix_ml/domain/monitoring/repositories/`
 
 | File | Purpose |
 |------|-----------|
@@ -182,7 +211,9 @@ Package init.
 | `drift_report_repository.py` | **DriftReportRepository ABC**: `save(report)`, `get_by_model(model_id, limit)` |
 | `prediction_log_repository.py` | **PredictionLogRepository ABC**: `log(command, prediction)`, `get_recent(model_id, limit)`, `update_ground_truth(pred_id, truth)` |
 
-##### `phoenix_ml/domain/monitoring/services/`
+<h5>Services</h5>
+
+**Path:** `phoenix_ml/domain/monitoring/services/`
 
 | File | Purpose |
 |------|-----------|
@@ -197,7 +228,9 @@ Package init.
 
 ---
 
-#### `phoenix_ml/domain/training/` — Bounded Context: Training
+<h4>Bounded Context: Training</h4>
+
+**Path:** `phoenix_ml/domain/training/`
 
 **Responsibility**: Training job management, plugin interfaces for data loading and training.
 
@@ -205,7 +238,9 @@ Package init.
 |------|-----------|
 | `__init__.py` | Package init |
 
-##### `phoenix_ml/domain/training/entities/`
+<h5>Entities</h5>
+
+**Path:** `phoenix_ml/domain/training/entities/`
 
 | File | Purpose |
 |------|-----------|
@@ -213,21 +248,27 @@ Package init.
 | `training_config.py` | **TrainingConfig**: training configuration — `model_id`, `data_path`, `hyperparameters`, `epochs`, `batch_size` |
 | `training_job.py` | **TrainingJob entity**: `job_id`, `model_id`, `status` (PENDING/RUNNING/COMPLETED/FAILED), `started_at`, `finished_at`, `metrics` |
 
-##### `phoenix_ml/domain/training/events/`
+<h5>Events</h5>
+
+**Path:** `phoenix_ml/domain/training/events/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
 | `training_completed.py` | **TrainingCompleted event**: `model_id`, `version`, `metrics`, `duration` |
 
-##### `phoenix_ml/domain/training/repositories/`
+<h5>Repositories</h5>
+
+**Path:** `phoenix_ml/domain/training/repositories/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
 | `training_repository.py` | **TrainingRepository ABC**: `save(job)`, `get(job_id)`, `list_by_model(model_id)` |
 
-##### `phoenix_ml/domain/training/services/`
+<h5>Services</h5>
+
+**Path:** `phoenix_ml/domain/training/services/`
 
 | File | Purpose |
 |------|-----------|
@@ -239,7 +280,9 @@ Package init.
 
 ---
 
-#### `phoenix_ml/domain/feature_store/` — Bounded Context: Feature Store
+<h4>Bounded Context: Feature Store</h4>
+
+**Path:** `phoenix_ml/domain/feature_store/`
 
 **Responsibility**: Managing features for inference (online) and training (offline).
 
@@ -247,14 +290,18 @@ Package init.
 |------|-----------|
 | `__init__.py` | Package init |
 
-##### `phoenix_ml/domain/feature_store/entities/`
+<h5>Entities</h5>
+
+**Path:** `phoenix_ml/domain/feature_store/entities/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
 | `feature_registry.py` | **FeatureRegistry**: manages metadata — feature name, type, source, lineage |
 
-##### `phoenix_ml/domain/feature_store/repositories/`
+<h5>Repositories</h5>
+
+**Path:** `phoenix_ml/domain/feature_store/repositories/`
 
 | File | Purpose |
 |------|-----------|
@@ -264,7 +311,9 @@ Package init.
 
 ---
 
-#### `phoenix_ml/domain/model_registry/` — Bounded Context: Model Registry
+<h4>Bounded Context: Model Registry</h4>
+
+**Path:** `phoenix_ml/domain/model_registry/`
 
 **Responsibility**: Managing model artifacts, versioning, and staging.
 
@@ -272,7 +321,9 @@ Package init.
 |------|-----------|
 | `__init__.py` | Package init |
 
-##### `phoenix_ml/domain/model_registry/repositories/`
+<h5>Repositories</h5>
+
+**Path:** `phoenix_ml/domain/model_registry/repositories/`
 
 | File | Purpose |
 |------|-----------|
@@ -282,7 +333,9 @@ Package init.
 
 ---
 
-#### `phoenix_ml/domain/shared/` — Shared Domain Kernel
+<h4>Shared Domain Kernel</h4>
+
+**Path:** `phoenix_ml/domain/shared/`
 
 | File | Purpose |
 |------|-----------|
@@ -291,7 +344,9 @@ Package init.
 | `event_bus.py` | **DomainEventBus**: Observer pattern — `subscribe(event_type, handler)`, `publish(event)`. Fully decouples modules |
 | `plugin_registry.py` | **PluginRegistry**: registers + resolves preprocessor/postprocessor/data_loader plugins by `model_id`. Method `register_model(id, pre, post, loader)`, `resolve(id)` |
 
-##### `phoenix_ml/domain/shared/interfaces/`
+<h5>Interfaces</h5>
+
+**Path:** `phoenix_ml/domain/shared/interfaces/`
 
 | File | Purpose |
 |------|-----------|
@@ -300,7 +355,9 @@ Package init.
 
 ---
 
-### `phoenix_ml/application/` — Application Layer (Use Cases)
+<h3>Application Layer (Use Cases)</h3>
+
+**Path:** `phoenix_ml/application/`
 
 > Orchestrates domain objects, implements CQRS pattern (Command/Query separation).
 
@@ -309,7 +366,9 @@ Package init.
 | `__init__.py` | Package init |
 | `decorators.py` | Utility decorators: `@timing` (measure + log execution time), `@retry` (auto-retry on failure with configurable attempts) |
 
-#### `phoenix_ml/application/commands/`
+<h4>Commands</h4>
+
+**Path:** `phoenix_ml/application/commands/`
 
 | File | Purpose |
 |------|-----------|
@@ -319,7 +378,9 @@ Package init.
 | `load_model_command.py` | **LoadModelCommand**: `model_id`, `version` |
 | `trigger_retrain_command.py` | **TriggerRetrainCommand**: `model_id`, `reason` |
 
-#### `phoenix_ml/application/handlers/`
+<h4>Handlers</h4>
+
+**Path:** `phoenix_ml/application/handlers/`
 
 | File | Purpose |
 |------|-----------|
@@ -330,7 +391,9 @@ Package init.
 | `retrain_handler.py` | **RetrainHandler**: triggers retraining workflow — validates model exists → kicks off training |
 | `query_handlers.py` | 3 query handlers (CQRS read side): **GetModelQueryHandler** (queries model info), **GetDriftReportQueryHandler** (retrieves drift reports), **GetModelPerformanceQueryHandler** (computes performance metrics) |
 
-#### `phoenix_ml/application/dto/`
+<h4>Dto</h4>
+
+**Path:** `phoenix_ml/application/dto/`
 
 | File | Purpose |
 |------|-----------|
@@ -338,13 +401,17 @@ Package init.
 | `prediction_request.py` | **PredictionRequest DTO**: Pydantic model for HTTP request validation |
 | `prediction_response.py` | **PredictionResponse DTO**: Pydantic model for HTTP response serialization |
 
-#### `phoenix_ml/application/queries/`
+<h4>Queries</h4>
+
+**Path:** `phoenix_ml/application/queries/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Export query DTOs: **GetModelQuery** (`model_id`, `version`), **GetDriftReportQuery** (`model_id`, `limit`), **GetModelPerformanceQuery** (`model_id`) |
 
-#### `phoenix_ml/application/services/`
+<h4>Services</h4>
+
+**Path:** `phoenix_ml/application/services/`
 
 | File | Purpose |
 |------|-----------|
@@ -353,7 +420,9 @@ Package init.
 
 ---
 
-### `phoenix_ml/infrastructure/` — Infrastructure Layer (Adapters)
+<h3>Infrastructure Layer (Adapters)</h3>
+
+**Path:** `phoenix_ml/infrastructure/`
 
 > Implements ABCs from the domain layer. Connects to external systems: DB, Kafka, Redis, ML engines, HTTP, gRPC.
 
@@ -361,7 +430,9 @@ Package init.
 |------|-----------|
 | `__init__.py` | Package init |
 
-#### `phoenix_ml/infrastructure/bootstrap/` — Dependency Injection & App Lifecycle
+<h4>Dependency Injection & App Lifecycle</h4>
+
+**Path:** `phoenix_ml/infrastructure/bootstrap/`
 
 | File | Purpose |
 |------|-----------|
@@ -370,7 +441,9 @@ Package init.
 | `lifespan.py` | **FastAPI Lifespan**: STARTUP: create DB tables → seed all models from `model_configs/` → seed feature store → start gRPC server → start Kafka producer/consumer → start monitoring loop. SHUTDOWN: cancel tasks → stop gRPC/Kafka/batch_manager → dispose DB engine |
 | `model_config_loader.py` | **load_all_model_configs(config_dir)**: scans all `.yaml` files in `model_configs/` → parses into `dict[str, ModelConfig]`. Function `load_features_from_metrics(path)`: reads feature names from `metrics.json` |
 
-#### `phoenix_ml/infrastructure/ml_engines/` — ML Inference Engines
+<h4>ML Inference Engines</h4>
+
+**Path:** `phoenix_ml/infrastructure/ml_engines/`
 
 | File | Purpose |
 |------|-----------|
@@ -380,7 +453,9 @@ Package init.
 | `triton_client.py` | **TritonInferenceClient** (implement InferenceEngine): HTTP REST v2 client for NVIDIA Triton Inference Server. Calls `/v2/models/{id}/infer`. Falls back to mock if Triton offline |
 | `mock_engine.py` | **MockInferenceEngine** (implement InferenceEngine): mock engine for testing — result = `mean(features)`, confidence = 0.99 |
 
-#### `phoenix_ml/infrastructure/messaging/` — Kafka
+<h4>Kafka</h4>
+
+**Path:** `phoenix_ml/infrastructure/messaging/`
 
 | File | Purpose |
 |------|-----------|
@@ -388,7 +463,9 @@ Package init.
 | `kafka_producer.py` | **KafkaProducer**: async event publishing to Kafka topics. Uses `AIOKafkaProducer`, JSON serialization. No-op fallback if Kafka offline |
 | `kafka_consumer.py` | **KafkaConsumer**: async event consumption from Kafka topics. Uses `AIOKafkaConsumer`, JSON deserialization, per-message error handling, auto-commit offsets. No-op fallback if Kafka offline |
 
-#### `phoenix_ml/infrastructure/feature_store/` — Feature Store Adapters
+<h4>Feature Store Adapters</h4>
+
+**Path:** `phoenix_ml/infrastructure/feature_store/`
 
 | File | Purpose |
 |------|-----------|
@@ -397,7 +474,9 @@ Package init.
 | `in_memory_feature_store.py` | **InMemoryFeatureStore** (implement FeatureStore): in-memory dict store for testing/dev |
 | `parquet_feature_store.py` | **ParquetFeatureStore** (implement OfflineFeatureStore): reads features from Parquet files for batch processing |
 
-#### `phoenix_ml/infrastructure/data_loaders/` — Dataset Loading
+<h4>Dataset Loading</h4>
+
+**Path:** `phoenix_ml/infrastructure/data_loaders/`
 
 | File | Purpose |
 |------|-----------|
@@ -406,7 +485,9 @@ Package init.
 | `image_loader.py` | **ImageDataLoader** (implement IDataLoader): loads NPZ archives or image directories (class_0/, class_1/...). Normalizes 0-255→0-1, flattens for ONNX, stratified split |
 | `registry.py` | **DataLoaderRegistry**: registry pattern. `resolve_data_loader(model_id)` → resolves loader based on model config YAML's `data_loader` field. Default: `TabularDataLoader` |
 
-#### `phoenix_ml/infrastructure/http/` — FastAPI HTTP Server
+<h4>FastAPI HTTP Server</h4>
+
+**Path:** `phoenix_ml/infrastructure/http/`
 
 | File | Purpose |
 |------|-----------|
@@ -417,14 +498,18 @@ Package init.
 | `feature_routes.py` | **Feature Router**: `GET /features/{entity_id}` (gets features), `POST /features/{entity_id}` (adds features) |
 | `dependencies.py` | FastAPI Depends: `get_predict_handler()` — injects PredictHandler with InferenceService, event_bus |
 
-#### `phoenix_ml/infrastructure/grpc/` — gRPC Server
+<h4>gRPC Server</h4>
+
+**Path:** `phoenix_ml/infrastructure/grpc/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
 | `grpc_server.py` | **InferenceServicer**: gRPC async server. RPCs: `Predict(PredictRequest) → PredictResponse`, `HealthCheck() → HealthCheckResponse`. **LoggingInterceptor**: logs method + latency. Factory `create_grpc_server()`. Port: `50051` |
 
-##### `phoenix_ml/infrastructure/grpc/proto/`
+<h5>Proto</h5>
+
+**Path:** `phoenix_ml/infrastructure/grpc/proto/`
 
 | File | Purpose |
 |------|-----------|
@@ -433,7 +518,9 @@ Package init.
 | `inference_pb2.py` | Generated protobuf Python code (from `protoc`) |
 | `inference_pb2_grpc.py` | Generated gRPC stubs (servicer base class + client stub) |
 
-#### `phoenix_ml/infrastructure/artifact_storage/` — Model Artifact Storage
+<h4>Model Artifact Storage</h4>
+
+**Path:** `phoenix_ml/infrastructure/artifact_storage/`
 
 | File | Purpose |
 |------|-----------|
@@ -441,7 +528,9 @@ Package init.
 | `local_artifact_storage.py` | **LocalArtifactStorage** (implement ArtifactStorage): stores/reads model files on local filesystem |
 | `s3_artifact_storage.py` | **S3ArtifactStorage** (implement ArtifactStorage): stores/reads model files on S3/MinIO via boto3. URI format: `s3://bucket/key` |
 
-#### `phoenix_ml/infrastructure/monitoring/` — Observability Adapters
+<h4>Observability Adapters</h4>
+
+**Path:** `phoenix_ml/infrastructure/monitoring/`
 
 | File | Purpose |
 |------|-----------|
@@ -452,12 +541,14 @@ Package init.
 | `tracing.py` | **init_tracing()**: sets up OpenTelemetry TracerProvider + OTLP exporter sending traces → Jaeger. Functions `get_tracer()`, `shutdown_tracing()` |
 | `in_memory_log_repo.py` | **InMemoryPredictionLogRepository** (implement PredictionLogRepository): stores prediction logs in RAM for testing |
 
-#### `phoenix_ml/infrastructure/persistence/` — Database Adapters
+<h4>Database Adapters</h4>
+
+**Path:** `phoenix_ml/infrastructure/persistence/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
-| `database.py` | SQLAlchemy async engine + session factory. `get_db()` → `AsyncSession`. `Base` declarative base cho ORM |
+| `database.py` | SQLAlchemy async engine + session factory. `get_db()` → `AsyncSession`. `Base` declarative base for ORM |
 | `models.py` | ORM models: **ModelORM** (table `models`), **PredictionLogORM** (table `prediction_logs`), **DriftReportORM** (table `drift_reports`) |
 | `postgres_model_registry.py` | **PostgresModelRegistry** (implement ModelRepository): CRUD models in PostgreSQL. `update_stage("champion")` auto-demotes old champion → retired |
 | `postgres_log_repo.py` | **PostgresPredictionLogRepository** (implement PredictionLogRepository): stores logs in PostgreSQL, queries recent predictions |
@@ -467,19 +558,25 @@ Package init.
 
 ---
 
-### `phoenix_ml/shared/` — Shared Utilities
+<h3>Shared Utilities</h3>
+
+**Path:** `phoenix_ml/shared/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
 
-#### `phoenix_ml/shared/exceptions/`
+<h4>Exceptions</h4>
+
+**Path:** `phoenix_ml/shared/exceptions/`
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Custom exceptions: **ModelNotFoundError**, **InferenceError**, **DriftDetectedError**, **ValidationError**, **ConfigurationError** |
 
-#### `phoenix_ml/shared/ingestion/` — Data Ingestion Pipeline
+<h4>Data Ingestion Pipeline</h4>
+
+**Path:** `phoenix_ml/shared/ingestion/`
 
 | File | Purpose |
 |------|-----------|
@@ -490,7 +587,9 @@ Package init.
 | `data_collector.py` | **DataCollector**: aggregates data from multiple ingestors, merges and deduplicates |
 | `service.py` | **IngestionService**: orchestrates full ingestion pipeline — collect → validate → transform → store |
 
-#### `phoenix_ml/shared/utils/`
+<h4>Utils</h4>
+
+**Path:** `phoenix_ml/shared/utils/`
 
 | File | Purpose |
 |------|-----------|
@@ -499,9 +598,11 @@ Package init.
 
 ---
 
-## 📂 `frontend/` — React TypeScript Dashboard
+## 📂 React TypeScript Dashboard
 
-### Root Files
+**Path:** `frontend/`
+
+<h3>Root Files</h3>
 
 | File | Purpose |
 |------|-----------|
@@ -509,14 +610,16 @@ Package init.
 | `package.json` | NPM dependencies: react, recharts, vite, vitest, @testing-library |
 | `vite.config.ts` | Vite dev server config: port 5173, proxy `/api` → backend `VITE_API_TARGET` |
 | `tsconfig.json` | TypeScript config root — references app + node configs |
-| `tsconfig.app.json` | TypeScript config cho app code: strict mode, jsx react-jsx |
-| `tsconfig.node.json` | TypeScript config cho Node.js files (vite config) |
+| `tsconfig.app.json` | TypeScript config for app code: strict mode, jsx react-jsx |
+| `tsconfig.node.json` | TypeScript config for Node.js files (vite config) |
 | `eslint.config.js` | ESLint config: react-hooks rules, typescript-eslint |
 | `.gitignore` | Frontend-specific gitignore (dist, node_modules) |
 | `README.md` | Frontend README |
 | `public/vite.svg` | Vite logo favicon |
 
-### `frontend/phoenix_ml/`
+<h3>Phoenix Ml</h3>
+
+**Path:** `frontend/phoenix_ml/`
 
 | File | Purpose |
 |------|-----------|
@@ -525,13 +628,17 @@ Package init.
 | `index.css` | Global CSS styles: dark theme, gradients, animations, responsive grid |
 | `config.ts` | Centralized config: `API_BASE_URL`, `SERVICES` array (11 services with name/port/icon/healthUrl), `ENDPOINTS` mapping, `CHART_CONFIG` |
 
-### `frontend/phoenix_ml/api/`
+<h3>Api</h3>
+
+**Path:** `frontend/phoenix_ml/api/`
 
 | File | Purpose |
 |------|-----------|
 | `mlService.ts` | **MLService class**: fetch wrapper for all API calls — `predict(modelId, features)`, `getModelInfo(modelId)`, `getDriftReport(modelId)`, `getPerformance(modelId)`, `getModels()`, `getPipelineStatus()` |
 
-### `frontend/phoenix_ml/components/dashboard/`
+<h3>Dashboard</h3>
+
+**Path:** `frontend/phoenix_ml/components/dashboard/`
 
 | File | Purpose |
 |------|-----------|
@@ -545,13 +652,17 @@ Package init.
 | `ServicesStatus.tsx` | Grid of 11 ServiceCards: displays all infrastructure services (API, DB, Redis, Kafka, MLflow, etc.) |
 | `GrafanaEmbed.tsx` | Embeds Grafana dashboard iframe with configurable URL |
 
-### `frontend/phoenix_ml/components/layout/`
+<h3>Layout</h3>
+
+**Path:** `frontend/phoenix_ml/components/layout/`
 
 | File | Purpose |
 |------|-----------|
 | `Sidebar.tsx` | Navigation sidebar: logo + nav links (Dashboard, Models, Monitoring, Pipeline) |
 
-### `frontend/phoenix_ml/components/ui/`
+<h3>Ui</h3>
+
+**Path:** `frontend/phoenix_ml/components/ui/`
 
 | File | Purpose |
 |------|-----------|
@@ -562,7 +673,9 @@ Package init.
 | `PredictionResult.tsx` | Panel displaying prediction result: class label + confidence bar + latency + model info |
 | `EntitySelector.tsx` | Dropdown to select entity ID for feature lookup |
 
-### `frontend/phoenix_ml/test/` — Tests (Vitest + React Testing Library)
+<h3>Tests (Vitest + React Testing Library)</h3>
+
+**Path:** `frontend/phoenix_ml/test/`
 
 | File | Purpose |
 |------|-----------|
@@ -588,22 +701,28 @@ Package init.
 
 ---
 
-## 📂 `tests/` — Backend Tests (pytest)
+## 📂 Backend Tests (pytest)
 
-### Root
+**Path:** `tests/`
+
+<h3>Root</h3>
 
 | File | Purpose |
 |------|-----------|
 | `__init__.py` | Package init |
 | `conftest.py` | Shared fixtures: mock inference engine, sample Model, FeatureVector, async DB session factory |
 
-### `tests/e2e/` — End-to-End Tests
+<h3>End-to-End Tests</h3>
+
+**Path:** `tests/e2e/`
 
 | File | Purpose |
 |------|-----------|
 | `test_full_flow.py` | Full flow: register model → predict → submit feedback → check drift |
 
-### `tests/integration/` — Integration Tests
+<h3>Integration Tests</h3>
+
+**Path:** `tests/integration/`
 
 | File | Purpose |
 |------|-----------|
@@ -619,7 +738,9 @@ Package init.
 | `test_real_inference.py` | Tests inference with real ONNX model |
 | `test_real_model_inference.py` | Test end-to-end inference pipeline |
 
-### `tests/unit/application/` — Application Layer Unit Tests
+<h3>Application Layer Unit Tests</h3>
+
+**Path:** `tests/unit/application/`
 
 | File | Purpose |
 |------|-----------|
@@ -633,7 +754,9 @@ Package init.
 | `test_monitoring_service.py` | Test MonitoringService drift detection + alerting |
 | `test_dto_and_config.py` | Test DTOs validation + Settings loading |
 
-### `tests/unit/domain/inference/` — Inference Domain Unit Tests
+<h3>Inference Domain Unit Tests</h3>
+
+**Path:** `tests/unit/domain/inference/`
 
 | File | Purpose |
 |------|-----------|
@@ -647,7 +770,9 @@ Package init.
 | `test_request_pipeline.py` | Test RequestPipeline middleware chain |
 | `test_plugin_registry.py` | Test PluginRegistry register/resolve |
 
-### `tests/unit/domain/monitoring/` — Monitoring Domain Unit Tests
+<h3>Monitoring Domain Unit Tests</h3>
+
+**Path:** `tests/unit/domain/monitoring/`
 
 | File | Purpose |
 |------|-----------|
@@ -657,7 +782,9 @@ Package init.
 | `test_model_evaluator.py` | Test ClassificationEvaluator + RegressionEvaluator metrics |
 | `test_rollback_manager.py` | Test RollbackManager decision logic |
 
-### `tests/unit/domain/` — Other Domain Tests
+<h3>Other Domain Tests</h3>
+
+**Path:** `tests/unit/domain/`
 
 | File | Purpose |
 |------|-----------|
@@ -665,7 +792,9 @@ Package init.
 | `test_inference_service.py` | Test InferenceService orchestration |
 | `test_feature_lineage.py` | Test FeatureRegistry lineage tracking |
 
-### `tests/unit/domain/training/` — Training Domain Unit Tests
+<h3>Training Domain Unit Tests</h3>
+
+**Path:** `tests/unit/domain/training/`
 
 | File | Purpose |
 |------|-----------|
@@ -673,7 +802,9 @@ Package init.
 | `test_training_service.py` | Test TrainingService flow: load → train → evaluate → save |
 | `test_data_loader_plugin.py` | Test IDataLoader interface + DatasetInfo |
 
-### `tests/unit/infrastructure/` — Infrastructure Unit Tests
+<h3>Infrastructure Unit Tests</h3>
+
+**Path:** `tests/unit/infrastructure/`
 
 | File | Purpose |
 |------|-----------|
@@ -702,7 +833,9 @@ Package init.
 | `test_model_generator.py` | Test generate_simple_onnx() |
 | `test_data_ingestion.py` | Test data ingestion pipeline |
 
-### `tests/unit/shared/` — Shared Utils Tests
+<h3>Shared Utils Tests</h3>
+
+**Path:** `tests/unit/shared/`
 
 | File | Purpose |
 |------|-----------|
@@ -718,7 +851,9 @@ Package init.
 
 ---
 
-## 📂 `model_configs/` — Model Configuration (YAML)
+## 📂 Model Configuration (YAML)
+
+**Path:** `model_configs/`
 
 | File | Model | Data Loader | Drift Test |
 |------|-------|-------------|------------|
@@ -730,7 +865,9 @@ Package init.
 
 ---
 
-## 📂 `examples/` — Training Scripts
+## 📂 Training Scripts
+
+**Path:** `examples/`
 
 | File | Purpose |
 |------|-----------|
@@ -742,7 +879,9 @@ Package init.
 
 ---
 
-## 📂 `dags/` — Airflow DAGs
+## 📂 Airflow DAGs
+
+**Path:** `dags/`
 
 | File | Purpose |
 |------|-----------|
@@ -750,7 +889,9 @@ Package init.
 
 ---
 
-## 📂 `scripts/` — Utility Scripts
+## 📂 Utility Scripts
+
+**Path:** `scripts/`
 
 | File | Purpose |
 |------|-----------|
@@ -766,7 +907,9 @@ Package init.
 
 ---
 
-## 📂 `benchmarks/` — Performance Benchmarks
+## 📂 Performance Benchmarks
+
+**Path:** `benchmarks/`
 
 | File | Purpose |
 |------|-----------|
@@ -780,37 +923,42 @@ Package init.
 
 ---
 
-## 📂 `deploy/helm/phoenix-ml/` — Kubernetes Helm Chart
+## 📂 Kubernetes Helm Chart
+
+**Path:** `deploy/helm/phoenix-ml/`
 
 | File | Purpose |
 |------|-----------|
 | `Chart.yaml` | Helm chart metadata: name, version, description |
 | `values.yaml` | Default values: replica count, image tag, resources (CPU/memory limits), service ports |
 | `templates/deployment.yaml` | K8s Deployment: container spec, health probes, env vars from ConfigMap/Secret |
-| `templates/service.yaml` | K8s Service: ClusterIP cho internal access |
+| `templates/service.yaml` | K8s Service: ClusterIP for internal access |
 | `templates/ingress.yaml` | K8s Ingress: external access rules, TLS config |
 | `templates/hpa.yaml` | HorizontalPodAutoscaler: auto-scales based on CPU/custom metrics |
 
 ---
 
-## 📂 `grafana/` — Grafana Configuration
+## 📂 Grafana Configuration
+
+**Path:** `grafana/`
 
 | File | Purpose |
 |------|-----------|
-| `dashboards/phoenix-ml.json` | Main dashboard JSON: panels cho inference latency, prediction count, drift score, model accuracy, system health |
+| `dashboards/phoenix-ml.json` | Main dashboard JSON: panels for inference latency, prediction count, drift score, model accuracy, system health |
 | `provisioning/dashboards/provider.yml` | Dashboard auto-provisioning: points Grafana to JSON files |
 | `provisioning/dashboards/phoenix_dashboard.json` | Dashboard provisioning config |
 | `provisioning/datasources/datasource.yml` | Auto-provision Prometheus datasource: URL `http://prometheus:9090` |
 
 ---
 
-## 📂 `docs/` — MkDocs Documentation Site
+## 📂 MkDocs Documentation Site
+
+**Path:** `docs/`
 
 | File | Purpose |
 |------|-----------|
 | `index.md` | Homepage: project overview, quick links |
 | `architecture/system-design.md` | System architecture: components, data flow, deployment diagram |
-| `architecture/ddd-overview.md` | DDD architecture: bounded contexts, layers, dependency rules |
 | `api/reference.md` | API reference: all endpoints with examples |
 | `guides/customization.md` | Customization guide: adding new models, custom plugins |
 | `guides/library-api.md` | Guide to using as Python library |
@@ -821,7 +969,6 @@ Package init.
 | `blog/system-design-overview.md` | Blog: system design decisions |
 | `blog/self-healing-ml.md` | Blog: self-healing ML pipeline |
 | `blog/performance-optimization.md` | Blog: performance optimization techniques |
-| `adr/001-use-ddd-architecture.md` | ADR #1: Why DDD + Clean Architecture |
 | `adr/002-use-onnx-runtime.md` | ADR #2: Why ONNX Runtime for inference |
 | `adr/003-use-kafka-for-event-streaming.md` | ADR #3: Why Kafka for event streaming |
 | `adr/004-observability-with-prometheus-grafana.md` | ADR #4: Why Prometheus + Grafana |
@@ -833,7 +980,9 @@ Package init.
 
 ---
 
-## 📂 `notebooks/` — Jupyter Demo Notebooks
+## 📂 Jupyter Demo Notebooks
+
+**Path:** `notebooks/`
 
 | File | Purpose |
 |------|-----------|
@@ -844,12 +993,14 @@ Package init.
 
 ---
 
-## 📂 `alembic/` — Database Migrations
+## 📂 Database Migrations
+
+**Path:** `alembic/`
 
 | File | Purpose |
 |------|-----------|
 | `env.py` | Alembic environment: async SQLAlchemy engine, auto-detect model changes |
-| `script.py.mako` | Template cho auto-generated migration files |
+| `script.py.mako` | Template for auto-generated migration files |
 | `versions/8e03d4fe1b79_initial_schema_*.py` | **Initial migration**: creates 3 tables — `models` (id, version, uri, framework, stage, metadata, metrics, is_active, created_at), `prediction_logs` (id, model_id, features, result, confidence, latency, ground_truth, timestamp), `drift_reports` (id, model_id, feature_name, method, score, is_drifted, threshold, timestamp) |
 
 ---

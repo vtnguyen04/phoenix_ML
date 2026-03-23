@@ -15,7 +15,7 @@ Building a production ML platform requires solving:
 
 ## Key Design Decisions
 
-### 1. Domain-Driven Design vs Monolithic
+### 1. Layered Architecture vs Monolithic
 
 **Problem**: ML platform has many different concerns (inference, monitoring, training, features) that a monolithic approach would mix.
 
@@ -116,7 +116,7 @@ plugin_registry.register_model(
 
 | Decision | Benefit | Cost |
 |----------|---------|------|
-| DDD layers | Clean, testable, swappable | More files, learning curve |
+| Layered architecture | Clean, testable, swappable | More files, learning curve |
 | ONNX standardization | Single runtime, cross-platform | Conversion step required |
 | Kafka | Async, durable, scalable | Extra container, eventual consistency |
 | PostgreSQL | ACID, complex queries | Slower than NoSQL for simple KV |

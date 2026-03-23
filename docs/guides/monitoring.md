@@ -89,16 +89,16 @@ result = calc.calculate_chi2(reference, current)
 
 ### Configure Drift Detection
 
-Per-model trong `model_configs/<model>.yaml`:
+Per-model config in `model_configs/<model>.yaml`:
 
 ```yaml
 # model_configs/credit-risk.yaml
 monitoring:
   drift_test: ks           # Algorithm
-  drift_threshold: 0.3     # Threshold cho alert
+  drift_threshold: 0.3     # Threshold for alert
 ```
 
-Global trong `.env`:
+Global config in `.env`:
 
 ```bash
 MONITORING_INTERVAL_SECONDS=30   # Check frequency
@@ -306,7 +306,7 @@ Access: `http://localhost:16686`
 ### Setup
 
 ```python
-# Automatic initialize trong lifespan.py
+# Automatically initialized in lifespan.py
 from phoenix_ml.infrastructure.monitoring.tracing import init_tracing
 init_tracing()  # OTLP exporter → Jaeger
 ```

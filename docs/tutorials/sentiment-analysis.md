@@ -20,7 +20,7 @@ my-sentiment-project/
 ├── data/
 │   └── sentiment/
 │       └── reviews.csv            # ← Dataset
-└── models/                        # ← Framework auto-creates khi train
+└── models/                        # ← Framework auto-creates during training
 ```
 
 ---
@@ -85,9 +85,9 @@ monitoring:
 | `train_script` | ✅ | Path to the `train_and_export()` function |
 | `feature_names` | ✅ | List of features, used for drift monitoring |
 | `data_loader` | ❌ | Custom class path, if empty → `TabularDataLoader` |
-| `data_source.type` | ❌ | Default: `file`. `database` cho SQL, `dvc` cho large datasets |
+| `data_source.type` | ❌ | Default: `file`. `database` for SQL, `dvc` for large datasets |
 | `retrain.trigger` | ❌ | Default: `drift`. See triggers table below |
-| `monitoring.drift_test` | ❌ | Default: `ks` cho classification |
+| `monitoring.drift_test` | ❌ | Default: `ks` for classification |
 
 ---
 
@@ -97,7 +97,7 @@ monitoring:
 
 ```python
 # my_training/train.py
-"""Training script cho sentiment analysis.
+"""Training script for sentiment analysis.
 
 Framework requires function: train_and_export(output_path, **kwargs)
 Optional parameters: metrics_path, data_path, reference_path
@@ -263,7 +263,7 @@ import pandas as pd
 
 
 class SentimentDataLoader(IDataLoader):
-    """Custom data loader cho sentiment analysis.
+    """Custom data loader for sentiment analysis.
 
     Processes CSV with 'text' and 'label' columns (positive/negative).
     """

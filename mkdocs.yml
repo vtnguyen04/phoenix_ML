@@ -8,25 +8,30 @@ theme:
   name: material
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
     - navigation.sections
     - navigation.expand
     - content.code.copy
     - content.tooltips
     - search.suggest
     - search.highlight
+  font:
+    text: Inter
+    code: Fira Code
   palette:
+    - scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
     - scheme: default
-      primary: orange
+      primary: indigo
       accent: blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    - scheme: slate
-      primary: orange
-      accent: blue
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
 
 plugins:
   - search
@@ -48,30 +53,32 @@ markdown_extensions:
   - attr_list
 
 nav:
-  - Home: index.md
-  - Architecture:
-    - System Design: architecture/system-design.md
-    - DDD Overview: architecture/ddd-overview.md
-    - Frontend Design: frontend/architecture.md
+  - Welcome: index.md
+  - Getting Started:
+    - Quick Start: guides/getting-started.md
+    - Tutorials:
+      - Sentiment Analysis: tutorials/sentiment-analysis.md
+      - Credit Risk: tutorials/credit-risk.md
+      - Fraud Detection: tutorials/fraud-detection.md
+      - House Price: tutorials/house-price.md
+      - Image Classification: tutorials/image-classification.md
+  - Core Concepts:
+    - Architecture: architecture/system-design.md
     - Project Structure: project-structure.md
+    - Frontend: frontend/architecture.md
+  - Operations & Guides:
+    - Library API: guides/library-api.md
+    - Deployment Stack: deployment/docker-stack.md
+    - Monitoring & Alerting: guides/monitoring.md
+    - Customization: guides/customization.md
+    - Troubleshooting: guides/troubleshooting.md
   - API Reference: api/reference.md
-  - Decisions (ADR):
-    - 001 - DDD Architecture: adr/001-use-ddd-architecture.md
+  - Architecture Decisions:
     - 002 - ONNX Runtime: adr/002-use-onnx-runtime.md
     - 003 - Kafka Streaming: adr/003-use-kafka-for-event-streaming.md
-    - 004 - Observability Stack: adr/004-observability-with-prometheus-grafana.md
-  - Deployment:
-    - Docker Stack: deployment/docker-stack.md
-  - Guides:
-    - Getting Started: guides/getting-started.md
-    - Library API: guides/library-api.md
-    - Customization: guides/customization.md
-    - Monitoring & Alerting: guides/monitoring.md
-    - Troubleshooting: guides/troubleshooting.md
-    - Contributing: ../CONTRIBUTING.md
-  - Tutorials:
-    - Sentiment Analysis: tutorials/sentiment-analysis.md
-  - Blog:
-    - System Design Overview: blog/system-design-overview.md
+    - 004 - Observability: adr/004-observability-with-prometheus-grafana.md
+    - 005 - DVC Versioning: adr/005-dvc-data-versioning.md
+  - Engineering Blog:
+    - System Design: blog/system-design-overview.md
     - Self-Healing ML: blog/self-healing-ml.md
-    - Performance Optimization: blog/performance-optimization.md
+    - Performance: blog/performance-optimization.md

@@ -12,21 +12,22 @@ Step-by-step guide to building a production ML system with the Phoenix ML framew
 
 ## Overview: User Flow
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  1. Install framework                                  │
-│  2. Create model_configs/my-model.yaml ← Your use case  │
-│  3. Write my_project/train.py          ← Train + ONNX   │
-│  4. Run framework (docker/local)                        │
-│  5. POST /predict → inference                           │
-│     ↓ Framework handles:                                │
-│     ├── ONNX inference (sub-50ms)                       │
-│     ├── Drift monitoring                                │
-│     ├── Auto retrain (drift/schedule/manual/data_change)│
-│     ├── MLflow experiment logging                       │
-│     ├── Champion/Challenger A/B testing                 │
-│     └── Prometheus metrics + alerting                   │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A[1. Install framework] --> B[2. Create model_configs/my-model.yaml]
+    B --> C[3. Write my_project/train.py]
+    C --> D[4. Run framework]
+    D --> E[5. POST /predict]
+    E --> F[Framework Handles:]
+    
+    subgraph Operations["Automated by Framework"]
+        F --> O[ONNX inference]
+        F --> M[Drift monitoring]
+        F --> R[Auto-retraining]
+        F --> L[MLflow logging]
+        F --> AB[A/B testing]
+        F --> P[Prometheus metrics]
+    end
 ```
 
 ---
@@ -49,7 +50,7 @@ Create file `model_configs/<model-id>.yaml`:
 ### Config Structure
 
 ```yaml
-# ── BẮT BUỘC ──────────────────────────────
+# ── REQUIRED ──────────────────────────────
 model_id: my-model              # Unique ID
 version: v1
 framework: onnx                 # onnx | tensorrt | triton
@@ -76,7 +77,7 @@ retrain:
   trigger: drift                # drift | manual | data_change | scheduled
   # trigger: scheduled → add:
   #   schedule: "0 0 * * 0"    # Cron expression
-  drift_detection: true         # false cho object_detection, NLP
+  drift_detection: true         # false for object_detection, NLP
 
 # ── MONITORING ───────────────────────────
 monitoring:
@@ -140,7 +141,7 @@ def train_and_export(output_path, metrics_path=None, data_path=None):
 # Start all stack: API, PostgreSQL, Redis, Kafka, MLflow, Airflow, Grafana
 docker compose up -d
 
-# Xem logs
+# View logs
 docker compose logs -f api
 ```
 

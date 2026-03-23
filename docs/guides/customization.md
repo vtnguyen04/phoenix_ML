@@ -254,7 +254,7 @@ class TeamsNotifier(IAlertNotifier):
 
 ## Configure Monitoring Thresholds
 
-Trong `model_configs/<model>.yaml`:
+In `model_configs/<model>.yaml`:
 
 ```yaml
 monitoring:
@@ -262,7 +262,7 @@ monitoring:
   drift_threshold: 0.25       # When to consider as drifted
 ```
 
-Trong `.env`:
+In `.env`:
 
 ```bash
 MONITORING_INTERVAL_SECONDS=30   # Check drift every 30s

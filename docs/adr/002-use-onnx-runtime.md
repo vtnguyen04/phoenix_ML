@@ -46,7 +46,7 @@ INFERENCE_ENGINE=tensorrt   # GPU optimization
 INFERENCE_ENGINE=triton     # Distributed serving
 ```
 
-Factory pattern trong `container.py`:
+Factory pattern in `container.py`:
 ```python
 _ENGINE_FACTORIES = {
     "onnx": lambda: ONNXInferenceEngine(cache_dir=...),

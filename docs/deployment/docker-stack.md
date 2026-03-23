@@ -33,30 +33,30 @@ curl http://localhost:8001/health
 
 ```mermaid
 graph LR
-    subgraph "Frontend"
+    subgraph SG_Frontend ["Frontend"]
         FE["phoenix-frontend<br/>:5174"]
     end
     
-    subgraph "API"
+    subgraph SG_API ["API"]
         API["phoenix-api<br/>:8001 + :50051 gRPC"]
     end
     
-    subgraph "Data"
+    subgraph SG_Data ["Data"]
         PG["postgres<br/>:5433"]
         RD["redis<br/>:6380"]
     end
     
-    subgraph "Messaging"
+    subgraph SG_Messaging ["Messaging"]
         KF["kafka<br/>:9094"]
         KUI["kafka-ui<br/>:8082"]
     end
     
-    subgraph "ML"
+    subgraph SG_ML ["ML"]
         MLF["mlflow<br/>:5001"]
         MINIO["minio<br/>:9000"]
     end
     
-    subgraph "Monitoring"
+    subgraph SG_Monitoring ["Monitoring"]
         PROM["prometheus<br/>:9091"]
         GRAF["grafana<br/>:3001"]
         JAEG["jaeger<br/>:16686"]

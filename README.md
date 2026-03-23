@@ -22,9 +22,9 @@
 
 ## 📌 What is Phoenix ML?
 
-Phoenix ML is a **production-grade, model-agnostic ML inference framework** (Python library) that goes beyond simple model serving. Install it, define your model config, and get real-time inference with autonomous monitoring, drift detection, and self-healing — all built with **Domain-Driven Design (DDD)** and **Clean Architecture** principles.
+Phoenix ML is a **production-grade, model-agnostic ML inference framework** (Python library) that goes beyond simple model serving. Install it, define your model config, and get real-time inference with autonomous monitoring, drift detection, and self-healing — all built for **modularity** and **extensibility**.
 
-> **Framework + Reference Deployment**: The `src/` package is the installable library. Everything else (docker-compose, examples, Grafana dashboards) is reference deployment for demo and learning.
+> **Framework + Reference Deployment**: The `phoenix_ml/` package is the installable library. Everything else (docker-compose, examples, Grafana dashboards) is reference deployment for demo and learning.
 
 <div align="center">
 
@@ -85,62 +85,42 @@ uv run uvicorn src.infrastructure.http.fastapi_server:app --reload
 
 ```mermaid
 graph LR
-    Client([🌐 Client]) -->|REST/gRPC| Gateway[⚡ API Gateway<br/>FastAPI]
-    Gateway --> Pipeline[🔗 Request Pipeline<br/>Chain of Responsibility]
-    Pipeline --> Router{🎯 Router<br/>A/B · Canary · Shadow}
+    Client[Client] -->|REST/gRPC| Gateway[API Gateway]
+    Gateway --> Pipeline[Request Pipeline]
+    Pipeline --> Router{Router}
 
-    Router --> CB1[🛡️ Circuit<br/>Breaker]
+    Router --> CB1[Circuit Breaker]
     CB1 --> ONNX[ONNX Runtime]
 
-    Router --> CB2[🛡️ Circuit<br/>Breaker]
+    Router --> CB2[Circuit Breaker]
     CB2 --> TRT[TensorRT]
 
-    Router --> CB3[🛡️ Circuit<br/>Breaker]
+    Router --> CB3[Circuit Breaker]
     CB3 --> Triton[Triton Server]
 
-    Gateway -.->|Async| Kafka[(📨 Kafka)]
-    Gateway -->|MGET| Redis[(🔴 Redis<br/>Features)]
-    Gateway -->|Query| PG[(🐘 PostgreSQL)]
-
-    style Client fill:#667eea,stroke:#764ba2,color:#fff
-    style Gateway fill:#f093fb,stroke:#f5576c,color:#fff
-    style Router fill:#4facfe,stroke:#00f2fe,color:#fff
-    style ONNX fill:#43e97b,stroke:#38f9d7,color:#000
-    style TRT fill:#43e97b,stroke:#38f9d7,color:#000
-    style Triton fill:#43e97b,stroke:#38f9d7,color:#000
+    Gateway -.->|Async| Kafka[(Kafka)]
+    Gateway -->|MGET| Redis[(Redis)]
+    Gateway -->|Query| PG[(PostgreSQL)]
 ```
 
 ### Self-Healing MLOps Loop
 
 ```mermaid
 graph TD
-    Train["🏋️ Model Training<br/>Airflow Pipeline"] --> Deploy["📦 Deployment<br/>ONNX + Docker"]
-    Deploy --> Serve["⚡ Real-time Inference<br/>FastAPI + Routing"]
-    Serve --> Monitor["📊 Monitoring<br/>Every 30s"]
-    Monitor --> Anomaly["🔍 Drift Detection<br/>KS · PSI · Chi² · Wasserstein"]
-    Anomaly --> Decision{"Drift<br/>Detected?"}
+    Train[Model Training] --> Deploy[Deployment]
+    Deploy --> Serve[Real-time Inference]
+    Serve --> Monitor[Monitoring]
+    Monitor --> Drift[Drift Detection]
+    Drift --> Decision{Drift Detected?}
     Decision -->|No| Serve
-    Decision -->|"Yes (deduped)"| Airflow["🌀 Airflow self_healing_pipeline<br/>max_active_runs=1"]
-    Airflow --> T1["🚨 1. Send Alert<br/>Webhook Notify"]
-    T1 --> T2["⏪ 2. Rollback<br/>Archive Challengers"]
-    T2 --> T3["🏋️ 3. Train Model<br/>ONNX Export"]
-    T3 --> T4["📈 4. Log MLflow<br/>Metrics + Params"]
-    T4 --> T5["🗄️ 5. Register<br/>Challenger in Postgres"]
+    Decision -->|Yes| Airflow[Airflow Pipeline]
+    Airflow --> T1[1. Send Alert]
+    T1 --> T2[2. Rollback Challengers]
+    T2 --> T3[3. Retrain Model]
+    T3 --> T4[4. Log to MLflow]
+    T4 --> T5[5. Register Challenger]
     T5 --> Deploy
     T2 -.->|champion continues| Serve
-
-    style Train fill:#667eea,stroke:#764ba2,color:#fff
-    style Deploy fill:#764ba2,stroke:#667eea,color:#fff
-    style Serve fill:#f093fb,stroke:#f5576c,color:#fff
-    style Monitor fill:#4facfe,stroke:#00f2fe,color:#fff
-    style Anomaly fill:#fa709a,stroke:#fee140,color:#fff
-    style Decision fill:#ffecd2,stroke:#fcb69f,color:#000
-    style Airflow fill:#017cee,stroke:#00c7b7,color:#fff
-    style T1 fill:#f5576c,stroke:#ff6b6b,color:#fff
-    style T2 fill:#ff9a9e,stroke:#fad0c4,color:#000
-    style T3 fill:#43e97b,stroke:#38f9d7,color:#000
-    style T4 fill:#43e97b,stroke:#38f9d7,color:#000
-    style T5 fill:#fa709a,stroke:#fee140,color:#fff
 ```
 
 ---
@@ -181,37 +161,14 @@ graph TD
 
 ## 🏛️ Architecture & Design Patterns
 
-### Clean Architecture (DDD)
+### Module Structure
 
-```
-src/
-├── domain/                    # 🧠 Pure business logic (zero framework deps)
-│   ├── inference/             #    Model, Prediction, InferenceEngine interface
-│   ├── feature_store/         #    FeatureRegistry, FeatureStore interface
-│   ├── model_registry/        #    ModelRepository, ArtifactStorage interface
-│   ├── monitoring/            #    DriftReport, DriftCalculator, AnomalyDetector
-│   └── training/              #    TrainingJob, TrainerPlugin, DataLoaderPlugin
-│
-├── application/               # 🎯 Use-case orchestration (CQRS)
-│   ├── commands/              #    PredictCommand, BatchPredictCommand, LoadModelCommand
-│   ├── handlers/              #    PredictHandler, BatchPredictHandler, QueryHandlers
-│   └── services/              #    MonitoringService
-│
-├── infrastructure/            # 🔌 Framework adapters
-│   ├── http/                  #    FastAPI, gRPC, Routes, DI Container
-│   ├── ml_engines/            #    ONNX, TensorRT, Triton implementations
-│   ├── feature_store/         #    Redis, InMemory
-│   ├── persistence/           #    Postgres, SQLite, InMemory repos
-│   ├── messaging/             #    Kafka Producer/Consumer
-│   ├── monitoring/            #    Prometheus, Jaeger, Alert Notifier
-│   └── artifact_storage/      #    S3 (MinIO), Local
-│
-└── shared/                    # 🔧 Cross-cutting utilities
-    ├── exceptions/            #    PhoenixBaseError hierarchy
-    ├── interfaces/            #    EventPublisher, CacheBackend
-    ├── ingestion/             #    DataCollector, IngestionService
-    └── utils/                 #    ModelGenerator, helpers
-```
+| Package | Responsibility |
+|---------|---------------|
+| `phoenix_ml/domain/` | Core business logic — models, interfaces, domain services |
+| `phoenix_ml/application/` | Use-case orchestration — commands, handlers, DTOs |
+| `phoenix_ml/infrastructure/` | External adapters — FastAPI, ONNX, Redis, Kafka, Postgres |
+| `phoenix_ml/shared/` | Cross-cutting — exceptions, interfaces, utilities |
 
 ### Design Patterns Implemented
 
@@ -290,7 +247,7 @@ curl -X POST http://localhost:8001/predict/batch \
 uv sync
 
 # Run API server (port 8000)
-uv run uvicorn src.infrastructure.http.fastapi_server:app --reload
+uv run uvicorn phoenix_ml.infrastructure.http.fastapi_server:app --reload
 
 # Or via CLI entry point (after pip install)
 phoenix-serve
@@ -353,7 +310,7 @@ uv run locust -f benchmarks/load_test.py --host http://localhost:8001
 phoenix-ml-platform/
 │
 │  ── 🔧 FRAMEWORK CORE (pip install phoenix-ml) ──────────
-├── src/                         # Core library (DDD layers)
+├── phoenix_ml/                  # Core library
 │   ├── domain/                  #   Business logic + interfaces
 │   ├── application/             #   Commands, handlers, DTOs
 │   ├── infrastructure/          #   FastAPI, ONNX, Postgres, Redis, Kafka
@@ -389,7 +346,6 @@ phoenix-ml-platform/
 
 | ADR | Decision | Rationale |
 |-----|----------|-----------|
-| [001](docs/adr/001-use-ddd-architecture.md) | DDD + Clean Architecture | Testability, flexibility, maintainability |
 | [002](docs/adr/002-use-onnx-runtime.md) | ONNX Runtime standardization | Framework-agnostic, 2-10x inference speedup |
 | [003](docs/adr/003-use-kafka-for-event-streaming.md) | Kafka for event streaming | Decouple inference from logging, durability |
 | [004](docs/adr/004-observability-with-prometheus-grafana.md) | Prometheus + Grafana | Real-time metrics, dashboard-as-code |
@@ -422,6 +378,6 @@ git push origin feature/your-feature
 
 ---
 
-*Built with ❤️ using DDD, SOLID, and a passion for production-grade ML systems*
+*Built with ❤️ and a passion for production-grade ML systems*
 
 </div>

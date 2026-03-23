@@ -16,7 +16,7 @@ ML inference platform generates high-volume events: predictions, drift detection
 
 ## Decision
 
-Use **Apache Kafka** (KRaft mode, no Zookeeper) cho async event streaming.
+Use **Apache Kafka** (KRaft mode, no Zookeeper) for async event streaming.
 
 ### Event Flow
 
@@ -36,7 +36,7 @@ graph LR
 **Producer** (`kafka_producer.py`):
 - `AIOKafkaProducer` (async)
 - JSON serialization
-- No-op fallback khi Kafka offline → development/CI no need for Kafka
+- No-op fallback when Kafka offline → development/CI no need for Kafka
 
 **Consumer** (`kafka_consumer.py`):
 - `AIOKafkaConsumer` (async)
@@ -75,7 +75,7 @@ kafka:
 ### Positive
 - ✅ Inference latency not affected by downstream processing
 - ✅ Horizontal scaling via consumer groups
-- ✅ Event replay: re-process events khi fix bugs
+- ✅ Event replay: re-process events after fixing bugs
 - ✅ Decoupled services: producer/consumer evolve independently
 - ✅ KRaft mode: simpler deployment (no Zookeeper)
 
