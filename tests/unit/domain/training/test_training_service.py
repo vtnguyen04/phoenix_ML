@@ -1,9 +1,4 @@
-"""
-Unit Tests: Training Bounded Context.
-
-Tests TrainingJob lifecycle, TrainingService orchestration,
-TrainingConfig immutability, and HyperparameterOptimizer strategies.
-"""
+"""Tests for training bounded context."""
 
 from unittest.mock import AsyncMock
 

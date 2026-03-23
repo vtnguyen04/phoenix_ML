@@ -1,6 +1,4 @@
-"""
-Tests for InMemoryFeatureStore — in-memory feature storage implementation.
-"""
+"""Tests for InMemoryFeatureStore."""
 
 import pytest
 

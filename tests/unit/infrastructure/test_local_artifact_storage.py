@@ -1,6 +1,4 @@
-"""
-Tests for LocalArtifactStorage — stores model artifacts on local filesystem.
-"""
+"""Tests for LocalArtifactStorage."""
 
 from pathlib import Path
 

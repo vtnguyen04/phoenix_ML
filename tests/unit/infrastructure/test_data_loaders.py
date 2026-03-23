@@ -1,12 +1,4 @@
-"""
-Tests for DataLoader infrastructure (unified framework).
-
-Tests:
-    - TabularDataLoader: load CSV, split, metadata
-    - ImageDataLoader: load NPZ, split, metadata
-    - DataLoaderRegistry: register, resolve, fallback
-    - resolve_data_loader: YAML config resolution
-"""
+"""Tests for DataLoader infrastructure."""
 
 import asyncio
 from pathlib import Path
